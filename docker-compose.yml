@@ -1,5 +1,9 @@
+version: '3.8'
+
 services:
-  # 1. Base de données MongoDB
+  # ===========================================================================
+  # 1. Base de données MongoDB (partagée par backend et cineslot-sse)
+  # ===========================================================================
   mongodb:
     image: mongo:latest
     container_name: ynov-mongodb
@@ -11,8 +15,15 @@ services:
       - ./database/seed_movies.js:/docker-entrypoint-initdb.d/seed_movies.js:ro
     networks:
       - ynov-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
-  # 2. API Backend (Node.js / Express / Mongoose)
+  # ===========================================================================
+  # 2. API Backend Films (Node.js / Express / Mongoose)
+  # ===========================================================================
   backend:
     build:
       context: ./backend
@@ -20,16 +31,67 @@ services:
     container_name: ynov-backend
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     environment:
       - PORT=3000
       - MONGO_URI=mongodb://mongodb:27017/cours_db?directConnection=true
+      - WEB_CONCURRENCY=${WEB_CONCURRENCY:-2}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - ynov-network
 
-  # 3. Tests de charge k6 avec Web Dashboard (sur profil 'test')
+  # ===========================================================================
+  # 3. Service Billetterie SSE (Spring Boot / MongoDB)
+  # ===========================================================================
+  cineslot-sse:
+    build:
+      context: ./services/cineslot-sse
+      dockerfile: Dockerfile
+    container_name: ynov-cineslot-sse
+    restart: unless-stopped
+    ports:
+      - "${SSE_PORT:-8086}:8080"
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/cours_db
+      - SPRING_PROFILES_ACTIVE=lab
+      - SERVER_PORT=8080
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ynov-network
+
+  # ===========================================================================
+  # 4. Frontend (Vite + Vue 3 + TypeScript)
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ynov-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_MOVIES_URL=http://backend:3000/api/movies
+      - VITE_API_SLOTS_URL=http://cineslot-sse:8080/api/slots
+      - VITE_SSE_EVENTS_URL=http://cineslot-sse:8080/api/slots/events
+    command: npm run dev
+    networks:
+      - ynov-network
+    depends_on:
+      - backend
+      - cineslot-sse
+
+  # ===========================================================================
+  # 5. Tests de charge k6 avec Web Dashboard (profil 'test')
+  # ===========================================================================
   k6:
     image: grafana/k6:latest
     container_name: ynov-k6
@@ -50,7 +112,9 @@ services:
     profiles:
       - test
 
-  # 4. Tests de charge k6 en mode CI (sortie automatique avec code retour)
+  # ===========================================================================
+  # 6. Tests de charge k6 en mode CI (sortie automatique)
+  # ===========================================================================
   k6-ci:
     image: grafana/k6:latest
     container_name: ynov-k6-ci
@@ -66,9 +130,15 @@ services:
     profiles:
       - test
 
+# ===========================================================================
+# Volumes
+# ===========================================================================
 volumes:
   mongo-data:
 
+# ===========================================================================
+# Réseaux
+# ===========================================================================
 networks:
   ynov-network:
     driver: bridge
