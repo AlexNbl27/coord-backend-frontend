@@ -54,4 +54,10 @@ const movieSchema = new mongoose.Schema({
   collection: 'movies'
 });
 
+// Index B-Tree pour accélérer les requêtes de filtrage et de tri du test de charge
+movieSchema.index({ genres: 1, 'ratings.imdb': -1 });
+movieSchema.index({ year: -1 });
+movieSchema.index({ 'ratings.imdb': -1 });
+
 export const Movie = mongoose.model('Movie', movieSchema);
+
