@@ -13,42 +13,39 @@ const postMovieDuration = new Trend('post_movie_duration');
 const customErrorRate = new Rate('custom_error_rate');
 
 // ==============================================================================
-// 📈 PALIERS DE MONTÉE EN CHARGE (Plateaus / Stages)
-// Objectif : Trouver le point de rupture de l'API jusqu'à 2000 VUs simultanés
+// 📈 PALIERS DE MONTÉE EN CHARGE CALIBRÉS (50 ➔ 150 ➔ 300 ➔ 500 VUs)
+// Objectif : Observer les 3 zones de vie de l'API (Confort, Charge, Rupture)
 // ==============================================================================
 export const options = {
   stages: [
-    // Palier 1 : Charge nominale (100 utilisateurs simultanés)
-    { duration: '15s', target: 100 },
-    { duration: '10s', target: 100 },
+    // Palier 1 : Zone de confort / nominale (50 utilisateurs simultanés)
+    { duration: '15s', target: 50 },
 
-    // Palier 2 : Charge élevée (500 utilisateurs simultanés)
-    { duration: '15s', target: 500 },
-    { duration: '10s', target: 500 },
+    // Palier 2 : Charge soutenue / trafic élevé (150 utilisateurs simultanés)
+    { duration: '15s', target: 150 },
 
-    // Palier 3 : Forte charge (1000 utilisateurs simultanés)
-    { duration: '15s', target: 1000 },
-    { duration: '10s', target: 1000 },
+    // Palier 3 : Forte affluence / zone limite (300 utilisateurs simultanés)
+    { duration: '20s', target: 300 },
 
-    // Palier 4 : Charge extrême / Point de rupture (2000 utilisateurs simultanés)
-    { duration: '20s', target: 2000 },
-    { duration: '10s', target: 2000 },
+    // Palier 4 : POINT DE RUPTURE (500 utilisateurs simultanés)
+    // Sature l'Event Loop mono-thread de Node.js et sollicite le pool MongoDB
+    { duration: '20s', target: 500 },
 
-    // Palier 5 : Récupération / Descente
-    { duration: '15s', target: 0 },
+    // Palier 5 : Récupération / descente (0 VU)
+    { duration: '10s', target: 0 },
   ],
 
   // ============================================================================
   // 🎯 MARGE DE TOLÉRANCE DE PING & SEUILS DE QUALITÉ (Thresholds)
-  // Si le ping dépasse la marge tolérée ou si le taux d'erreur dépasse 1%,
-  // le test devient ROUGE et déclenche la création du ticket GitHub Issues.
+  // Si le ping p(95) dépasse MAX_PING_MS ou si le taux d'erreur dépasse 1%,
+  // le test échoue et déclenche la création automatique du ticket incident.
   // ============================================================================
   thresholds: {
-    // 95% des requêtes doivent répondre dans la marge de ping tolérée
-    http_req_duration: [`p(95)<${MAX_PING_MS}`, 'p(99)<1200'],
-    // Moins de 1% d'erreurs HTTP autorisées
+    // 95% des requêtes doivent répondre sous la marge de ping tolérée
+    http_req_duration: [`p(95)<${MAX_PING_MS}`, 'p(99)<1000'],
+    // Taux d'erreurs HTTP maximal toléré : 1%
     http_req_failed: ['rate<0.01'],
-    // Taux d'échec sur les vérifications fonctionnelles
+    // Taux d'erreurs fonctionnelles
     custom_error_rate: ['rate<0.01'],
   },
 };
@@ -87,7 +84,7 @@ export default function () {
       genres: ['Sci-Fi'],
       duration: 120,
       ratings: { imdb: 8.0 },
-      synopsis: 'Test palier k6',
+      synopsis: 'Test palier k6 calibré',
     });
     const params = { headers: { 'Content-Type': 'application/json' } };
     const res = http.post(`${BASE_URL}/api/movies`, payload, params);
@@ -96,6 +93,6 @@ export default function () {
     customErrorRate.add(!ok);
   }
 
-  // Temps de pause court (entre 0.1s et 0.4s) pour maximiser le parallélisme des requêtes
-  sleep(Math.random() * 0.3 + 0.1);
+  // Temps de pause court (entre 0.1s et 0.3s) pour simuler un comportement utilisateur réel
+  sleep(Math.random() * 0.2 + 0.1);
 }

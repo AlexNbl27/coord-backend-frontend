@@ -65,7 +65,7 @@ jobs:
 
             const title = `🚨 [Rupture de Charge] L API ne répond plus aux exigences de ping (<${maxPing}ms) sur ${branch} (${commitSha})`;
             const body = [
-              '## ⚠️ Rupture de charge détectée lors des tests par paliers (jusqu à 2000 requêtes) !',
+              '## ⚠️ Rupture de charge détectée lors des tests par paliers (jusqu à 500 requêtes simultanées) !',
               '',
               `Le serveur a dépassé la marge de ping tolérée (seuil **p(95) < ${maxPing}ms**) ou le taux d erreurs a excédé 1%.`,
               '',
@@ -75,7 +75,7 @@ jobs:
               `| **Branche** | \`${branch}\` |`,
               `| **Commit** | [\`${commitSha}\`](${process.env.GITHUB_SERVER_URL || 'https://github.com'}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}) |`,
               `| **Marge de ping tolérée** | \`${maxPing} ms\` (p95) |`,
-              `| **Palier maximal testé** | \`2000 utilisateurs simultanés\` |`,
+              `| **Palier maximal testé** | \`500 utilisateurs simultanés\` |`,
               `| **Déclenché par** | @${context.actor} |`,
               `| **Logs de la CI** | [Consulter le rapport k6 détaillé](${runUrl}) |`,
               `| **Date** | ${new Date().toISOString()} |`,
