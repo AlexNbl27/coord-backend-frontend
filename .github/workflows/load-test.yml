@@ -1,0 +1,46 @@
+name: API Load Testing (k6)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  load-test:
+    name: Run k6 Load & Stress Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🚀 Start MongoDB & Backend stack
+        run: |
+          docker compose up -d mongodb backend
+
+      - name: ⏳ Wait for API to be healthy
+        run: |
+          echo "Waiting for Backend API (http://localhost:3000/health) to be ready..."
+          max_retries=30
+          count=0
+          until curl -s http://localhost:3000/health | grep -q '"database":"connected"'; do
+            sleep 2
+            count=$((count+1))
+            if [ $count -ge $max_retries ]; then
+              echo "❌ Backend did not become healthy in time!"
+              docker compose logs backend
+              exit 1
+            fi
+          done
+          echo "✅ API is up and connected to MongoDB!"
+
+      - name: 📊 Execute k6 Load Test
+        run: |
+          docker compose run --rm k6-ci
+
+      - name: 🧹 Teardown Docker Stack
+        if: always()
+        run: |
+          docker compose down -v
