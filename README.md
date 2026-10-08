@@ -80,6 +80,18 @@ Vous observerez en direct :
 - Les centiles de temps de réponse (p90, p95)
 - Les vérifications (*checks*) et seuils de qualité (*thresholds*)
 
+### 🤖 Simulation CI Locale (Non-bloquant avec validation des seuils) :
+
+- Sous **Windows PowerShell** :
+  ```powershell
+  ./tests-k6/run-ci-local.ps1 -MaxVus 200 -MaxPingMs 400
+  ```
+- Sous **Linux / macOS / Bash** :
+  ```bash
+  ./tests-k6/run-ci-local.sh 200 400
+  ```
+*(Pour plus de détails sur les paliers dynamiques, consultez le guide complet dans [`tests-k6/README.md`](./tests-k6/README.md)).*
+
 ---
 
 ## 🛑 Arrêter la stack

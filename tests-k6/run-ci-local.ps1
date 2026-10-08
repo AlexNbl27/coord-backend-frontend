@@ -1,3 +1,8 @@
+param(
+    [int]$MaxVus = 500,
+    [int]$MaxPingMs = 500
+)
+
 # ==============================================================================
 # Script d'émulation locale de la CI GitHub Actions (PowerShell)
 # Exécute la même séquence que le workflow .github/workflows/load-test.yml
@@ -6,6 +11,7 @@
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "   🚀 DÉMARRAGE DE LA SIMULATION CI LOCALE (k6 LOAD TEST)  " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "⚙️ Configuration : MAX_VUS = $MaxVus (Paliers: 10%, 30%, 60%, 100%) | MAX_PING = ${MaxPingMs}ms" -ForegroundColor DarkCyan
 
 # 1. Démarrage des conteneurs backend et mongodb
 Write-Host "`n[1/4] Démarrage de MongoDB et du Backend..." -ForegroundColor Yellow
@@ -46,7 +52,7 @@ Write-Host "✅ Backend opérationnel et connecté à MongoDB !" -ForegroundColo
 
 # 3. Exécution du test de charge k6
 Write-Host "`n[3/4] Exécution du test de montée en charge k6 (mode CI)..." -ForegroundColor Yellow
-docker compose run --rm k6-ci
+docker compose run --rm -e MAX_VUS="$MaxVus" -e MAX_PING_MS="$MaxPingMs" k6-ci
 $k6ExitCode = $LASTEXITCODE
 
 # 4. Résumé et nettoyage

@@ -6,9 +6,13 @@
 
 set -e
 
+MAX_VUS="${1:-${MAX_VUS:-500}}"
+MAX_PING_MS="${2:-${MAX_PING_MS:-500}}"
+
 echo "=========================================================="
 echo "   🚀 DÉMARRAGE DE LA SIMULATION CI LOCALE (k6 LOAD TEST)  "
 echo "=========================================================="
+echo "⚙️ Configuration : MAX_VUS = $MAX_VUS (Paliers: 10%, 30%, 60%, 100%) | MAX_PING = ${MAX_PING_MS}ms"
 
 echo -e "\n[1/4] Démarrage de MongoDB et du Backend..."
 docker compose up -d mongodb backend
@@ -31,7 +35,7 @@ echo "✅ API opérationnelle et connectée à MongoDB !"
 
 echo -e "\n[3/4] Exécution du test de montée en charge k6 (mode CI)..."
 set +e
-docker compose run --rm k6-ci
+docker compose run --rm -e MAX_VUS="$MAX_VUS" -e MAX_PING_MS="$MAX_PING_MS" k6-ci
 k6_exit_code=$?
 set -e
 
