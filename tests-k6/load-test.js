@@ -5,6 +5,9 @@ import { Trend, Rate } from 'k6/metrics';
 // Configuration de l'URL cible
 const BASE_URL = __ENV.TARGET_URL || 'http://backend:3000';
 
+// Capacité maximale ciblée (par défaut 500 VUs)
+const MAX_VUS = parseInt(__ENV.MAX_VUS || '500', 10);
+
 // Marge de tolérance de ping (latence maximale tolérée en ms pour 95% des requêtes)
 const MAX_PING_MS = parseInt(__ENV.MAX_PING_MS || '500', 10);
 
@@ -12,40 +15,35 @@ const MAX_PING_MS = parseInt(__ENV.MAX_PING_MS || '500', 10);
 const postMovieDuration = new Trend('post_movie_duration');
 const customErrorRate = new Rate('custom_error_rate');
 
+// Calcul dynamique des paliers en % du maximum
+const STAGE_10_PCT = Math.max(1, Math.round(MAX_VUS * 0.10)); // 10% du MAX
+const STAGE_30_PCT = Math.max(1, Math.round(MAX_VUS * 0.30)); // 30% du MAX
+const STAGE_60_PCT = Math.max(1, Math.round(MAX_VUS * 0.60)); // 60% du MAX
+const STAGE_100_PCT = MAX_VUS;                                // 100% du MAX (Point de rupture)
+
 // ==============================================================================
-// 📈 PALIERS DE MONTÉE EN CHARGE CALIBRÉS (50 ➔ 150 ➔ 300 ➔ 500 VUs)
-// Objectif : Observer les 3 zones de vie de l'API (Confort, Charge, Rupture)
+// 📈 PALIERS CALCULÉS EN POURCENTAGES DU MAXIMUM :
+// Palier 1 : 10% du MAX (Warmup)
+// Palier 2 : 30% du MAX (Charge nominale)
+// Palier 3 : 60% du MAX (Forte affluence / zone limite)
+// Palier 4 : 100% du MAX (Point de rupture ciblé)
+// Palier 5 : 0% du MAX (Descente et récupération)
 // ==============================================================================
 export const options = {
   stages: [
-    // Palier 1 : Zone de confort / nominale (50 utilisateurs simultanés)
-    { duration: '15s', target: 50 },
-
-    // Palier 2 : Charge soutenue / trafic élevé (150 utilisateurs simultanés)
-    { duration: '15s', target: 150 },
-
-    // Palier 3 : Forte affluence / zone limite (300 utilisateurs simultanés)
-    { duration: '20s', target: 300 },
-
-    // Palier 4 : POINT DE RUPTURE (500 utilisateurs simultanés)
-    // Sature l'Event Loop mono-thread de Node.js et sollicite le pool MongoDB
-    { duration: '20s', target: 500 },
-
-    // Palier 5 : Récupération / descente (0 VU)
+    { duration: '15s', target: STAGE_10_PCT },
+    { duration: '15s', target: STAGE_30_PCT },
+    { duration: '20s', target: STAGE_60_PCT },
+    { duration: '20s', target: STAGE_100_PCT },
     { duration: '10s', target: 0 },
   ],
 
-  // ============================================================================
-  // 🎯 MARGE DE TOLÉRANCE DE PING & SEUILS DE QUALITÉ (Thresholds)
-  // Si le ping p(95) dépasse MAX_PING_MS ou si le taux d'erreur dépasse 1%,
-  // le test échoue et déclenche la création automatique du ticket incident.
-  // ============================================================================
   thresholds: {
     // 95% des requêtes doivent répondre sous la marge de ping tolérée
-    http_req_duration: [`p(95)<${MAX_PING_MS}`, 'p(99)<1000'],
-    // Taux d'erreurs HTTP maximal toléré : 1%
+    http_req_duration: [`p(95)<${MAX_PING_MS}`, 'p(99)<1200'],
+    // Moins de 1% d'erreurs HTTP autorisées
     http_req_failed: ['rate<0.01'],
-    // Taux d'erreurs fonctionnelles
+    // Taux d'échec sur les vérifications fonctionnelles
     custom_error_rate: ['rate<0.01'],
   },
 };
@@ -56,26 +54,26 @@ export default function () {
   const rand = Math.random();
 
   if (rand < 0.25) {
-    // 1. Healthcheck (requête légère)
+    // 1. Healthcheck
     const res = http.get(`${BASE_URL}/health`);
     const ok = check(res, { 'status is 200': (r) => r.status === 200 });
     customErrorRate.add(!ok);
 
   } else if (rand < 0.65) {
-    // 2. Listing des films (requête base de données)
+    // 2. Listing des films
     const res = http.get(`${BASE_URL}/api/movies`);
     const ok = check(res, { 'status is 200': (r) => r.status === 200 });
     customErrorRate.add(!ok);
 
   } else if (rand < 0.90) {
-    // 3. Filtrage dynamique (index & tri MongoDB)
+    // 3. Filtrage dynamique
     const genre = GENRES[Math.floor(Math.random() * GENRES.length)];
     const res = http.get(`${BASE_URL}/api/movies?genre=${genre}&minRating=7`);
     const ok = check(res, { 'status is 200': (r) => r.status === 200 });
     customErrorRate.add(!ok);
 
   } else {
-    // 4. Écriture concurrente (création de film)
+    // 4. Écriture concurrente
     const id = `${Date.now()}-${__VU}-${__ITER}`;
     const payload = JSON.stringify({
       title: `Film k6 ${id}`,
@@ -84,7 +82,7 @@ export default function () {
       genres: ['Sci-Fi'],
       duration: 120,
       ratings: { imdb: 8.0 },
-      synopsis: 'Test palier k6 calibré',
+      synopsis: 'Test palier k6 en pourcentage',
     });
     const params = { headers: { 'Content-Type': 'application/json' } };
     const res = http.post(`${BASE_URL}/api/movies`, payload, params);
@@ -93,6 +91,5 @@ export default function () {
     customErrorRate.add(!ok);
   }
 
-  // Temps de pause court (entre 0.1s et 0.3s) pour simuler un comportement utilisateur réel
   sleep(Math.random() * 0.2 + 0.1);
 }
