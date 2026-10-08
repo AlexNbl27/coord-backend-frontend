@@ -7,11 +7,10 @@ on:
     branches: [ "main", "master", "develop" ]
   workflow_dispatch:
     inputs:
-      simulate_failure:
-        description: 'Simuler un échec de performance (seuil 1ms) pour tester la création d issue ?'
+      max_ping_ms:
+        description: 'Marge de ping tolérée en ms (p95) avant création de ticket (défaut: 500)'
         required: false
-        type: boolean
-        default: false
+        default: '500'
 
 permissions:
   contents: read
@@ -49,12 +48,9 @@ jobs:
       - name: 📊 Execute k6 Load Test
         id: k6_test
         run: |
-          if [ "${{ github.event.inputs.simulate_failure }}" = "true" ]; then
-            echo "⚠️ Simulation d'échec activée : seuil imposé à 1ms pour déclencher l'alerte !"
-            docker compose run --rm --entrypoint "k6 run /scripts/load-test.js --threshold 'http_req_duration=p(95)<1'" k6
-          else
-            docker compose run --rm k6-ci
-          fi
+          MAX_PING="${{ github.event.inputs.max_ping_ms || '500' }}"
+          echo "Démarrage du test de charge par paliers (jusqu'à 2000 VUs) avec marge de ping tolérée à ${MAX_PING}ms..."
+          docker compose run --rm -e MAX_PING_MS="$MAX_PING" k6-ci
 
       - name: 🚨 Create GitHub Issue on Test Failure
         if: failure() && steps.k6_test.outcome == 'failure'
@@ -65,30 +61,33 @@ jobs:
             const runUrl = `${process.env.GITHUB_SERVER_URL || 'https://github.com'}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const commitSha = context.sha.substring(0, 7);
             const branch = context.ref.replace('refs/heads/', '');
+            const maxPing = '${{ github.event.inputs.max_ping_ms || '500' }}';
 
-            const title = `🚨 [Performance Regression] Échec du test k6 sur ${branch} (${commitSha})`;
+            const title = `🚨 [Rupture de Charge] L API ne répond plus aux exigences de ping (<${maxPing}ms) sur ${branch} (${commitSha})`;
             const body = [
-              '## ⚠️ Régression de performance détectée lors du test de charge !',
+              '## ⚠️ Rupture de charge détectée lors des tests par paliers (jusqu à 2000 requêtes) !',
               '',
-              'Un ou plusieurs seuils de performance (*thresholds*) ou taux d erreurs ont été dépassés lors du test automatisé k6.',
+              `Le serveur a dépassé la marge de ping tolérée (seuil **p(95) < ${maxPing}ms**) ou le taux d erreurs a excédé 1%.`,
               '',
               '### 📋 Informations du Run',
               '| Paramètre | Valeur |',
               '| :--- | :--- |',
               `| **Branche** | \`${branch}\` |`,
               `| **Commit** | [\`${commitSha}\`](${process.env.GITHUB_SERVER_URL || 'https://github.com'}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}) |`,
-              `| **Auteur / Déclencheur** | @${context.actor} |`,
-              `| **Logs CI** | [Consulter les logs](${runUrl}) |`,
+              `| **Marge de ping tolérée** | \`${maxPing} ms\` (p95) |`,
+              `| **Palier maximal testé** | \`2000 utilisateurs simultanés\` |`,
+              `| **Déclenché par** | @${context.actor} |`,
+              `| **Logs de la CI** | [Consulter le rapport k6 détaillé](${runUrl}) |`,
               `| **Date** | ${new Date().toISOString()} |`,
               '',
               '---',
               '',
-              '### 🔍 Actions correctives pour l équipe :',
-              '- [ ] Vérifier les temps de réponse de l API Express (/api/movies)',
-              '- [ ] Vérifier les index MongoDB dans backend/src/models/Movie.js',
-              '- [ ] Analyser les logs et la latence k6',
+              '### 🔍 Diagnostic recommandé :',
+              '- [ ] Identifier à quel palier (100, 500, 1000 ou 2000 VUs) le ping a franchi la marge tolérée.',
+              '- [ ] Vérifier la saturation de l Event Loop Node.js ou du pool de connexions MongoDB.',
+              '- [ ] Mettre en place un clustering ou un autoscaling pour répartir la charge.',
               '',
-              '> *Issue générée automatiquement par la CI GitHub Actions.*'
+              '> *Ticket incident ouvert automatiquement par le pipeline CI suite à l échec des tests de performance.*'
             ].join('\n');
 
             await github.rest.issues.create({
