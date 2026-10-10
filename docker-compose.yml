@@ -42,6 +42,8 @@ services:
       - K6_WEB_DASHBOARD_HOST=0.0.0.0
       - K6_WEB_DASHBOARD_PORT=5665
       - TARGET_URL=http://backend:3000
+      - MAX_VUS=${MAX_VUS:-500}
+      - MAX_PING_MS=${MAX_PING_MS:-500}
     entrypoint: ["k6", "run", "--linger", "/scripts/load-test.js"]
     networks:
       - ynov-network
@@ -56,6 +58,8 @@ services:
       - ./tests-k6:/scripts
     environment:
       - TARGET_URL=http://backend:3000
+      - MAX_VUS=${MAX_VUS:-500}
+      - MAX_PING_MS=${MAX_PING_MS:-500}
     entrypoint: ["k6", "run", "/scripts/load-test.js"]
     networks:
       - ynov-network

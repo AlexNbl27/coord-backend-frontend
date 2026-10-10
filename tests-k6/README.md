@@ -6,23 +6,29 @@ Ce dossier contient les scénarios de test de charge conçus pour évaluer la r�
 
 ## 📈 Scénario de montée en charge (`load-test.js`)
 
-Le test simule une montée progressive par paliers (**Ramping VUs**) :
-1. **0s ➜ 15s** : Montée douce de 0 à **10 VUs** (*Warmup*).
-2. **15s ➜ 35s** : Charge de croisière à **25 VUs**.
-3. **35s ➜ 55s** : Pic de charge (*Stress test*) à **50 VUs**.
-4. **55s ➜ 70s** : Récupération et descente à **0 VU**.
+Le test simule une montée progressive par paliers calculés dynamiquement en **pourcentages de la charge maximale (`MAX_VUS`)** :
+1. **0s ➜ 15s** : Montée à **10% du MAX** (*Warmup*).
+2. **15s ➜ 30s** : Montée à **30% du MAX** (*Charge nominale*).
+3. **30s ➜ 50s** : Montée à **60% du MAX** (*Zone limite / Forte affluence*).
+4. **50s ➜ 70s** : Pic à **100% du MAX** (*Point de rupture ciblé*).
+5. **70s ➜ 80s** : Descente et récupération à **0 VU**.
+
+### ⚙️ Paramètres configurables (Variables d'environnement) :
+- `MAX_VUS` : Capacité maximale ciblée (par défaut : `500` VUs).
+- `MAX_PING_MS` : Marge de latence/ping tolérée au 95e centile (par défaut : `500` ms).
+- `TARGET_URL` : URL de l'API ciblée (par défaut : `http://backend:3000`).
 
 ### Mix de trafic simulé :
-- `20%` : `GET /health` (requêtes de santé légères).
+- `25%` : `GET /health` (requêtes de santé légères).
 - `40%` : `GET /api/movies` (consultation de la liste des films).
-- `30%` : `GET /api/movies?genre=...&minRating=...` (requêtes filtrées avec index Mongoose).
+- `25%` : `GET /api/movies?genre=...&minRating=...` (requêtes filtrées avec index Mongoose).
 - `10%` : `POST /api/movies` (écritures concurrentes dans MongoDB).
 
 ### Seuils de qualité (*Thresholds*) :
-- Taux d'échec global : `< 2%`
-- Temps de réponse p95 : `< 400ms`
-- Temps de réponse p99 : `< 800ms`
-- Temps de création de film p90 : `< 500ms`
+- Temps de réponse p95 : `< MAX_PING_MS` (par défaut `< 500ms`)
+- Temps de réponse p99 : `< 1200ms`
+- Taux d'échec HTTP global : `< 1%`
+- Taux d'échec des vérifications fonctionnelles : `< 1%`
 
 ---
 
@@ -46,25 +52,33 @@ Ce mode exécute le test de manière non-bloquante et valide automatiquement les
 
 ### A. Exécution locale (Simulation CI)
 
+Vous pouvez exécuter le script avec les valeurs par défaut (500 VUs, ping 500ms) ou spécifier vos propres valeurs :
+
 - **Sur Windows (PowerShell)** :
   ```powershell
+  # Valeurs par défaut (500 VUs, 500ms ping toléré) :
   ./tests-k6/run-ci-local.ps1
+
+  # Avec valeurs personnalisées :
+  ./tests-k6/run-ci-local.ps1 -MaxVus 200 -MaxPingMs 400
   ```
 - **Sur Linux / macOS / Git Bash** :
   ```bash
   chmod +x ./tests-k6/run-ci-local.sh
+  # Valeurs par défaut :
   ./tests-k6/run-ci-local.sh
+
+  # Avec valeurs personnalisées :
+  ./tests-k6/run-ci-local.sh 200 400
   ```
 - **Ou directement via Docker Compose** :
   ```bash
-  docker compose run --rm k6-ci
+  docker compose run --rm -e MAX_VUS=200 -e MAX_PING_MS=400 k6-ci
   ```
 
-### B. Exécution avec l'outil `act` (Runner GitHub Actions local)
-Si vous avez installé [act](https://github.com/nektos/act) sur votre machine :
-```bash
-act -W .github/workflows/load-test.yml
-```
+### B. Pipeline GitHub Actions & Création d'Issue automatique
+Le workflow [`.github/workflows/load-test.yml`](../.github/workflows/load-test.yml) se déclenche :
+- Automatiquement lors des `push` et `pull_request` sur les branches `main`, `master` et `develop`.
+- Manuellement via le bouton **"Run workflow"** avec choix des valeurs `max_vus` et `max_ping_ms`.
 
-### C. Pipeline GitHub Actions distant
-Le fichier [`.github/workflows/load-test.yml`](../.github/workflows/load-test.yml) se déclenche automatiquement lors des push / pull requests ou manuellement via le bouton **"Run workflow"** sur GitHub Actions.
+🚨 **Notification incident** : Si l'API dépasse la marge de ping tolérée ou subit plus de 1% d'erreurs, le job CI échoue et **ouvre automatiquement un ticket GitHub (Issue)** avec tous les détails du run (commit, branche, métriques ciblées, diagnostic recommandé).
