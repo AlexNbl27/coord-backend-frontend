@@ -7,6 +7,10 @@ on:
     branches: [ "main", "master", "develop" ]
   workflow_dispatch:
     inputs:
+      max_vus:
+        description: 'Capacité maximale ciblée (MAX_VUS) - Les paliers seront à 10%, 30%, 60%, 100%'
+        required: false
+        default: '500'
       max_ping_ms:
         description: 'Marge de ping tolérée en ms (p95) avant création de ticket (défaut: 500)'
         required: false
@@ -48,9 +52,10 @@ jobs:
       - name: 📊 Execute k6 Load Test
         id: k6_test
         run: |
+          MAX_VUS="${{ github.event.inputs.max_vus || '500' }}"
           MAX_PING="${{ github.event.inputs.max_ping_ms || '500' }}"
-          echo "Démarrage du test de charge par paliers (jusqu'à 2000 VUs) avec marge de ping tolérée à ${MAX_PING}ms..."
-          docker compose run --rm -e MAX_PING_MS="$MAX_PING" k6-ci
+          echo "Lancement du test k6 (MAX_VUS: ${MAX_VUS}, Paliers: 10%, 30%, 60%, 100%, Tolérance ping: ${MAX_PING}ms)..."
+          docker compose run --rm -e MAX_VUS="$MAX_VUS" -e MAX_PING_MS="$MAX_PING" k6-ci
 
       - name: 🚨 Create GitHub Issue on Test Failure
         if: failure() && steps.k6_test.outcome == 'failure'
@@ -61,11 +66,12 @@ jobs:
             const runUrl = `${process.env.GITHUB_SERVER_URL || 'https://github.com'}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const commitSha = context.sha.substring(0, 7);
             const branch = context.ref.replace('refs/heads/', '');
+            const maxVus = '${{ github.event.inputs.max_vus || '500' }}';
             const maxPing = '${{ github.event.inputs.max_ping_ms || '500' }}';
 
             const title = `🚨 [Rupture de Charge] L API ne répond plus aux exigences de ping (<${maxPing}ms) sur ${branch} (${commitSha})`;
             const body = [
-              '## ⚠️ Rupture de charge détectée lors des tests par paliers (jusqu à 500 requêtes simultanées) !',
+              '## ⚠️ Rupture de charge détectée lors des tests par paliers !',
               '',
               `Le serveur a dépassé la marge de ping tolérée (seuil **p(95) < ${maxPing}ms**) ou le taux d erreurs a excédé 1%.`,
               '',
@@ -74,8 +80,9 @@ jobs:
               '| :--- | :--- |',
               `| **Branche** | \`${branch}\` |`,
               `| **Commit** | [\`${commitSha}\`](${process.env.GITHUB_SERVER_URL || 'https://github.com'}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}) |`,
+              `| **Capacité cible (100%)** | \`${maxVus} VUs simultanés\` |`,
+              `| **Paliers exécutés** | \`10%, 30%, 60%, 100%\` |`,
               `| **Marge de ping tolérée** | \`${maxPing} ms\` (p95) |`,
-              `| **Palier maximal testé** | \`500 utilisateurs simultanés\` |`,
               `| **Déclenché par** | @${context.actor} |`,
               `| **Logs de la CI** | [Consulter le rapport k6 détaillé](${runUrl}) |`,
               `| **Date** | ${new Date().toISOString()} |`,
@@ -83,9 +90,9 @@ jobs:
               '---',
               '',
               '### 🔍 Diagnostic recommandé :',
-              '- [ ] Identifier à quel palier (100, 500, 1000 ou 2000 VUs) le ping a franchi la marge tolérée.',
+              '- [ ] Identifier à quel palier (10%, 30%, 60% ou 100%) le ping a franchi la marge tolérée.',
               '- [ ] Vérifier la saturation de l Event Loop Node.js ou du pool de connexions MongoDB.',
-              '- [ ] Mettre en place un clustering ou un autoscaling pour répartir la charge.',
+              '- [ ] Mettre en place un clustering ou un cache Redis pour absorber le pic.',
               '',
               '> *Ticket incident ouvert automatiquement par le pipeline CI suite à l échec des tests de performance.*'
             ].join('\n');
