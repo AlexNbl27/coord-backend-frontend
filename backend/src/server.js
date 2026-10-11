@@ -2,61 +2,91 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cluster from 'node:cluster';
+import os from 'node:os';
 import { movieRouter } from './routes/movieRoutes.js';
 
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb:27017/cours_db?directConnection=true';
+const numCPUs = process.env.WEB_CONCURRENCY
+  ? parseInt(process.env.WEB_CONCURRENCY, 10)
+  : (os.availableParallelism ? os.availableParallelism() : os.cpus().length);
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
+function createServer() {
+  const app = express();
 
-// Racine
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Bienvenue sur l\'API du projet YNOV (Backend) !',
-    version: '1.0.0',
-    endpoints: {
-      health: 'GET /health',
-      getAllMovies: 'GET /api/movies',
-      getOneMovie: 'GET /api/movies/:id',
-      createMovie: 'POST /api/movies',
-      updateMovie: 'PUT /api/movies/:id',
-      deleteMovie: 'DELETE /api/movies/:id'
-    }
+  // Middlewares
+  app.use(cors());
+  app.use(express.json());
+
+  // Racine
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'Bienvenue sur l\'API du projet YNOV (Backend) !',
+      version: '1.0.0',
+      workerPid: process.pid,
+      endpoints: {
+        health: 'GET /health',
+        getAllMovies: 'GET /api/movies',
+        getOneMovie: 'GET /api/movies/:id',
+        createMovie: 'POST /api/movies',
+        updateMovie: 'PUT /api/movies/:id',
+        deleteMovie: 'DELETE /api/movies/:id'
+      }
+    });
   });
-});
 
-// Santé
-app.get('/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  res.json({
-    status: 'OK',
-    database: dbStatus,
-    timestamp: new Date().toISOString()
+  // Santé
+  app.get('/health', (req, res) => {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({
+      status: 'OK',
+      database: dbStatus,
+      workerPid: process.pid,
+      timestamp: new Date().toISOString()
+    });
   });
-});
 
-// Routes CRUD
-app.use('/api/movies', movieRouter);
+  // Routes CRUD
+  app.use('/api/movies', movieRouter);
 
-// Connexion MongoDB & Démarrage
-async function startServer() {
+  return app;
+}
+
+// Connexion MongoDB & Démarrage du Worker
+async function startWorker() {
   try {
-    console.log(`[MongoDB] Connexion en cours à : ${MONGO_URI}...`);
-    await mongoose.connect(MONGO_URI);
-    console.log('[MongoDB] Connecté avec succès !');
+    await mongoose.connect(MONGO_URI, {
+      maxPoolSize: 50,
+      minPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+    });
+    console.log(`[MongoDB] Connecté avec succès (Worker ${process.pid}) !`);
 
+    const app = createServer();
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`[API] Serveur Express en écoute sur http://localhost:${PORT}`);
+      console.log(`[API] Worker ${process.pid} en écoute sur http://localhost:${PORT}`);
     });
   } catch (err) {
-    console.error('[MongoDB] Erreur de connexion :', err.message);
+    console.error(`[Worker ${process.pid}] Erreur de démarrage :`, err.message);
     process.exit(1);
   }
 }
 
-startServer();
+// Gestion du clustering multi-cœurs
+if (cluster.isPrimary && numCPUs > 1) {
+  console.log(`[Cluster] Master ${process.pid} lance ${numCPUs} workers...`);
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
+
+  cluster.on('exit', (worker) => {
+    console.log(`[Cluster] Worker ${worker.process.pid} arrêté. Redémarrage...`);
+    cluster.fork();
+  });
+} else {
+  startWorker();
+}
+

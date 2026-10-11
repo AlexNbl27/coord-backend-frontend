@@ -4,15 +4,49 @@ import { Movie } from '../models/Movie.js';
 export const movieRouter = Router();
 
 // ==========================================
-// 1. GET ALL - Récupérer tous les films (avec filtres optionnels)
+// 🚀 Cache mémoire léger (TTL 5s) avec invalidation
+// ==========================================
+const cache = new Map();
+const CACHE_TTL_MS = 5000;
+
+function getCached(key) {
+  const item = cache.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+function setCache(key, data) {
+  if (cache.size > 200) {
+    cache.clear();
+  }
+  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+export function clearMovieCache() {
+  cache.clear();
+}
+
+// ==========================================
+// 1. GET ALL - Récupérer les films avec pagination et cache
 // ==========================================
 movieRouter.get('/', async (req, res) => {
   try {
+    const cacheKey = req.originalUrl || req.url;
+    const cachedData = getCached(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const { genre, director, minRating, search } = req.query;
     const filter = {};
 
     if (genre) {
-      filter.genres = { $in: [new RegExp(genre, 'i')] };
+      // Utilisation directe pour exploiter l'index composite B-Tree
+      filter.genres = genre;
     }
     if (director) {
       filter.director = new RegExp(director, 'i');
@@ -24,11 +58,27 @@ movieRouter.get('/', async (req, res) => {
       filter.$text = { $search: search };
     }
 
-    const movies = await Movie.find(filter).sort({ year: -1 });
-    res.json({
+    // Pagination pour préserver la mémoire vive sous forte affluence
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const skip = (page - 1) * limit;
+
+    // .lean() permet d'éviter l'overhead d'hydratation Mongoose (x5 plus rapide)
+    const movies = await Movie.find(filter)
+      .sort({ year: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const responsePayload = {
       count: movies.length,
+      page,
+      limit,
       data: movies
-    });
+    };
+
+    setCache(cacheKey, responsePayload);
+    res.json(responsePayload);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -39,7 +89,7 @@ movieRouter.get('/', async (req, res) => {
 // ==========================================
 movieRouter.get('/:id', async (req, res) => {
   try {
-    const movie = await Movie.findById(req.params.id);
+    const movie = await Movie.findById(req.params.id).lean();
     if (!movie) {
       return res.status(404).json({ error: 'Film non trouvé' });
     }
@@ -56,6 +106,7 @@ movieRouter.post('/', async (req, res) => {
   try {
     const newMovie = new Movie(req.body);
     const savedMovie = await newMovie.save();
+    clearMovieCache(); // Invalidation du cache de lecture
     res.status(201).json({
       message: 'Film créé avec succès !',
       data: savedMovie
@@ -78,6 +129,7 @@ movieRouter.put('/:id', async (req, res) => {
     if (!updatedMovie) {
       return res.status(404).json({ error: 'Film non trouvé' });
     }
+    clearMovieCache();
     res.json({
       message: 'Film mis à jour avec succès !',
       data: updatedMovie
@@ -96,6 +148,7 @@ movieRouter.delete('/:id', async (req, res) => {
     if (!deletedMovie) {
       return res.status(404).json({ error: 'Film non trouvé' });
     }
+    clearMovieCache();
     res.json({
       message: 'Film supprimé avec succès !',
       deletedId: req.params.id
