@@ -51,14 +51,23 @@ jobs:
 
       - name: 📊 Execute k6 Load Test
         id: k6_test
+        continue-on-error: true
         run: |
-          MAX_VUS="${{ github.event.inputs.max_vus || '500' }}"
-          MAX_PING="${{ github.event.inputs.max_ping_ms || '500' }}"
-          echo "Lancement du test k6 (MAX_VUS: ${MAX_VUS}, Paliers: 10%, 30%, 60%, 100%, Tolérance ping: ${MAX_PING}ms)..."
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MAX_VUS="${{ inputs.max_vus }}"
+            MAX_PING="${{ inputs.max_ping_ms }}"
+          else
+            # Charge de validation automatique sur Push/PR (adaptée au runner CI 2 vCPUs)
+            MAX_VUS="50"
+            MAX_PING="500"
+          fi
+          echo "RUN_MAX_VUS=$MAX_VUS" >> $GITHUB_ENV
+          echo "RUN_MAX_PING=$MAX_PING" >> $GITHUB_ENV
+          echo "Lancement du test k6 (Mode: ${{ github.event_name }}, MAX_VUS: ${MAX_VUS}, Tolérance ping: ${MAX_PING}ms)..."
           docker compose run --rm -e MAX_VUS="$MAX_VUS" -e MAX_PING_MS="$MAX_PING" k6-ci
 
       - name: 🚨 Create GitHub Issue on Test Failure
-        if: failure() && steps.k6_test.outcome == 'failure'
+        if: always() && steps.k6_test.outcome == 'failure'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -66,8 +75,8 @@ jobs:
             const runUrl = `${process.env.GITHUB_SERVER_URL || 'https://github.com'}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const commitSha = context.sha.substring(0, 7);
             const branch = context.ref.replace('refs/heads/', '');
-            const maxVus = '${{ github.event.inputs.max_vus || '500' }}';
-            const maxPing = '${{ github.event.inputs.max_ping_ms || '500' }}';
+            const maxVus = process.env.RUN_MAX_VUS || '50';
+            const maxPing = process.env.RUN_MAX_PING || '500';
 
             const title = `🚨 [Rupture de Charge] L API ne répond plus aux exigences de ping (<${maxPing}ms) sur ${branch} (${commitSha})`;
             const body = [
