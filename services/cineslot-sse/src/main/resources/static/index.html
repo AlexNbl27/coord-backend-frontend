@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CinéSlot · Billetterie Cinéma en Direct (SSE)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app" v-cloak>
+    <header>
+      <div class="brand">
+        <span class="icon">🍿</span>
+        <strong>CinéSlot</strong>
+      </div>
+      <span class="tagline">BILLETTERIE · SYNCHRONISATION DES SÉANCES EN DIRECT (SSE)</span>
+    </header>
+
+    <main>
+      <p class="eyebrow">🎬 SÉANCES EN TEMPS RÉEL · RÉSERVATION CONCURRENTE SANS RECHARGEMENT</p>
+      <h1>Les séances de cinéma,<br><span class="gradient-text">en direct.</span></h1>
+      <p class="intro">Ouvrez deux onglets. Réservez une place dans le premier, observez le second passer instantanément à <em>Complet</em>.</p>
+      
+      <div class="toolbar">
+        <span :class="['connection', connection.includes('Connecté') ? 'connected' : 'connecting']">
+          <span class="status-dot"></span>
+          {{ connection }}
+        </span>
+        <button class="btn-create" @click="createSlot">
+          <span>+</span> Ajouter une séance de test
+        </button>
+      </div>
+
+      <p class="message" role="status">
+        {{ message || 'Prêt pour la démonstration en direct.' }}
+      </p>
+
+      <p v-if="!slots.length" class="empty-state">
+        Aucune séance programmée. Cliquez sur <strong>« Ajouter une séance de test »</strong> pour commencer.
+      </p>
+
+      <div class="grid">
+        <article v-for="slot in slots" :key="slot.id" :class="['card', slot.status]">
+          <div class="card-header">
+            <span class="date">📅 {{ new Date(slot.startsAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }}</span>
+            <span class="id">#{{ slot.id.slice(0,8) }}</span>
+          </div>
+
+          <h2>{{ slot.movieTitle || 'Séance Cinéma' }}</h2>
+          <p class="hall">{{ slot.hall || 'Salle Principale · Son Dolby' }}</p>
+
+          <div class="card-footer">
+            <p :class="['badge', slot.status]">
+              {{ slot.status === 'AVAILABLE' ? '🟢 1 place disponible' : '🔴 Séance complète' }}
+            </p>
+            <button 
+              :disabled="slot.status !== 'AVAILABLE' || pending === slot.id" 
+              @click="reserve(slot)"
+              class="btn-reserve"
+            >
+              {{ pending === slot.id ? 'Réservation…' : slot.status === 'BOOKED' ? 'Complet' : 'Réserver ma place' }}
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <p class="note">
+        Données de démonstration du laboratoire YNOV · Synchronisation Server-Sent Events (SSE) native · Spring Boot & MongoDB.
+      </p>
+    </main>
+  </div>
+
+  <script src="vue.global.prod.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
