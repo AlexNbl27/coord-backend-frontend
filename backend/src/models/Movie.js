@@ -48,6 +48,12 @@ const movieSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
+  synopsis: {
+    type: String
+  },
+  poster: {
+    type: String
+  },
   reviews: [reviewSchema]
 }, {
   timestamps: true,
