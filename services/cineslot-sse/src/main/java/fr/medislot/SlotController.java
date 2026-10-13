@@ -50,6 +50,12 @@ public class SlotController {
     return new BookingView(s.bookingId, s.id, s.status);
   }
 
+  @DeleteMapping("/slots/{id}/reservations")
+  public SlotView cancel(@PathVariable String id) {
+    Slot s = service.cancel(id);
+    return SlotView.from(s);
+  }
+
   @GetMapping(value="/slots/events", produces=MediaType.TEXT_EVENT_STREAM_VALUE)
   public SseEmitter stream() { 
     return events.subscribe(); 
