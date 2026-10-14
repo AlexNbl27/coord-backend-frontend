@@ -1,46 +1,38 @@
-# =============================================================================
-# Dockerfile pour le Frontend (Vite + Vue 3 + TypeScript)
-# Mode : Développement (avec hot-reload)
-# =============================================================================
+# Dockerfile for Cineslot Frontend (Vue 3 + Vite)
+# Multi-stage build for production
 
-# Build stage
+# Stage 1: Build the application
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copier les fichiers de configuration
+# Copy package files first for better caching
 COPY package*.json ./
-COPY vite.config.ts ./
-COPY tailwind.config.js ./
-COPY tsconfig.json ./
 
-# Installer les dépendances
+# Install dependencies
 RUN npm ci
 
-# Copier le reste des sources
-COPY src ./src
-COPY public ./public
-COPY index.html .
+# Copy source files
+COPY . .
 
-# Run stage (développement)
-FROM node:20-alpine AS runner
+# Build the application
+RUN npm run build
 
-WORKDIR /app
+# Stage 2: Serve the application
+FROM nginx:alpine
 
-ENV NODE_ENV=development
+# Copy built files from builder
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copier les dépendances et les sources depuis le builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/vite.config.ts ./
-COPY --from=builder /app/tailwind.config.js ./
-COPY --from=builder /app/tsconfig.json ./
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/index.html .
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Exposer le port Vite
-EXPOSE 5173
+# Expose port
+EXPOSE 80
 
-# Lancer le serveur de développement Vite
-CMD ["npm", "run", "dev"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
