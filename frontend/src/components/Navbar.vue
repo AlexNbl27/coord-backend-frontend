@@ -84,6 +84,17 @@
             </span>
           </router-link>
 
+          <!-- Bouton Test A/B -->
+          <button
+            @click="handleOpenAbModal"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/40 text-accent-gold text-xs font-bold transition-all shadow-sm cursor-pointer"
+            title="Consulter les métriques du Test A/B"
+          >
+            <span>🧪</span>
+            <span class="hidden sm:inline">Test A/B :</span>
+            <span>{{ variant }}</span>
+          </button>
+
           <!-- Mobile menu button -->
           <button
             @click="toggleMobileMenu"
@@ -162,14 +173,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useSlotsStore } from '../stores/slots';
 import { useReservations } from '../composables/useReservations';
+import { useAbTest } from '../composables/useAbTest';
 
 const slotsStore = useSlotsStore();
 const { sseConnected } = storeToRefs(slotsStore);
 const { activeBookingsCount } = useReservations();
+const { variant } = useAbTest();
+
+const openAbMetricsModal = inject<() => void>('openAbMetricsModal');
+
+const handleOpenAbModal = () => {
+  if (openAbMetricsModal) {
+    openAbMetricsModal();
+  }
+};
 
 const mobileMenuOpen = ref(false);
 

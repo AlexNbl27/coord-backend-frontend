@@ -204,13 +204,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, inject } from 'vue';
+import { ref, computed, onMounted, inject, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMoviesStore } from '../stores/movies';
 import { useSlotsStore } from '../stores/slots';
 import { useMovies } from '../composables/useMovies';
 import { useSlots } from '../composables/useSlots';
 import { useReservations } from '../composables/useReservations';
+import { useAbTest } from '../composables/useAbTest';
 import MovieCard from '../components/MovieCard.vue';
 import SlotCard from '../components/SlotCard.vue';
 import type { Movie } from '../composables/useMovies';
@@ -222,6 +223,7 @@ const slotsStore = useSlotsStore();
 const { fetchMovies } = useMovies();
 const { fetchSlots, connectSse, reserveSlot, sseConnected, loading: loadingSlots } = useSlots();
 const { saveBooking } = useReservations();
+const { exposeIfAvailable } = useAbTest();
 const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
 
 const loadingPopular = ref(false);
@@ -230,6 +232,12 @@ const selectedMovie = ref<Movie | null>(null);
 
 const popularMovies = computed(() => moviesStore.popularMovies);
 const availableSlots = computed(() => slotsStore.availableSlots);
+
+watch(availableSlots, (slots) => {
+  if (slots.length > 0) {
+    exposeIfAvailable(true);
+  }
+}, { immediate: true });
 
 const movieSlots = computed(() => {
   if (!selectedMovie.value) return [];

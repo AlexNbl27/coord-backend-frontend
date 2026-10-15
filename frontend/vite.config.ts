@@ -13,16 +13,11 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      // Proxy vers l'API Films Node.js
-      '/api/movies': {
+      // Proxy vers l'API Express Node.js (Films, Séances/SSE, Test A/B)
+      '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-      },
-      // Proxy vers l'API Billetterie SSE Spring Boot
-      '/api/slots': {
-        target: 'http://localhost:8086',
-        changeOrigin: true,
-        ws: true, // Important pour Server-Sent Events
+        ws: true,
       },
     },
   },
