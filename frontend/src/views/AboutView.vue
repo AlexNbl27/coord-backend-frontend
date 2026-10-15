@@ -1,16 +1,17 @@
 <template>
-  <div class="min-h-screen">
-    <!-- En-tête -->
-    <section class="py-12 px-4 sm:px-6 lg:px-8">
-      <div class="page-container">
-        <h1 class="section-title">ℹ️ À propos de CinéSlot</h1>
-        <p class="section-subtitle">Plateforme de réservation de films en temps réel</p>
+  <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto">
+      <!-- En-tête standardisé -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-3xl">ℹ️</span>
+        <div>
+          <h1 class="text-3xl font-extrabold text-white tracking-tight">À propos de CinéSlot</h1>
+          <p class="text-cinema-textMuted text-sm mt-1">Plateforme de réservation de cinéma haute fidélité en temps réel</p>
+        </div>
       </div>
-    </section>
 
-    <!-- Contenu -->
-    <section class="section">
-      <div class="page-container max-w-4xl">
+      <!-- Contenu principal -->
+      <div class="space-y-12">
         <!-- Introduction -->
         <div class="mb-12">
           <h2 class="text-2xl font-bold text-white mb-4">Qu'est-ce que CinéSlot ?</h2>
@@ -146,14 +147,14 @@
         </div>
 
         <!-- Équipe -->
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-white mb-6">Projet académique YNOV</h2>
-          <p class="text-cinema-textMuted leading-relaxed">
+        <div class="text-center pt-8 border-t border-cinema-border/30">
+          <h2 class="text-2xl font-bold text-white mb-2">Projet académique YNOV</h2>
+          <p class="text-cinema-textMuted text-sm leading-relaxed">
             Développé dans le cadre du module <span class="text-accent-gold font-semibold">Coordination Backend & Frontend</span>.
           </p>
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </template>
 

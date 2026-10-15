@@ -1,76 +1,107 @@
 <template>
   <div
-    class="slot-card transition-all duration-300"
+    class="slot-card transition-all duration-300 flex flex-col h-full justify-between"
     :class="{
       'slot-card-available': slot.status === 'AVAILABLE',
       'slot-card-booked': slot.status === 'BOOKED'
     }"
     @click="handleSlotClick"
   >
-    <!-- En-tête avec titre du film et statut -->
-    <div class="flex justify-between items-start mb-3">
-      <div class="flex-1">
-        <h4 class="text-white font-bold text-lg line-clamp-1">
-          {{ slot.movieTitle }}
-        </h4>
-        <p class="text-cinema-textMuted text-sm mt-1">
-          {{ slot.hall }}
+    <!-- Contenu haut -->
+    <div>
+      <!-- En-tête avec titre du film et statut -->
+      <div class="flex justify-between items-start gap-2 mb-3">
+        <div class="flex-1">
+          <h4 class="text-white font-bold text-base sm:text-lg line-clamp-1 leading-snug">
+            {{ slot.movieTitle }}
+          </h4>
+          <p class="text-cinema-textMuted text-xs mt-1">
+            {{ slot.hall }}
+          </p>
+        </div>
+        
+        <!-- Badge de statut -->
+        <span
+          class="badge whitespace-nowrap shrink-0"
+          :class="{
+            'badge-available': slot.status === 'AVAILABLE',
+            'badge-booked': slot.status === 'BOOKED'
+          }"
+        >
+          {{ slot.status === 'AVAILABLE' ? 'Disponible' : 'Complet' }}
+        </span>
+      </div>
+
+      <!-- Horaires -->
+      <div class="flex items-center gap-2 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cinema-textMuted shrink-0" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+        </svg>
+        <span class="text-cinema-text text-xs font-semibold">
+          {{ formattedStartsAt }}
+        </span>
+      </div>
+
+      <!-- Hall / Technology Tags -->
+      <div class="flex items-center gap-1.5 flex-wrap mb-4">
+        <span
+          v-if="slot.hall && slot.hall.includes('IMAX')"
+          class="px-2 py-0.5 rounded text-xs font-black tracking-wider bg-blue-500/15 text-blue-400 border border-blue-500/30"
+        >
+          IMAX LASER
+        </span>
+        <span
+          v-else-if="slot.hall && slot.hall.includes('Dolby')"
+          class="px-2 py-0.5 rounded text-xs font-black tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/30"
+        >
+          DOLBY ATMOS
+        </span>
+        <span
+          v-else-if="slot.hall && slot.hall.includes('70mm')"
+          class="px-2 py-0.5 rounded text-xs font-black tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30"
+        >
+          70MM ANALOG
+        </span>
+        <span
+          class="px-2 py-0.5 rounded text-xs font-medium bg-white/5 text-gray-400 border border-white/5"
+        >
+          Fauteuil Club
+        </span>
+      </div>
+    </div>
+
+    <!-- Contenu bas (ancré) -->
+    <div class="mt-auto pt-2 border-t border-cinema-border/30">
+      <!-- Bouton de réservation -->
+      <button
+        v-if="slot.status === 'AVAILABLE'"
+        @click.stop="handleReserve"
+        class="w-full btn btn-primary text-xs py-2.5"
+        :disabled="isReserving || !sseConnected"
+      >
+        <span v-if="!isReserving" class="flex items-center justify-center gap-2">
+          <span>🎟️</span>
+          <span>Réserver cette séance</span>
+        </span>
+        <span v-else class="flex items-center justify-center gap-2">
+          <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <span>Réservation...</span>
+        </span>
+      </button>
+
+      <!-- Message si SSE non connecté -->
+      <div v-else-if="!sseConnected" class="text-center py-2">
+        <p class="text-xs text-cinema-textMuted/70">
+          Connexion SSE requise pour réserver
         </p>
       </div>
-      
-      <!-- Badge de statut -->
-      <span
-        class="badge whitespace-nowrap"
-        :class="{
-          'badge-available': slot.status === 'AVAILABLE',
-          'badge-booked': slot.status === 'BOOKED'
-        }"
-      >
-        {{ slot.status === 'AVAILABLE' ? 'Disponible' : 'Complet' }}
-      </span>
-    </div>
 
-    <!-- Horaires -->
-    <div class="flex items-center gap-2 mb-4">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cinema-textMuted" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
-      </svg>
-      <span class="text-cinema-text text-sm">
-        {{ formattedStartsAt }}
-      </span>
-    </div>
-
-    <!-- Version (pour le debug) -->
-    <div class="text-xs text-cinema-textMuted/50">
-      v{{ slot.version }}
-    </div>
-
-    <!-- Bouton de réservation -->
-    <button
-      v-if="slot.status === 'AVAILABLE'"
-      @click.stop="handleReserve"
-      class="mt-3 w-full btn btn-primary"
-      :disabled="isReserving || !sseConnected"
-    >
-      <span v-if="!isReserving">Réserver</span>
-      <span v-else class="flex items-center justify-center gap-2">
-        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-        Réservation...
-      </span>
-    </button>
-
-    <!-- Message si SSE non connecté -->
-    <div v-else-if="!sseConnected" class="mt-3 text-center">
-      <p class="text-xs text-cinema-textMuted/70">
-        Connexion SSE requise pour réserver
-      </p>
-    </div>
-
-    <!-- Message si séance complète -->
-    <div v-else class="mt-3 text-center">
-      <p class="text-xs text-cinema-textMuted/70">
-        Désolé, cette séance est complète
-      </p>
+      <!-- Message si séance complète -->
+      <div v-else class="text-center py-2">
+        <p class="text-xs text-cinema-textMuted/70 font-medium">
+          Désolé, cette séance est complète
+        </p>
+      </div>
     </div>
   </div>
 </template>

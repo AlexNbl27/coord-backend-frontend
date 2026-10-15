@@ -7,16 +7,17 @@
     <Navbar />
     
     <!-- Main Content -->
-    <main class="relative z-10">
+    <main class="relative z-10 pt-16 min-h-[calc(100vh-4rem)]">
       <router-view />
     </main>
     
-    <!-- SSE Status Indicator -->
-    <SseStatus />
+    <!-- Footer -->
+    <Footer />
     
     <!-- Reservation Modal (global) -->
     <ReservationModal
       v-if="showReservationModal"
+      :show="showReservationModal"
       :booking-id="currentBookingId"
       :movie-title="currentMovieTitle"
       :starts-at="currentStartsAt"
@@ -29,7 +30,7 @@
 <script setup lang="ts">
 import { ref, provide } from 'vue';
 import Navbar from './components/Navbar.vue';
-import SseStatus from './components/SseStatus.vue';
+import Footer from './components/Footer.vue';
 import ReservationModal from './components/ReservationModal.vue';
 
 // Modal state

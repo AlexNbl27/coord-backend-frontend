@@ -1,345 +1,384 @@
 <template>
-  <div class="min-h-screen">
-    <!-- En-tête -->
-    <section class="py-12 px-4 sm:px-6 lg:px-8">
-      <div class="page-container">
-        <h1 class="section-title">🎬 Tous les films</h1>
-        <p class="section-subtitle">Parcourez notre catalogue complet de films</p>
-        
-        <!-- Barre de recherche -->
-        <div class="mt-8 max-w-4xl mx-auto">
-          <SearchBar
-            v-model:search="searchQuery"
-            v-model:genre="selectedGenre"
-            v-model:minRating="minRating"
-            :results-count="filteredMovies.length"
-            :available-genres="availableGenres"
-            @search="applyFilters"
-          />
+  <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- En-tête standardisé -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">🎬</span>
+            <h1 class="text-3xl font-extrabold text-white tracking-tight">Catalogue des films</h1>
+          </div>
+          <p class="text-cinema-textMuted text-sm mt-1">
+            Explorez notre sélection de chefs-d'œuvre cinématographiques et réservez votre séance
+          </p>
+        </div>
+
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border/60 text-xs text-cinema-textMuted self-start sm:self-auto">
+          <span class="text-accent-gold font-bold">{{ sortedMovies.length }}</span>
+          <span>film{{ sortedMovies.length > 1 ? 's' : '' }} à l'affiche</span>
         </div>
       </div>
-    </section>
 
-    <!-- Résultats -->
-    <section class="section">
-      <div class="page-container">
-        <!-- Filtres actifs -->
-        <div v-if="hasActiveFilters" class="mb-6 flex flex-wrap gap-2">
-          <span v-if="searchQuery" class="badge-genre">
-            {{ searchQuery }}
-            <button @click="clearSearch" class="ml-1 hover:text-white">×</button>
-          </span>
-          <span v-if="selectedGenre" class="badge-genre">
-            {{ selectedGenre }}
-            <button @click="clearGenre" class="ml-1 hover:text-white">×</button>
-          </span>
-          <span v-if="minRating" class="badge-rating">
-            Note ≥ {{ minRating }}
-            <button @click="clearRating" class="ml-1 hover:text-white">×</button>
-          </span>
-          <button @click="resetFilters" class="ml-4 text-cinema-textMuted hover:text-white text-sm">
-            Réinitialiser
-          </button>
-        </div>
+      <!-- Barre de recherche -->
+      <div class="mb-6">
+        <SearchBar
+          v-model:search="searchQuery"
+          v-model:genre="selectedGenre"
+          v-model:minRating="selectedMinRating"
+          :availableGenres="availableGenres"
+          :resultsCount="sortedMovies.length"
+          @search="onSearch"
+          :minSearchLength="3"
+          :debounceDelay="300"
+        />
+      </div>
 
-        <!-- Grille de films -->
-        <div v-if="loading" class="movies-grid">
-          <div v-for="n in 12" :key="n" class="skeleton h-80 rounded-xl"></div>
-        </div>
-        <div v-else-if="filteredMovies.length === 0" class="empty-state">
-          <div class="empty-state-icon">🎬</div>
-          <p class="empty-state-text">Aucun film trouvé avec ces critères.</p>
-          <button @click="resetFilters" class="mt-4 btn btn-primary">
-            Réinitialiser les filtres
-          </button>
-        </div>
-        <div v-else class="movies-grid">
-          <MovieCard
-            v-for="movie in filteredMovies"
-            :key="movie._id"
-            :movie="movie"
-            @click="selectMovie(movie)"
-          />
-        </div>
-
-        <!-- Pagination -->
-        <div v-if="hasMore && filteredMovies.length > 0" class="mt-12 text-center">
+      <!-- Filtres actifs & Barre de tri (alignement vertical harmonisé) -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-cinema-border/40">
+        <!-- Chips filtres actifs -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-cinema-textMuted font-medium">Filtres :</span>
+          <span v-if="!hasActiveFilters" class="text-xs text-cinema-textMuted/70 italic">Aucun filtre actif</span>
+          
           <button
-            @click="loadMore"
-            class="px-8 py-3 btn btn-primary"
-            :disabled="loadingMore"
+            v-if="searchQuery"
+            @click="searchQuery = ''"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-accent-gold/15 text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/25 transition-colors cursor-pointer"
           >
-            <span v-if="!loadingMore">Charger plus</span>
-            <span v-else class="flex items-center justify-center gap-2">
-              <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Chargement...
-            </span>
+            <span>"{{ searchQuery }}"</span>
+            <span class="font-bold">✕</span>
+          </button>
+
+          <button
+            v-if="selectedGenre"
+            @click="selectedGenre = ''"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-accent-gold/15 text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/25 transition-colors cursor-pointer"
+          >
+            <span>Genre: {{ selectedGenre }}</span>
+            <span class="font-bold">✕</span>
+          </button>
+
+          <button
+            v-if="selectedMinRating"
+            @click="selectedMinRating = undefined"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-accent-gold/15 text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/25 transition-colors cursor-pointer"
+          >
+            <span>Note ≥ {{ selectedMinRating }}★</span>
+            <span class="font-bold">✕</span>
+          </button>
+
+          <button
+            v-if="hasActiveFilters"
+            @click="resetAllFilters"
+            class="text-xs text-cinema-textMuted hover:text-white underline ml-2 cursor-pointer"
+          >
+            Tout effacer
           </button>
         </div>
-      </div>
-    </section>
 
-    <!-- Modal de détails -->
-    <Transition name="modal">
-      <div v-if="selectedMovie" class="modal-overlay" @click.self="selectedMovie = null">
-        <div class="modal-content max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-          <button @click="selectedMovie = null" class="modal-close">&times;</button>
+        <!-- Sélecteur de tri -->
+        <div class="flex items-center gap-2.5 self-start sm:self-auto">
+          <label class="text-xs text-cinema-textMuted font-medium whitespace-nowrap">Trier par :</label>
+          <select
+            v-model="currentSort"
+            class="h-9 px-3 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs focus:ring-1 focus:ring-accent-gold focus:outline-none transition-colors"
+          >
+            <option value="rating_desc">Note IMDB (décroissante)</option>
+            <option value="year_desc">Année (plus récents)</option>
+            <option value="title_asc">Titre (A → Z)</option>
+            <option value="duration_desc">Durée (plus longs)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Résultats : Grille de films -->
+      <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div v-for="n in 8" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
+      </div>
+      <div v-else-if="sortedMovies.length === 0" class="text-center py-16 bg-cinema-card/30 rounded-2xl border border-cinema-border/40">
+        <span class="text-4xl block mb-2">🎬</span>
+        <h3 class="text-lg font-bold text-white mb-1">Aucun film ne correspond à votre recherche</h3>
+        <p class="text-xs text-cinema-textMuted max-w-sm mx-auto mb-4">
+          Essayez d'ajuster vos critères de recherche ou réinitialisez les filtres.
+        </p>
+        <button
+          @click="resetAllFilters"
+          class="px-4 py-2 rounded-xl bg-accent-gold text-cinema-dark font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
+        >
+          Réinitialiser la recherche
+        </button>
+      </div>
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <MovieCard
+          v-for="movie in sortedMovies"
+          :key="movie._id"
+          :movie="movie"
+          @click="selectMovie(movie)"
+        />
+      </div>
+    </div>
+
+    <!-- Modal de détails enrichie -->
+    <transition name="modal">
+      <div v-if="selectedMovie" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="selectedMovie = null">
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl">
+          <button
+            @click="selectedMovie = null"
+            class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-cinema-textMuted hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xl"
+            aria-label="Fermer"
+          >
+            ✕
+          </button>
           
           <div class="flex flex-col md:flex-row gap-6">
             <!-- Affiche -->
             <div class="w-full md:w-1/3">
-              <div class="aspect-poster bg-cinema-border rounded-xl overflow-hidden">
+              <div class="aspect-[2/3] bg-cinema-darker rounded-xl overflow-hidden border border-cinema-border/50">
                 <img
                   v-if="selectedMovie.poster"
                   :src="selectedMovie.poster"
                   :alt="selectedMovie.title"
                   class="w-full h-full object-cover"
                 />
-                <div v-else class="w-full h-full bg-gradient-to-br from-cinema-border to-cinema-darker flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-cinema-border/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-500 text-sm">
+                  Pas d'affiche
                 </div>
               </div>
             </div>
             
             <!-- Détails -->
             <div class="flex-1">
-              <h2 class="text-2xl font-bold text-white mb-2">{{ selectedMovie.title }}</h2>
-              
-              <div class="flex items-center gap-4 mb-4">
-                <div class="flex items-center gap-1">
-                  <span class="text-yellow-400 text-xl">★</span>
-                  <span class="text-white font-bold">{{ selectedMovie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
+              <div class="flex items-start justify-between">
+                <div>
+                  <h2 class="text-2xl font-bold text-white">{{ selectedMovie.title }}</h2>
+                  <p class="text-gray-400 text-xs mt-0.5">{{ selectedMovie.year }} • {{ selectedMovie.duration }} min • Dir. {{ selectedMovie.director }}</p>
                 </div>
-                <span class="text-cinema-textMuted">•</span>
-                <span class="text-cinema-textMuted">{{ selectedMovie.year }}</span>
-                <span class="text-cinema-textMuted">•</span>
-                <span class="text-cinema-textMuted">{{ selectedMovie.duration }} min</span>
+                <div class="flex items-center gap-1 bg-accent-gold/15 px-2.5 py-1 rounded-full border border-accent-gold/30">
+                  <span class="text-accent-gold text-sm">★</span>
+                  <span class="text-white text-xs font-bold">{{ selectedMovie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
+                </div>
               </div>
-              
-              <p class="text-cinema-textMuted mb-4">
-                Réalisé par <span class="text-white">{{ selectedMovie.director || 'Inconnu' }}</span>
-              </p>
-              
-              <div class="flex flex-wrap gap-2 mb-4">
+
+              <!-- Genres -->
+              <div class="flex flex-wrap gap-1.5 mt-3">
                 <span
                   v-for="(genre, index) in selectedMovie.genres"
                   :key="index"
-                  class="badge-genre"
+                  class="text-[11px] px-2 py-0.5 rounded bg-white/10 text-gray-300 font-medium"
                 >
                   {{ genre }}
                 </span>
               </div>
-              
-              <!-- Acteurs -->
-              <div v-if="selectedMovie.cast && selectedMovie.cast.length > 0" class="mb-4">
-                <h3 class="text-sm font-medium text-cinema-textMuted mb-2">Avec</h3>
-                <p class="text-sm text-cinema-textMuted">
-                  {{ selectedMovie.cast.join(', ') }}
-                </p>
-              </div>
-              
-              <p class="text-cinema-textMuted text-sm mb-6">
+
+              <p class="text-gray-300 text-sm mt-3 mb-4 line-clamp-3 leading-relaxed">
                 {{ selectedMovie.synopsis || 'Aucun synopsis disponible.' }}
               </p>
               
-              <!-- Séances pour ce film -->
-              <div v-if="slotsByMovie.get(selectedMovie.title)?.length" class="mb-6">
-                <h3 class="text-sm font-medium text-cinema-textMuted mb-2">Séances disponibles</h3>
-                <div class="space-y-2">
-                  <div
-                    v-for="slot in slotsByMovie.get(selectedMovie.title)"
+              <!-- Séances disponibles pour ce film -->
+              <div class="mb-5 p-3.5 bg-cinema-darker/70 rounded-xl border border-cinema-border/50">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold uppercase tracking-wider text-accent-gold flex items-center gap-1.5">
+                    <span>🎟️</span>
+                    <span>Séances programmées ({{ movieSlots.length }})</span>
+                  </span>
+                  <span v-if="movieSlots.length > 0" class="text-[10px] text-emerald-400 font-medium">Temps réel</span>
+                </div>
+
+                <div v-if="movieSlots.length > 0" class="flex flex-wrap gap-2">
+                  <button
+                    v-for="slot in movieSlots"
                     :key="slot.id"
-                    class="flex items-center justify-between p-2 bg-cinema-card/50 rounded-lg"
+                    @click="handleReserveFromModal(slot.id)"
+                    class="group px-3 py-2 rounded-lg bg-cinema-card hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
                   >
-                    <div>
-                      <p class="text-white text-sm">{{ formatDate(slot.startsAt) }}</p>
-                      <p class="text-cinema-textMuted text-xs">{{ slot.hall }}</p>
-                    </div>
-                    <span
-                      class="badge text-xs"
-                      :class="{
-                        'badge-available': slot.status === 'AVAILABLE',
-                        'badge-booked': slot.status === 'BOOKED'
-                      }"
-                    >
-                      {{ slot.status === 'AVAILABLE' ? 'Disponible' : 'Complet' }}
+                    <span>🕒 {{ formatSlotTime(slot.startsAt) }}</span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 group-hover:bg-black/20 text-cinema-textMuted group-hover:text-cinema-dark">
+                      {{ slot.hall }}
                     </span>
-                  </div>
+                  </button>
+                </div>
+                <div v-else class="text-xs text-cinema-textMuted py-2 flex items-center justify-between">
+                  <span>Aucune séance disponible pour ce film aujourd'hui.</span>
+                  <router-link to="/slots" @click="selectedMovie = null" class="text-accent-gold hover:underline font-semibold ml-2">
+                    Voir les séances →
+                  </router-link>
                 </div>
               </div>
-              
-              <!-- Boutons d'action -->
-              <div class="flex gap-4">
-                <button class="flex-1 btn btn-primary">
-                  Réserver
+
+              <!-- Actions -->
+              <div class="flex flex-col sm:flex-row gap-2.5">
+                <button
+                  @click="goToMovieDetails(selectedMovie)"
+                  class="flex-1 py-2.5 px-4 rounded-xl bg-accent-gold/15 hover:bg-accent-gold/25 text-accent-gold border border-accent-gold/40 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Fiche complète & Casting</span>
+                  <span>→</span>
                 </button>
-                <button @click="selectedMovie = null" class="flex-1 btn btn-outline">
+                <button
+                  @click="selectedMovie = null"
+                  class="py-2.5 px-4 rounded-xl bg-cinema-darker hover:bg-cinema-border text-cinema-textMuted hover:text-white text-xs font-medium transition-all cursor-pointer"
+                >
                   Fermer
                 </button>
               </div>
             </div>
           </div>
         </div>
-      </Transition>
-    </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, inject, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useMoviesStore } from '../stores/movies';
 import { useSlotsStore } from '../stores/slots';
 import { useMovies } from '../composables/useMovies';
-import SearchBar from '../components/SearchBar.vue';
+import { useSlots } from '../composables/useSlots';
+import { useReservations } from '../composables/useReservations';
 import MovieCard from '../components/MovieCard.vue';
+import SearchBar from '../components/SearchBar.vue';
 import type { Movie } from '../composables/useMovies';
 
+const router = useRouter();
 const moviesStore = useMoviesStore();
 const slotsStore = useSlotsStore();
 const { fetchMovies } = useMovies();
+const { fetchSlots, connectSse, reserveSlot } = useSlots();
+const { saveBooking } = useReservations();
 
-// État de recherche
-const searchQuery = ref('');
-const selectedGenre = ref<string | undefined>();
-const minRating = ref<number | undefined>();
+const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
 
-// État de chargement
 const loading = ref(false);
-const loadingMore = ref(false);
-
-// Sélection
 const selectedMovie = ref<Movie | null>(null);
+const currentSort = ref<'rating_desc' | 'year_desc' | 'title_asc' | 'duration_desc'>('rating_desc');
 
-// Films calculés
+// État local pour les filtres
+const searchQuery = ref('');
+const selectedGenre = ref<string | undefined>(undefined);
+const selectedMinRating = ref<number | undefined>(undefined);
+
 const availableGenres = computed(() => moviesStore.availableGenres);
-const filteredMovies = computed(() => moviesStore.filteredMovies);
-const hasMore = computed(() => moviesStore.hasMore);
+
 const hasActiveFilters = computed(() => {
-  return searchQuery.value || selectedGenre.value || minRating.value;
+  return Boolean(searchQuery.value || selectedGenre.value || selectedMinRating.value);
 });
 
-// Séances par film
-const slotsByMovie = computed(() => slotsStore.slotsByMovie);
+const movieSlots = computed(() => {
+  if (!selectedMovie.value) return [];
+  return slotsStore.availableSlots.filter(
+    s => s.movieTitle.toLowerCase() === selectedMovie.value?.title.toLowerCase()
+  );
+});
 
-// Appliquer les filtres
-const applyFilters = async () => {
+const sortedMovies = computed(() => {
+  const list = [...moviesStore.filteredMovies];
+  switch (currentSort.value) {
+    case 'rating_desc':
+      return list.sort((a, b) => (b.ratings?.imdb || 0) - (a.ratings?.imdb || 0));
+    case 'year_desc':
+      return list.sort((a, b) => b.year - a.year);
+    case 'title_asc':
+      return list.sort((a, b) => a.title.localeCompare(b.title));
+    case 'duration_desc':
+      return list.sort((a, b) => b.duration - a.duration);
+    default:
+      return list;
+  }
+});
+
+const selectMovie = (movie: Movie) => {
+  selectedMovie.value = movie;
+};
+
+const goToMovieDetails = (movie: Movie | null) => {
+  if (!movie) return;
+  selectedMovie.value = null;
+  router.push(`/movies/${movie._id}`);
+};
+
+const formatSlotTime = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleString('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
+const resetAllFilters = () => {
+  searchQuery.value = '';
+  selectedGenre.value = undefined;
+  selectedMinRating.value = undefined;
+  onSearch();
+};
+
+const handleReserveFromModal = async (slotId: string) => {
+  selectedMovie.value = null;
+  const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
+  try {
+    const result = await reserveSlot(slotId, customerId);
+    const slot = slotsStore.availableSlots.find(s => s.id === slotId);
+    if (slot) {
+      const movie = moviesStore.movies.find(m => m.title.toLowerCase() === slot.movieTitle.toLowerCase());
+      saveBooking({
+        bookingId: result.bookingId,
+        slotId: slot.id,
+        movieTitle: slot.movieTitle,
+        startsAt: slot.startsAt,
+        hall: slot.hall,
+        poster: movie?.poster
+      });
+
+      if (openReservationModal) {
+        openReservationModal(result.bookingId, slot.movieTitle, slot.startsAt, slot.hall);
+      }
+    }
+  } catch (err) {
+    console.error('Reservation error:', err);
+  }
+};
+
+// Gérer la recherche à partir de la SearchBar
+const onSearch = () => {
   moviesStore.setSearchQuery(searchQuery.value);
   moviesStore.setSelectedGenre(selectedGenre.value);
-  moviesStore.setMinRating(minRating.value);
-  
+  moviesStore.setMinRating(selectedMinRating.value);
+  loadMovies();
+};
+
+// Charger les films avec les filtres
+const loadMovies = async () => {
   loading.value = true;
   try {
-    await fetchMovies({
-      search: searchQuery.value,
-      genre: selectedGenre.value,
-      minRating: minRating.value,
-    });
+    const filters = {
+      search: searchQuery.value || undefined,
+      genre: selectedGenre.value || undefined,
+      minRating: selectedMinRating.value || undefined,
+      page: 1,
+      limit: 50,
+    };
+    await fetchMovies(filters, true);
   } catch (err) {
-    console.error('Erreur lors de l\'application des filtres:', err);
+    console.error('Error loading movies:', err);
   } finally {
     loading.value = false;
   }
 };
 
-// Charger plus de films
-const loadMore = async () => {
-  if (loadingMore.value || !hasMore.value) return;
-  
-  loadingMore.value = true;
-  moviesStore.nextPage();
-  
-  try {
-    await fetchMovies({
-      search: searchQuery.value,
-      genre: selectedGenre.value,
-      minRating: minRating.value,
-      page: moviesStore.currentPage,
-      limit: moviesStore.currentLimit,
-    });
-  } catch (err) {
-    console.error('Erreur lors du chargement de plus de films:', err);
-  } finally {
-    loadingMore.value = false;
-  }
-};
+onMounted(async () => {
+  connectSse();
+  await loadMovies();
+  await fetchSlots();
+});
 
-// Sélectionner un film
-const selectMovie = (movie: Movie) => {
-  selectedMovie.value = movie;
-  moviesStore.setSelectedMovieTitle(movie.title);
-};
-
-// Effacer les filtres
-const clearSearch = () => {
-  searchQuery.value = '';
-  applyFilters();
-};
-
-const clearGenre = () => {
-  selectedGenre.value = undefined;
-  applyFilters();
-};
-
-const clearRating = () => {
-  minRating.value = undefined;
-  applyFilters();
-};
-
-const resetFilters = () => {
-  searchQuery.value = '';
-  selectedGenre.value = undefined;
-  minRating.value = undefined;
-  moviesStore.resetFilters();
-  moviesStore.setPage(1);
-  applyFilters();
-};
-
-// Formater la date
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-// Charger les données initiales
-fetchMovies();
+watch([searchQuery, selectedGenre, selectedMinRating], () => {
+  onSearch();
+});
 </script>
-
-<style scoped>
-/* Animation pour les cartes */
-.movie-card {
-  animation: fadeIn 0.5s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Skeleton animation */
-.skeleton {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-</style>
