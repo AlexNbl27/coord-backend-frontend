@@ -227,3 +227,25 @@ export async function getSlotProof(slotId) {
     subjectId: slot.subjectId || null
   };
 }
+
+/**
+ * Réinitialisation de tous les créneaux au statut AVAILABLE
+ */
+export async function resetAllSlots() {
+  await Slot.updateMany({}, {
+    $set: { status: 'AVAILABLE' },
+    $unset: { bookedBy: 1, bookingId: 1, bookedAt: 1, experimentId: 1, subjectId: 1 },
+    $inc: { version: 1 }
+  });
+
+  // Notifie tous les clients SSE connectés de recharger leurs listes
+  for (const client of sseClients) {
+    try {
+      sendSseEvent(client, 'ready', { action: 'reload' });
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+
+  return { message: 'Tous les créneaux sont désormais disponibles.' };
+}

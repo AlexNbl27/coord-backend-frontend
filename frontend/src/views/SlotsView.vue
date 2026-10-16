@@ -13,15 +13,27 @@
           </p>
         </div>
 
-        <!-- Pastille de statut SSE -->
-        <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border/60 self-start sm:self-auto text-xs">
-          <div
-            class="w-2.5 h-2.5 rounded-full transition-all duration-300"
-            :class="sseConnected ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-red-500 animate-pulse'"
-          ></div>
-          <span class="text-cinema-text font-medium">
-            {{ sseConnected ? 'Synchronisation active' : 'Hors ligne' }}
-          </span>
+        <!-- Actions et Pastille de statut SSE -->
+        <div class="flex items-center gap-3 self-start sm:self-auto">
+          <button
+            @click="handleResetSlots"
+            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-cinema-card hover:bg-cinema-border/80 border border-cinema-border/60 text-cinema-text hover:text-white text-xs font-semibold transition-all cursor-pointer shadow-sm hover:border-accent-gold/40"
+            title="Remettre toutes les séances à l'état disponible"
+          >
+            <span>🔄</span>
+            <span>Réinitialiser les séances</span>
+          </button>
+
+          <!-- Pastille de statut SSE -->
+          <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border/60 text-xs">
+            <div
+              class="w-2.5 h-2.5 rounded-full transition-all duration-300"
+              :class="sseConnected ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-red-500 animate-pulse'"
+            ></div>
+            <span class="text-cinema-text font-medium">
+              {{ sseConnected ? 'Synchronisation active' : 'Hors ligne' }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -170,9 +182,13 @@ import type { Slot } from '../composables/useSlots';
 const slotsStore = useSlotsStore();
 const moviesStore = useMoviesStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse, reserveSlot, sseConnected } = useSlots();
+const { fetchSlots, connectSse, reserveSlot, resetSlots, sseConnected } = useSlots();
 const { saveBooking } = useReservations();
 const { exposeIfAvailable } = useAbTest();
+
+const handleResetSlots = async () => {
+  await resetSlots();
+};
 
 const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
 
