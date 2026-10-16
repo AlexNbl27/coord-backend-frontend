@@ -29,6 +29,7 @@ export function subscribeSse(req, res) {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Désactive le buffering Nginx/Vite
   res.flushHeaders?.();
 
   sseClients.add(res);
@@ -42,6 +43,19 @@ export function subscribeSse(req, res) {
 }
 
 /**
+ * Diffusion locale à tous les clients connectés au worker courant
+ */
+function sendToLocalClients(eventName, data) {
+  for (const client of sseClients) {
+    try {
+      sendSseEvent(client, eventName, data);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
+
+/**
  * Diffusion de la mise à jour d'un créneau à tous les clients SSE
  * Règle de confidentialité : uniquement slotId, status et version
  */
@@ -52,13 +66,27 @@ export function broadcastSlotChange(slot) {
     version: slot.version
   };
 
-  for (const client of sseClients) {
-    try {
-      sendSseEvent(client, 'slot-updated', payload);
-    } catch {
-      sseClients.delete(client);
-    }
+  // 1. Envoi aux clients locaux
+  sendToLocalClients('slot-updated', payload);
+
+  // 2. Relais IPC aux autres workers si en cluster
+  if (process.send) {
+    process.send({
+      type: 'BROADCAST_SSE',
+      eventName: 'slot-updated',
+      payload,
+      originPid: process.pid
+    });
   }
+}
+
+// Écoute des messages IPC provenant des autres workers du cluster
+if (process.on) {
+  process.on('message', (msg) => {
+    if (msg && msg.type === 'BROADCAST_SSE' && msg.originPid !== process.pid) {
+      sendToLocalClients(msg.eventName, msg.payload);
+    }
+  });
 }
 
 // Heartbeat périodique SSE (toutes les 15 secondes)
@@ -239,12 +267,14 @@ export async function resetAllSlots() {
   });
 
   // Notifie tous les clients SSE connectés de recharger leurs listes
-  for (const client of sseClients) {
-    try {
-      sendSseEvent(client, 'ready', { action: 'reload' });
-    } catch {
-      sseClients.delete(client);
-    }
+  sendToLocalClients('ready', { action: 'reload' });
+  if (process.send) {
+    process.send({
+      type: 'BROADCAST_SSE',
+      eventName: 'ready',
+      payload: { action: 'reload' },
+      originPid: process.pid
+    });
   }
 
   return { message: 'Tous les créneaux sont désormais disponibles.' };

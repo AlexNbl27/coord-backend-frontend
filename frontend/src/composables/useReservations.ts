@@ -91,7 +91,9 @@ export function useReservations() {
 
   const cancelBooking = async (slotId: string): Promise<boolean> => {
     try {
-      await axios.delete(`/api/slots/${slotId}/reservations`);
+      await axios.delete(`/api/slots/${slotId}/reservations`, {
+        withCredentials: true
+      });
       const target = bookings.value.find(b => b.slotId === slotId);
       if (target) {
         target.status = 'CANCELLED';

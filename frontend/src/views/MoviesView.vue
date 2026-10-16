@@ -377,8 +377,4 @@ onMounted(async () => {
   await loadMovies();
   await fetchSlots();
 });
-
-watch([searchQuery, selectedGenre, selectedMinRating], () => {
-  onSearch();
-});
 </script>

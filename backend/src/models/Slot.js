@@ -18,4 +18,7 @@ const slotSchema = new mongoose.Schema({
   versionKey: false
 });
 
+slotSchema.index({ status: 1, startsAt: 1 });
+slotSchema.index({ experimentId: 1, subjectId: 1 });
+
 export const Slot = mongoose.model('Slot', slotSchema);
