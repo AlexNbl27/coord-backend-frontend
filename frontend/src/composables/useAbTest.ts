@@ -7,12 +7,31 @@ export interface AbMetric {
   exposed: number;
   converted: number;
   rate: number | null;
+  confidenceInterval?: [number, number];
+}
+
+export interface AbSummary {
+  zScore: number;
+  pValue: number;
+  isSignificant: boolean;
+  relativeLift: number;
+  srm: {
+    hasMismatch: boolean;
+    pValue: number;
+    chiSquare?: number;
+  };
+  recommendation: 'A' | 'B' | null;
 }
 
 export interface AbAssignment {
   experimentId: string;
   variant: 'A' | 'B';
   enabled: boolean;
+}
+
+export interface AbMetricsData {
+  variants: AbMetric[];
+  summary?: AbSummary;
 }
 
 // État partagé réactif (singleton)
@@ -77,17 +96,38 @@ export function useAbTest() {
   };
 
   /**
-   * Récupère les métriques consolidées du test A/B
+   * Récupère les métriques consolidées du test A/B (variantes et synthèse statistique)
    */
-  const fetchMetrics = async (): Promise<AbMetric[]> => {
+  const fetchMetrics = async (): Promise<AbMetricsData> => {
     try {
-      const response = await axios.get<AbMetric[]>('/api/ab/metrics', {
+      const response = await axios.get<any>('/api/ab/metrics', {
+        withCredentials: true
+      });
+      if (Array.isArray(response.data)) {
+        return { variants: response.data };
+      }
+      return {
+        variants: response.data.variants || [],
+        summary: response.data.summary
+      };
+    } catch (err) {
+      console.error('[A/B Test] Erreur lors de la récupération des métriques:', err);
+      return { variants: [] };
+    }
+  };
+
+  /**
+   * Simule un jeu de données complet pour tester la réactivité et le verdict statistique
+   */
+  const simulateData = async (params = {}) => {
+    try {
+      const response = await axios.post<any>('/api/ab/simulate', params, {
         withCredentials: true
       });
       return response.data;
     } catch (err) {
-      console.error('[A/B Test] Erreur lors de la récupération des métriques:', err);
-      return [];
+      console.error('[A/B Test] Erreur lors de la simulation:', err);
+      throw err;
     }
   };
 
@@ -100,6 +140,7 @@ export function useAbTest() {
     bookingButtonLabel,
     initAssignment,
     exposeIfAvailable,
-    fetchMetrics
+    fetchMetrics,
+    simulateData
   };
 }

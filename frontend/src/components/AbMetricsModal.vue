@@ -4,7 +4,7 @@
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
     @click.self="$emit('close')"
   >
-    <div class="relative w-full max-w-3xl bg-cinema-card border border-cinema-border/80 rounded-2xl shadow-2xl p-6 sm:p-8 overflow-hidden">
+    <div class="relative w-full max-w-4xl bg-cinema-card border border-cinema-border/80 rounded-2xl shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] overflow-y-auto">
       <!-- Glow d'arrière-plan -->
       <div class="absolute -top-24 -right-24 w-72 h-72 bg-accent-gold/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -22,7 +22,7 @@
               </span>
             </h3>
             <p class="text-xs text-cinema-textMuted mt-0.5">
-              Évaluation du libellé de réservation sur le taux de conversion des séances
+              Évaluation statistique rigoureuse : Z-test, p-value, intervalles de confiance & SRM
             </p>
           </div>
         </div>
@@ -39,7 +39,7 @@
       </div>
 
       <!-- Statut du navigateur actuel -->
-      <div class="my-6 p-4 rounded-xl bg-cinema-darker border border-cinema-border/60 flex flex-wrap items-center justify-between gap-4">
+      <div class="my-5 p-4 rounded-xl bg-cinema-darker border border-cinema-border/60 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <span class="text-xs font-semibold uppercase tracking-wider text-cinema-textMuted">Votre statut actuel :</span>
           <span
@@ -70,10 +70,10 @@
       <!-- Grille des métriques A/B -->
       <div v-if="loading" class="py-12 text-center text-cinema-textMuted">
         <div class="w-8 h-8 border-2 border-accent-gold border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-        Calcul des conversions en direct...
+        Calcul des conversions & analyse statistique en direct...
       </div>
 
-      <div v-else class="space-y-6">
+      <div v-else class="space-y-5">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Variante A -->
           <div
@@ -82,7 +82,7 @@
           >
             <div class="flex items-center justify-between mb-4">
               <div>
-                <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Variante A (Référence)</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Variante A (Contrôle)</span>
                 <h4 class="text-lg font-black text-white mt-0.5">« Réserver »</h4>
               </div>
               <span v-if="variant === 'A'" class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
@@ -106,7 +106,12 @@
             </div>
 
             <div class="mt-4 flex items-center justify-between">
-              <span class="text-xs text-cinema-textMuted">Taux de conversion</span>
+              <div>
+                <div class="text-xs text-cinema-textMuted">Taux de conversion</div>
+                <div class="text-xs text-blue-400/80 font-mono mt-0.5">
+                  IC 95%: {{ formatCI(metricA?.confidenceInterval) }}
+                </div>
+              </div>
               <span class="text-xl font-black text-white">
                 {{ formatRate(metricA?.rate) }}
               </span>
@@ -120,7 +125,7 @@
           >
             <div class="flex items-center justify-between mb-4">
               <div>
-                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Variante B (Modification)</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Variante B (Challenger)</span>
                 <h4 class="text-lg font-black text-white mt-0.5">« Choisir ce créneau »</h4>
               </div>
               <span v-if="variant === 'B'" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
@@ -144,7 +149,12 @@
             </div>
 
             <div class="mt-4 flex items-center justify-between">
-              <span class="text-xs text-cinema-textMuted">Taux de conversion</span>
+              <div>
+                <div class="text-xs text-cinema-textMuted">Taux de conversion</div>
+                <div class="text-xs text-emerald-400/80 font-mono mt-0.5">
+                  IC 95%: {{ formatCI(metricB?.confidenceInterval) }}
+                </div>
+              </div>
               <span class="text-xl font-black text-white">
                 {{ formatRate(metricB?.rate) }}
               </span>
@@ -152,13 +162,89 @@
           </div>
         </div>
 
-        <!-- Synthèse comparative -->
-        <div class="p-4 rounded-xl bg-cinema-card border border-cinema-border/60 flex items-center justify-between">
-          <div class="text-xs text-cinema-textMuted leading-relaxed">
-            <strong class="text-white">Règle d'attribution :</strong> Attribution si la réservation intervient dans les 24h suivant l'exposition du navigateur.
-            Plusieurs réservations du même visiteur ne comptent que pour <span class="text-accent-gold font-bold">1 visiteur converti unique</span>.
+        <!-- Encart : Rigueur Statistique & Verdict Industriel -->
+        <div class="p-5 rounded-2xl bg-cinema-darker/80 border border-cinema-border/70 space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-accent-gold flex items-center gap-1.5">
+                <span>📊</span> Analyse Statistique & Décision
+              </span>
+              <span
+                v-if="summary?.isSignificant"
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+              >
+                Significatif (p &lt; 0.05)
+              </span>
+              <span
+                v-else
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30"
+              >
+                Échantillon / Différence non concluant
+              </span>
+            </div>
+
+            <!-- Badge SRM (Sample Ratio Mismatch) -->
+            <div
+              class="text-xs px-2.5 py-1 rounded-md font-semibold flex items-center gap-1.5"
+              :class="summary?.srm?.hasMismatch ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'"
+            >
+              <span>{{ summary?.srm?.hasMismatch ? '⚠️ SRM Détecté' : '✓ Équilibre 50/50 validé' }}</span>
+              <span class="text-[10px] opacity-75 font-mono">(p={{ summary?.srm?.pValue ?? '1.0' }})</span>
+            </div>
           </div>
-          <div class="flex items-center gap-2 ml-4 shrink-0">
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center py-2 bg-black/20 rounded-xl border border-cinema-border/30">
+            <div>
+              <div class="text-[11px] text-cinema-textMuted">p-value (bilatérale)</div>
+              <div class="text-sm font-mono font-bold text-white mt-0.5">{{ summary?.pValue ?? '1.0' }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] text-cinema-textMuted">Z-Score</div>
+              <div class="text-sm font-mono font-bold text-white mt-0.5">{{ summary?.zScore ?? '0.00' }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] text-cinema-textMuted">Lift Relatif (B vs A)</div>
+              <div
+                class="text-sm font-mono font-bold mt-0.5"
+                :class="(summary?.relativeLift ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+              >
+                {{ (summary?.relativeLift ?? 0) >= 0 ? '+' : '' }}{{ summary?.relativeLift ?? 0 }} %
+              </div>
+            </div>
+            <div>
+              <div class="text-[11px] text-cinema-textMuted">Recommandation</div>
+              <div class="text-sm font-bold mt-0.5" :class="summary?.recommendation ? 'text-accent-gold' : 'text-cinema-textMuted'">
+                {{ summary?.recommendation ? `Gagnant : Variante ${summary.recommendation}` : 'Poursuivre le test' }}
+              </div>
+            </div>
+          </div>
+
+          <p class="text-xs text-cinema-textMuted leading-relaxed">
+            <span v-if="summary?.isSignificant">
+              💡 <strong>Conclusion :</strong> La différence observée est statistiquement significative avec un niveau de confiance supérieur à 95%.
+              La variante <strong class="text-accent-gold">{{ summary?.recommendation }}</strong> produit un impact mesurable réel.
+            </span>
+            <span v-else>
+              ℹ️ <strong>Conclusion :</strong> L'écart actuel peut être imputable au bruit aléatoire. Il est recommandé de collecter davantage d'expositions avant de prendre une décision finale.
+            </span>
+          </p>
+        </div>
+
+        <!-- Synthèse comparative & Boutons d'action -->
+        <div class="p-4 rounded-xl bg-cinema-card border border-cinema-border/60 flex flex-wrap items-center justify-between gap-3">
+          <div class="text-xs text-cinema-textMuted leading-relaxed max-w-md">
+            <strong class="text-white">Attribution robuste :</strong> Écriture différée (Lazy Write), protection anti-course critique et dédoublonnage strict par sujet unique.
+          </div>
+          <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <button
+              @click="handleSimulate"
+              :disabled="simulating"
+              class="px-3.5 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-xs font-semibold text-purple-300 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              title="Simuler un jeu de données A/B pour observer le comportement statistique"
+            >
+              <span>🧪</span>
+              <span>{{ simulating ? 'Simulation...' : 'Simuler 160 visiteurs' }}</span>
+            </button>
             <button
               @click="handleResetSlots"
               class="px-3.5 py-2 rounded-xl bg-cinema-darker hover:bg-white/5 border border-cinema-border text-xs font-semibold text-cinema-text hover:text-white transition-all flex items-center gap-2 cursor-pointer"
@@ -183,7 +269,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useAbTest, type AbMetric } from '../composables/useAbTest';
+import { useAbTest, type AbMetric, type AbSummary } from '../composables/useAbTest';
 import { useSlots } from '../composables/useSlots';
 
 defineProps<{
@@ -192,16 +278,13 @@ defineProps<{
 
 defineEmits(['close']);
 
-const { variant, experimentId, exposed, measured, bookingButtonLabel, fetchMetrics } = useAbTest();
+const { variant, experimentId, exposed, measured, bookingButtonLabel, fetchMetrics, simulateData } = useAbTest();
 const { resetSlots } = useSlots();
 
-const handleResetSlots = async () => {
-  await resetSlots();
-  await loadMetrics();
-};
-
 const loading = ref(false);
+const simulating = ref(false);
 const metrics = ref<AbMetric[]>([]);
+const summary = ref<AbSummary | undefined>(undefined);
 
 const metricA = computed(() => metrics.value.find(m => m.variant === 'A'));
 const metricB = computed(() => metrics.value.find(m => m.variant === 'B'));
@@ -211,12 +294,35 @@ const formatRate = (rate: number | null | undefined) => {
   return (rate * 100).toFixed(1) + ' %';
 };
 
+const formatCI = (ci?: [number, number]) => {
+  if (!ci || (ci[0] === 0 && ci[1] === 0)) return '[ — ]';
+  return `[${(ci[0] * 100).toFixed(1)}% – ${(ci[1] * 100).toFixed(1)}%]`;
+};
+
 const loadMetrics = async () => {
   loading.value = true;
   try {
-    metrics.value = await fetchMetrics();
+    const data = await fetchMetrics();
+    metrics.value = data.variants;
+    summary.value = data.summary;
   } finally {
     loading.value = false;
+  }
+};
+
+const handleResetSlots = async () => {
+  await resetSlots();
+  await loadMetrics();
+};
+
+const handleSimulate = async () => {
+  simulating.value = true;
+  try {
+    // 80 exposés A avec 16 conversions (20%) vs 80 exposés B avec 32 conversions (40%)
+    await simulateData({ countA: 80, convA: 16, countB: 80, convB: 32 });
+    await loadMetrics();
+  } finally {
+    simulating.value = false;
   }
 };
 
