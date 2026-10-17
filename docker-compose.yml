@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   # ===========================================================================
-  # 1. Base de données MongoDB (partagée par backend et cineslot-sse)
+  # 1. Base de données MongoDB
   # ===========================================================================
   mongodb:
     image: mongo:latest
@@ -12,7 +12,7 @@ services:
       - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
-      - ./database/seed_movies.js:/docker-entrypoint-initdb.d/seed_movies.js:ro
+      - ./database/seed_cinematheque.js:/docker-entrypoint-initdb.d/seed_cinematheque.js:ro
     networks:
       - ynov-network
     healthcheck:
@@ -22,7 +22,8 @@ services:
       retries: 20
 
   # ===========================================================================
-  # 2. API Backend Films (Node.js / Express / Mongoose)
+  # 2. API Backend Unifiée (Node.js / Express / Mongoose)
+  # Films, Séances SSE, Billetterie et Test A/B
   # ===========================================================================
   backend:
     build:
@@ -43,28 +44,7 @@ services:
       - ynov-network
 
   # ===========================================================================
-  # 3. Service Billetterie SSE (Spring Boot / MongoDB)
-  # ===========================================================================
-  cineslot-sse:
-    build:
-      context: ./services/cineslot-sse
-      dockerfile: Dockerfile
-    container_name: ynov-cineslot-sse
-    restart: unless-stopped
-    ports:
-      - "${SSE_PORT:-8086}:8080"
-    environment:
-      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/cours_db
-      - SPRING_PROFILES_ACTIVE=lab
-      - SERVER_PORT=8080
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    networks:
-      - ynov-network
-
-  # ===========================================================================
-  # 4. Frontend Production (Nginx + Vue 3)
+  # 3. Frontend Production (Nginx + Vue 3)
   # ===========================================================================
   frontend:
     build:
@@ -80,10 +60,9 @@ services:
       - ynov-network
     depends_on:
       - backend
-      - cineslot-sse
 
   # ===========================================================================
-  # 4b. Frontend Development (Vite + Vue 3 + TypeScript)
+  # 3b. Frontend Development (Vite + Vue 3 + TypeScript)
   # ===========================================================================
   frontend-dev:
     build:
@@ -98,20 +77,16 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      - VITE_API_MOVIES_URL=http://backend:3000/api/movies
-      - VITE_API_SLOTS_URL=http://cineslot-sse:8080/api/slots
-      - VITE_SSE_EVENTS_URL=http://cineslot-sse:8080/api/slots/events
     command: npm run dev
     networks:
       - ynov-network
     depends_on:
       - backend
-      - cineslot-sse
     profiles:
       - dev
 
   # ===========================================================================
-  # 5. Tests de charge k6 avec Web Dashboard (profil 'test')
+  # 4. Tests de charge k6 avec Web Dashboard (profil 'test')
   # ===========================================================================
   k6:
     image: grafana/k6:latest
