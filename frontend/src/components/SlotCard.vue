@@ -76,12 +76,13 @@
       <button
         v-if="slot.status === 'AVAILABLE'"
         @click.stop="handleReserve"
-        class="w-full btn btn-primary text-xs py-2.5"
-        :disabled="isReserving || !sseConnected"
+        class="w-full btn btn-primary text-xs py-2.5 cursor-pointer"
+        :disabled="isReserving"
       >
         <span v-if="!isReserving" class="flex items-center justify-center gap-2">
           <span>🎟️</span>
           <span>{{ bookingButtonLabel }}</span>
+          <span v-if="!sseConnected" class="text-[10px] text-amber-200 opacity-80">(différé)</span>
         </span>
         <span v-else class="flex items-center justify-center gap-2">
           <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -89,16 +90,13 @@
         </span>
       </button>
 
-      <!-- Message si SSE non connecté -->
-      <div v-else-if="!sseConnected" class="text-center py-2">
-        <p class="text-xs text-cinema-textMuted/70">
-          Connexion SSE requise pour réserver
-        </p>
-      </div>
-
-      <!-- Message si séance complète -->
+      <!-- Message si séance complète ou en attente de synchro -->
       <div v-else class="text-center py-2">
-        <p class="text-xs text-cinema-textMuted/70 font-medium">
+        <span v-if="isPendingSync" class="inline-flex items-center gap-1.5 text-xs text-amber-300 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/30">
+          <span>⏳</span>
+          <span>En attente de synchronisation</span>
+        </span>
+        <p v-else class="text-xs text-cinema-textMuted/70 font-medium">
           Désolé, cette séance est complète
         </p>
       </div>
@@ -110,6 +108,7 @@
 import { ref, computed, inject } from 'vue';
 import type { Slot } from '../composables/useSlots';
 import { useAbTest } from '../composables/useAbTest';
+import { offlineQueue } from '../services/offlineQueue';
 
 const { bookingButtonLabel } = useAbTest();
 
@@ -122,6 +121,7 @@ const props = defineProps<{
 const emit = defineEmits(['reserve', 'click']);
 
 const isReserving = ref(false);
+const isPendingSync = computed(() => offlineQueue.isSlotPendingReservation(props.slot.id));
 
 // Injecter la fonction pour ouvrir le modal
 const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
@@ -140,8 +140,6 @@ const formattedStartsAt = computed(() => {
 
 // Gérer la réservation
 const handleReserve = async () => {
-  if (!props.sseConnected) return;
-  
   isReserving.value = true;
   
   try {
@@ -160,7 +158,7 @@ const handleReserve = async () => {
 
 // Gérer le clic sur la carte
 const handleSlotClick = () => {
-  if (props.slot.status === 'AVAILABLE' && props.sseConnected) {
+  if (props.slot.status === 'AVAILABLE') {
     // Ne pas déclencher si on clique sur le bouton de réservation
   } else {
     emit('click', props.slot);

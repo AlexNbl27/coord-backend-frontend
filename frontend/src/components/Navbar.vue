@@ -52,19 +52,8 @@
 
         <!-- Right side: Status + User Tickets -->
         <div class="flex items-center gap-3">
-          <!-- SSE Status (mini indicator) -->
-          <div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-cinema-card/70 border border-cinema-border/40">
-            <div
-              class="w-2 h-2 rounded-full transition-all duration-300"
-              :class="{
-                'bg-green-500 shadow-sm shadow-green-500/50': sseConnected,
-                'bg-red-500 animate-pulse': !sseConnected
-              }"
-            ></div>
-            <span class="text-xs text-cinema-textMuted">
-              {{ sseConnected ? 'Synchronisé' : 'Hors ligne' }}
-            </span>
-          </div>
+          <!-- Indicateur de Connexion & Résilience -->
+          <ConnectionBadge class="hidden sm:block" />
 
           <!-- User / Mes Billets Quick Action Button -->
           <router-link
@@ -175,6 +164,7 @@
 <script setup lang="ts">
 import { ref, onMounted, inject } from 'vue';
 import { storeToRefs } from 'pinia';
+import ConnectionBadge from './ConnectionBadge.vue';
 import { useSlotsStore } from '../stores/slots';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';

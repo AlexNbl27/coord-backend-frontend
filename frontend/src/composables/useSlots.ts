@@ -1,6 +1,10 @@
 import { ref, computed } from 'vue';
-import axios from 'axios';
+import { apiClient } from '../services/apiClient';
+import { cacheManager, CacheKeys } from '../services/cacheManager';
+import { offlineQueue } from '../services/offlineQueue';
 import { useSlotsStore } from '../stores/slots';
+import { useConnectionStore } from '../stores/connection';
+import { useConnection } from './useConnection';
 import { useAbTest } from './useAbTest';
 
 // Interface pour une séance (slot)
@@ -45,25 +49,34 @@ const API_SSE_EVENTS_URL = '/api/slots/events';
 
 let sharedEventSource: EventSource | null = null;
 
+// Initialisation du cache persistant
+const initialCachedSlots = cacheManager.get<Slot[]>(CacheKeys.SLOTS);
+
 export function useSlots() {
   const slotsStore = useSlotsStore();
   const loading = ref(false);
   const error = ref<string | null>(null);
   const sseError = ref<string | null>(null);
 
+  // Charger le cache initial s'il existe et que le store est vide
+  if (initialCachedSlots?.data && slotsStore.slots.length === 0) {
+    slotsStore.setSlots(initialCachedSlots.data);
+  }
+
   const slots = computed(() => slotsStore.slots);
   const sseConnected = computed(() => slotsStore.sseConnected);
 
-  // Récupérer toutes les séances
+  // Récupérer toutes les séances avec fallback cache et résilience
   const fetchSlots = async () => {
     try {
       loading.value = true;
       error.value = null;
       slotsStore.setLoading(true);
       
-      const response = await axios.get<SlotView[]>(API_SLOTS_URL, {
-        withCredentials: true
+      const response = await apiClient.get<SlotView[]>(API_SLOTS_URL, {
+        withCredentials: true,
       });
+
       const mappedSlots: Slot[] = response.data.map(slot => ({
         id: slot.id,
         startsAt: slot.startsAt,
@@ -72,19 +85,30 @@ export function useSlots() {
         movieTitle: slot.movieTitle,
         hall: slot.hall,
       }));
+
+      // Persistance dans le cache local (10 min)
+      cacheManager.set(CacheKeys.SLOTS, mappedSlots, 10 * 60 * 1000);
       slotsStore.setSlots(mappedSlots);
       
-    } catch (err) {
-      error.value = 'Impossible de récupérer les séances. Veuillez réessayer.';
-      slotsStore.setError(error.value);
-      console.error('Erreur lors de la récupération des séances:', err);
+    } catch (err: any) {
+      // Repli fluide sur le cache local
+      const cached = cacheManager.get<Slot[]>(CacheKeys.SLOTS);
+      if (cached && cached.data.length > 0) {
+        console.warn('[useSlots] Backend indisponible. Utilisation fluide des séances en cache.');
+        slotsStore.setSlots(cached.data);
+        error.value = null;
+      } else {
+        error.value = 'Impossible de récupérer les séances. Mode hors-ligne sans cache.';
+        slotsStore.setError(error.value);
+        console.error('Erreur lors de la récupération des séances:', err);
+      }
     } finally {
       loading.value = false;
       slotsStore.setLoading(false);
     }
   };
 
-  // Connexion au flux SSE
+  // Connexion au flux SSE avec surveillance
   const connectSse = () => {
     if (sharedEventSource && sharedEventSource.readyState !== EventSource.CLOSED) {
       return;
@@ -96,41 +120,43 @@ export function useSlots() {
       sharedEventSource.onopen = () => {
         slotsStore.setSseConnected(true);
         sseError.value = null;
-        console.log('Connexion SSE etablie');
+        console.log('[SSE] Connexion SSE établie');
       };
 
       sharedEventSource.onerror = (event) => {
         slotsStore.setSseConnected(false);
-        sseError.value = 'Erreur de connexion SSE. Tentative de reconnexion...';
-        console.error('Erreur SSE:', event);
+        sseError.value = 'Connexion SSE interrompue. Reconnexion automatique...';
+        // Note: EventSource tente automatiquement de reconnecter de manière native
       };
 
       sharedEventSource.addEventListener('ready', (event: any) => {
+        slotsStore.setSseConnected(true);
         try {
           const data = JSON.parse(event.data);
           if (data.action === 'reload') {
             fetchSlots();
           }
         } catch (e) {
-          console.error('Erreur parsing SSE ready event:', e);
+          console.error('[SSE] Erreur parsing SSE ready event:', e);
         }
       });
 
       sharedEventSource.addEventListener('slot-updated', (event: any) => {
+        slotsStore.setSseConnected(true);
         try {
           const data: SseEvent = JSON.parse(event.data);
           slotsStore.updateSlotStatus(data.slotId, data.status as 'AVAILABLE' | 'BOOKED');
           slotsStore.updateSlot(data.slotId, { version: data.version });
-          console.log(`Seance ${data.slotId} mise a jour: ${data.status}`);
+          console.log(`[SSE] Séance ${data.slotId} mise à jour: ${data.status}`);
         } catch (e) {
-          console.error('Erreur parsing SSE slot-updated event:', e);
+          console.error('[SSE] Erreur parsing SSE slot-updated event:', e);
         }
       });
 
     } catch (err) {
       slotsStore.setSseConnected(false);
       sseError.value = 'Impossible d\'établir la connexion SSE.';
-      console.error('Erreur lors de la création de EventSource:', err);
+      console.error('[SSE] Erreur lors de la création de EventSource:', err);
     }
   };
 
@@ -140,29 +166,77 @@ export function useSlots() {
       sharedEventSource.close();
       sharedEventSource = null;
       slotsStore.setSseConnected(false);
-      console.log('Connexion SSE fermee');
+      console.log('[SSE] Connexion SSE fermée');
     }
   };
 
-  // Réserver une séance
+  // Enregistrement de la synchronisation au retour de connexion
+  try {
+    const { onReconnectSync } = useConnection();
+    onReconnectSync(async () => {
+      console.log('[useSlots] Reconnexion détectée, réactualisation SSE et séances...');
+      disconnectSse();
+      connectSse();
+      await fetchSlots();
+    });
+  } catch {
+    // Si hors contexte Vue
+  }
+
+  // Réserver une séance avec résilience, UI optimiste et file d'attente hors-ligne
   const reserveSlot = async (slotId: string, customerId: string): Promise<BookingView> => {
+    const { measured } = useAbTest();
+
     try {
-      const { measured } = useAbTest();
-      const response = await axios.post<BookingView>(
+      const response = await apiClient.post<BookingView>(
         `${API_SLOTS_URL}/${slotId}/reservations`,
         { customerId },
         {
           headers: {
-            'X-AB-Measure': String(measured.value)
+            'X-AB-Measure': String(measured.value),
           },
-          withCredentials: true
+          withCredentials: true,
         }
       );
       
-      // La séance sera mise à jour automatiquement via SSE
+      // Mise à jour optimiste locale immédiate (complétée par le SSE)
+      slotsStore.updateSlotStatus(slotId, 'BOOKED');
       return response.data;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Impossible de réserver cette séance.';
+    } catch (err: any) {
+      const isNetworkOrServer = !err.response || err.response.status >= 500;
+
+      // Si le backend est déconnecté ou en panne : Outbox Pattern & Résilience
+      if (isNetworkOrServer) {
+        console.warn(`[useSlots] Backend hors-ligne : mise en file d'attente de la réservation pour le créneau ${slotId}.`);
+        
+        const tempBookingId = `temp_bk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        
+        // 1. Mise à jour optimiste immédiate dans l'UI
+        slotsStore.updateSlotStatus(slotId, 'BOOKED');
+
+        // 2. Ajout dans la file d'attente persistante
+        offlineQueue.enqueue('RESERVE_SLOT', {
+          slotId,
+          customerId,
+          tempBookingId,
+        });
+
+        // 3. Notification utilisateur discrète
+        try {
+          const connectionStore = useConnectionStore();
+          connectionStore.showToast('Réservation enregistrée hors-ligne (en attente de synchronisation)', 'info', 5000);
+        } catch {}
+
+        // 4. Renvoi du résultat pour permettre au modal de confirmation de s'afficher sans erreur
+        return {
+          bookingId: tempBookingId,
+          slotId,
+          status: 'BOOKED',
+        };
+      }
+
+      // En cas de conflit réel 409 ou autre erreur métier
+      const errorMessage = err.response?.data?.message || (err instanceof Error ? err.message : 'Impossible de réserver cette séance.');
       throw new Error(errorMessage);
     }
   };
@@ -170,7 +244,7 @@ export function useSlots() {
   // Générer une nouvelle séance de démonstration
   const generateDemoSlot = async (): Promise<SlotView> => {
     try {
-      const response = await axios.post<SlotView>(`${API_SLOTS_URL}/lab`);
+      const response = await apiClient.post<SlotView>(`${API_SLOTS_URL}/lab`);
       return response.data;
     } catch (err) {
       console.error('Erreur lors de la génération d\'une séance:', err);
@@ -207,7 +281,7 @@ export function useSlots() {
   const resetSlots = async () => {
     try {
       loading.value = true;
-      await axios.post(`${API_SLOTS_URL}/reset`, {}, { withCredentials: true });
+      await apiClient.post(`${API_SLOTS_URL}/reset`, {}, { withCredentials: true });
       await fetchSlots();
     } catch (err) {
       console.error('Erreur réinitialisation créneaux:', err);
