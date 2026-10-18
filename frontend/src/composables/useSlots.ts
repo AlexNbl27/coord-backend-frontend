@@ -221,13 +221,7 @@ export function useSlots() {
           tempBookingId,
         });
 
-        // 3. Notification utilisateur discrète
-        try {
-          const connectionStore = useConnectionStore();
-          connectionStore.showToast('Réservation enregistrée hors-ligne (en attente de synchronisation)', 'info', 5000);
-        } catch {}
-
-        // 4. Renvoi du résultat pour permettre au modal de confirmation de s'afficher sans erreur
+        // 3. Renvoi du résultat pour permettre au modal de confirmation de s'afficher sans erreur
         return {
           bookingId: tempBookingId,
           slotId,
