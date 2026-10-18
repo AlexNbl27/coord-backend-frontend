@@ -197,6 +197,7 @@ import { useSlots } from '../composables/useSlots';
 import { useReservations } from '../composables/useReservations';
 import SlotCard from '../components/SlotCard.vue';
 import type { Movie } from '../composables/useMovies';
+import { cacheManager, CacheKeys } from '../services/cacheManager';
 
 const route = useRoute();
 const router = useRouter();
@@ -228,13 +229,25 @@ const formatCurrency = (amount: number) => {
 };
 
 const loadMovie = async () => {
-  try {
+  const movieId = route.params.id as string;
+  
+  // Pré-remplissage immédiat depuis le cache (0ms, aucun skeleton si déjà visité)
+  const cached = cacheManager.get<Movie>(`${CacheKeys.MOVIE_DETAIL_PREFIX}${movieId}`);
+  if (cached?.data) {
+    movie.value = cached.data;
+  }
+  
+  if (!movie.value) {
     loading.value = true;
+  }
+  
+  try {
     error.value = null;
-    const movieId = route.params.id as string;
     movie.value = await fetchMovieById(movieId);
   } catch (err) {
-    error.value = 'Impossible de charger les détails du film.';
+    if (!movie.value) {
+      error.value = 'Impossible de charger les détails du film.';
+    }
     console.error('Erreur:', err);
   } finally {
     loading.value = false;

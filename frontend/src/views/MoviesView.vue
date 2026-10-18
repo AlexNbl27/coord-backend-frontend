@@ -92,7 +92,7 @@
       </div>
 
       <!-- Résultats : Grille de films -->
-      <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div v-if="loading && sortedMovies.length === 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <div v-for="n in 8" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
       </div>
       <div v-else-if="sortedMovies.length === 0" class="text-center py-16 bg-cinema-card/30 rounded-2xl border border-cinema-border/40">
@@ -353,9 +353,11 @@ const onSearch = () => {
   loadMovies();
 };
 
-// Charger les films avec les filtres
+// Charger les films avec les filtres (sans skeleton si films déjà en cache)
 const loadMovies = async () => {
-  loading.value = true;
+  if (sortedMovies.value.length === 0) {
+    loading.value = true;
+  }
   try {
     const filters = {
       search: searchQuery.value || undefined,

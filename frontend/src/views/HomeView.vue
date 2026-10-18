@@ -57,7 +57,7 @@
           </router-link>
         </div>
         
-        <div v-if="loadingPopular" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div v-if="loadingPopular && popularMovies.length === 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <div v-for="n in 4" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -85,11 +85,7 @@
           </router-link>
         </div>
 
-        <div v-if="!sseConnected" class="mb-6 p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg text-yellow-400">
-          <p>Connexion SSE en cours...</p>
-        </div>
-
-        <div v-if="loadingSlots" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-if="loadingSlots && availableSlots.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div v-for="n in 6" :key="n" class="bg-gray-800 h-40 rounded-lg animate-pulse"></div>
         </div>
         <div v-else-if="availableSlots.length === 0 && !loadingSlots" class="text-center py-12">
@@ -317,7 +313,9 @@ const reserveForMovie = async (movie: Movie | null) => {
 };
 
 onMounted(async () => {
-  loadingPopular.value = true;
+  if (popularMovies.value.length === 0) {
+    loadingPopular.value = true;
+  }
   connectSse();
   try {
     await fetchMovies();

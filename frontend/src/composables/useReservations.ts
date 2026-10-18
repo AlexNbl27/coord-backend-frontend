@@ -98,11 +98,12 @@ export function useReservations() {
     status?: 'ACTIVE' | 'PENDING_SYNC';
   }) => {
     const seat = item.seat || generateSeat(item.slotId, item.bookingId);
+    const effectiveStatus = item.status || (item.bookingId.startsWith('temp_') ? 'PENDING_SYNC' : 'ACTIVE');
     const newBooking: UserBooking = {
       ...item,
       seat,
       bookedAt: new Date().toISOString(),
-      status: item.status || 'ACTIVE',
+      status: effectiveStatus,
     };
 
     // Évite les doublons

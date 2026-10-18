@@ -53,7 +53,7 @@
         <!-- Right side: Status + User Tickets -->
         <div class="flex items-center gap-3">
           <!-- Indicateur de Connexion & Résilience -->
-          <ConnectionBadge class="hidden sm:block" />
+          <ConnectionBadge class="hidden sm:inline-flex" />
 
           <!-- User / Mes Billets Quick Action Button -->
           <router-link

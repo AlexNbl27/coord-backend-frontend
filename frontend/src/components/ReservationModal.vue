@@ -11,20 +11,32 @@
           ✕
         </button>
 
-        <!-- Success icon -->
+        <!-- Status Header icon -->
         <div class="text-center mb-6">
-          <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40 flex items-center justify-center shadow-lg shadow-emerald-500/10">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+          <div
+            class="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center shadow-lg border-2"
+            :class="isOfflineBooking
+              ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-amber-500/10'
+              : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10'"
+          >
+            <!-- Icône Horloge/Sablier si hors-ligne -->
+            <svg v-if="isOfflineBooking" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <!-- Icône Check vert si en ligne -->
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
           </div>
           
           <h2 class="text-2xl font-black text-white tracking-tight">
-            Réservation confirmée !
+            {{ isOfflineBooking ? 'Réservation enregistrée !' : 'Réservation confirmée !' }}
           </h2>
           
-          <p class="text-cinema-textMuted text-xs mt-1">
-            Votre place est synchronisée et enregistrée en temps réel.
+          <p class="text-cinema-textMuted text-xs mt-1 leading-relaxed px-2">
+            {{ isOfflineBooking
+              ? 'Votre place a été réservée localement. Elle sera officiellement validée sur le serveur dès le retour de la connexion.'
+              : 'Votre place est synchronisée et enregistrée en temps réel sur le serveur.' }}
           </p>
         </div>
 
@@ -34,8 +46,14 @@
             <div class="divide-y divide-cinema-border/30 text-xs">
               <div class="flex justify-between items-center pb-2.5">
                 <span class="text-cinema-textMuted font-medium">Réf. Billet</span>
-                <span class="text-accent-gold font-mono font-bold bg-accent-gold/10 px-2 py-0.5 rounded border border-accent-gold/20">
-                  {{ shortBookingRef }}
+                <span
+                  class="font-mono font-bold px-2 py-0.5 rounded border flex items-center gap-1.5"
+                  :class="isOfflineBooking
+                    ? 'text-amber-400 bg-amber-500/10 border-amber-500/30'
+                    : 'text-accent-gold bg-accent-gold/10 border-accent-gold/20'"
+                >
+                  <span>{{ shortBookingRef }}</span>
+                  <span v-if="isOfflineBooking" class="text-[10px] uppercase font-normal opacity-75">(provisoire)</span>
                 </span>
               </div>
               
@@ -72,7 +90,7 @@
             class="w-full py-3 rounded-xl bg-gradient-to-r from-accent-gold to-yellow-600 text-cinema-dark font-extrabold text-sm hover:brightness-110 shadow-lg shadow-accent-gold/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>🎟️</span>
-            <span>Accéder à mon e-Billet</span>
+            <span>Accéder à mes Billets</span>
           </button>
 
           <div class="flex gap-2">
@@ -115,13 +133,18 @@ const emit = defineEmits(['close']);
 const router = useRouter();
 const { bookings, downloadCalendarFile } = useReservations();
 
+const currentBooking = computed(() => {
+  return bookings.value.find(b => b.bookingId === props.bookingId || b.slotId === props.bookingId);
+});
+
+const isOfflineBooking = computed(() => {
+  if (props.bookingId?.startsWith('temp_')) return true;
+  return currentBooking.value?.status === 'PENDING_SYNC';
+});
+
 const shortBookingRef = computed(() => {
   if (!props.bookingId) return '#CS-TICKET';
   return '#' + props.bookingId.substring(0, 8).toUpperCase();
-});
-
-const currentBooking = computed(() => {
-  return bookings.value.find(b => b.bookingId === props.bookingId);
 });
 
 const assignedSeat = computed(() => {
