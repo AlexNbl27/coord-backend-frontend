@@ -1,14 +1,27 @@
 <template>
   <transition name="modal">
-    <div v-if="show" class="modal-overlay" @click.self="close">
-      <div class="modal-content relative max-w-md w-full mx-4 shadow-2xl">
+    <div
+      v-if="show"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reservation-modal-title"
+      @keydown="handleKeyDown"
+      @click.self="close"
+    >
+      <div
+        ref="modalContentRef"
+        class="modal-content relative max-w-md w-full mx-4 shadow-2xl focus:outline-none"
+        tabindex="-1"
+      >
         <!-- Close button -->
         <button
+          ref="closeButtonRef"
           @click="close"
           class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-cinema-textMuted hover:text-white hover:bg-white/10 transition-colors duration-200 cursor-pointer text-xl"
-          aria-label="Fermer"
+          aria-label="Fermer la confirmation de réservation"
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </button>
 
         <!-- Status Header icon -->
@@ -18,18 +31,19 @@
             :class="isOfflineBooking
               ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-amber-500/10'
               : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10'"
+            aria-hidden="true"
           >
             <!-- Icône Horloge/Sablier si hors-ligne -->
-            <svg v-if="isOfflineBooking" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg v-if="isOfflineBooking" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <!-- Icône Check vert si en ligne -->
-            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
           </div>
           
-          <h2 class="text-2xl font-black text-white tracking-tight">
+          <h2 id="reservation-modal-title" class="text-2xl font-black text-white tracking-tight">
             {{ isOfflineBooking ? 'Réservation enregistrée !' : 'Réservation confirmée !' }}
           </h2>
           
@@ -75,7 +89,7 @@
               <div class="flex justify-between items-center pt-2.5">
                 <span class="text-cinema-textMuted font-medium">Fauteuil attribué</span>
                 <span class="text-emerald-400 font-bold flex items-center gap-1.5">
-                  <span>💺</span>
+                  <span aria-hidden="true">💺</span>
                   <span>{{ assignedSeat }}</span>
                 </span>
               </div>
@@ -89,7 +103,7 @@
             @click="goToReservations"
             class="w-full py-3 rounded-xl bg-gradient-to-r from-accent-gold to-yellow-600 text-cinema-dark font-extrabold text-sm hover:brightness-110 shadow-lg shadow-accent-gold/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>🎟️</span>
+            <span aria-hidden="true">🎟️</span>
             <span>Accéder à mes Billets</span>
           </button>
 
@@ -99,7 +113,7 @@
               @click="downloadCalendar"
               class="flex-1 py-2.5 rounded-xl border border-cinema-border hover:border-accent-gold/50 text-cinema-text hover:text-white text-xs font-semibold bg-cinema-darker/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>📅</span>
+              <span aria-hidden="true">📅</span>
               <span>Ajouter à l'agenda</span>
             </button>
 
@@ -117,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useReservations } from '../composables/useReservations';
 
@@ -132,6 +146,9 @@ const props = defineProps<{
 const emit = defineEmits(['close']);
 const router = useRouter();
 const { bookings, downloadCalendarFile } = useReservations();
+
+const modalContentRef = ref<HTMLElement | null>(null);
+const closeButtonRef = ref<HTMLButtonElement | null>(null);
 
 const currentBooking = computed(() => {
   return bookings.value.find(b => b.bookingId === props.bookingId || b.slotId === props.bookingId);
@@ -180,5 +197,49 @@ const formattedStartsAt = computed(() => {
     hour: '2-digit',
     minute: '2-digit',
   });
+});
+
+// Gestion du piège de focus et de la touche Échap
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    close();
+    return;
+  }
+
+  if (event.key === 'Tab' && modalContentRef.value) {
+    const focusable = Array.from(modalContentRef.value.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ));
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey) {
+      if (document.activeElement === first || document.activeElement === modalContentRef.value) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown, true);
+  nextTick(() => {
+    if (closeButtonRef.value) {
+      closeButtonRef.value.focus();
+    }
+  });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown, true);
 });
 </script>

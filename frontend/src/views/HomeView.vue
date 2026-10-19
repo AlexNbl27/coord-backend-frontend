@@ -7,7 +7,7 @@
       
       <div class="relative z-10 text-center max-w-4xl mx-auto">
         <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
-          <span>✨</span>
+          <span aria-hidden="true">✨</span>
           <span>Expérience Cinéma Haute Fidélité · Temps Réel</span>
         </div>
 
@@ -28,7 +28,7 @@
             to="/slots"
             class="px-7 py-3.5 rounded-xl bg-gradient-to-r from-accent-gold to-yellow-600 text-cinema-dark font-extrabold text-sm hover:brightness-110 shadow-lg shadow-accent-gold/25 transition-all flex items-center gap-2 cursor-pointer"
           >
-            <span>🎟️</span>
+            <span aria-hidden="true">🎟️</span>
             <span>Réserver une séance</span>
           </router-link>
 
@@ -36,7 +36,7 @@
             to="/movies"
             class="px-7 py-3.5 rounded-xl bg-cinema-card/80 hover:bg-cinema-border border border-cinema-border text-white font-semibold text-sm transition-all flex items-center gap-2 cursor-pointer"
           >
-            <span>🎬</span>
+            <span aria-hidden="true">🎬</span>
             <span>Explorer le catalogue</span>
           </router-link>
         </div>
@@ -105,14 +105,22 @@
 
     <!-- Modal de détails de film -->
     <transition name="modal">
-      <div v-if="selectedMovie" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="selectedMovie = null">
-        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl">
+      <div
+        v-if="selectedMovie"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="home-preview-title"
+        @keydown.esc="selectedMovie = null"
+        @click.self="selectedMovie = null"
+      >
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl focus:outline-none" tabindex="-1">
           <button
             @click="selectedMovie = null"
             class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-cinema-textMuted hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xl"
-            aria-label="Fermer"
+            aria-label="Fermer la prévisualisation du film"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
           
           <div class="flex flex-col md:flex-row gap-6">
@@ -121,10 +129,10 @@
                 <img
                   v-if="selectedMovie.poster"
                   :src="selectedMovie.poster"
-                  :alt="selectedMovie.title"
+                  :alt="`Affiche de ${selectedMovie.title}`"
                   class="w-full h-full object-cover"
                 />
-                <div v-else class="w-full h-full bg-gray-700 flex items-center justify-center">
+                <div v-else class="w-full h-full bg-gray-700 flex items-center justify-center" aria-hidden="true">
                   <p class="text-gray-500">Pas d'affiche</p>
                 </div>
               </div>
@@ -133,7 +141,7 @@
             <div class="flex-1">
               <div class="flex items-start justify-between">
                 <div>
-                  <h2 class="text-2xl font-bold text-white">{{ selectedMovie.title }}</h2>
+                  <h2 id="home-preview-title" class="text-2xl font-bold text-white">{{ selectedMovie.title }}</h2>
                   <p class="text-gray-400 text-sm mt-0.5">{{ selectedMovie.year }} • {{ selectedMovie.duration }} min • Dir. {{ selectedMovie.director }}</p>
                 </div>
                 <div class="flex items-center gap-1 bg-accent-gold/15 px-2.5 py-1 rounded-full border border-accent-gold/30">
@@ -148,7 +156,7 @@
               <div class="mb-5 p-3.5 bg-cinema-card/70 rounded-xl border border-cinema-border/50">
                 <div class="flex items-center justify-between mb-2.5">
                   <span class="text-xs font-bold uppercase tracking-wider text-accent-gold flex items-center gap-1.5">
-                    <span>🎟️</span>
+                    <span aria-hidden="true">🎟️</span>
                     <span>Séances programmées ({{ movieSlots.length }})</span>
                   </span>
                   <span v-if="movieSlots.length > 0" class="text-[11px] text-emerald-400 font-medium">Temps réel</span>
@@ -159,9 +167,13 @@
                     v-for="slot in movieSlots"
                     :key="slot.id"
                     @click="handleReserveFromModal(slot.id)"
+                    :aria-label="`Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}`"
                     class="group px-3 py-2 rounded-lg bg-cinema-darker hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
                   >
-                    <span>🕒 {{ formatSlotTime(slot.startsAt) }}</span>
+                    <span class="flex items-center gap-1">
+                      <span aria-hidden="true">🕒</span>
+                      <span>{{ formatSlotTime(slot.startsAt) }}</span>
+                    </span>
                     <span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 group-hover:bg-black/20 text-cinema-textMuted group-hover:text-cinema-dark">
                       {{ slot.hall }}
                     </span>

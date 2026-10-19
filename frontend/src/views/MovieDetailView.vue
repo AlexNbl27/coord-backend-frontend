@@ -54,18 +54,18 @@
               <img
                 v-if="movie.poster"
                 :src="movie.poster"
-                :alt="movie.title"
+                :alt="`Affiche officielle du film ${movie.title}`"
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              <div v-else class="w-full h-full bg-gradient-to-br from-cinema-border to-cinema-darker flex items-center justify-center">
+              <div v-else class="w-full h-full bg-gradient-to-br from-cinema-border to-cinema-darker flex items-center justify-center" aria-hidden="true">
                 <span class="text-6xl opacity-30">🎬</span>
               </div>
 
               <!-- Note IMDB Badge -->
-              <div class="absolute top-3 right-3 bg-cinema-dark/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-accent-gold/40 shadow-md flex items-center gap-1.5">
-                <span class="text-accent-gold text-base">★</span>
+              <div class="absolute top-3 right-3 bg-cinema-dark/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-accent-gold/40 shadow-md flex items-center gap-1.5" aria-label="`Note IMDB : ${movie.ratings?.imdb?.toFixed(1) || 'N/A'} sur 10`">
+                <span class="text-accent-gold text-base" aria-hidden="true">★</span>
                 <span class="text-white font-bold text-sm">{{ movie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
-                <span class="text-cinema-textMuted text-xs">/10</span>
+                <span class="text-cinema-textMuted text-xs" aria-hidden="true">/10</span>
               </div>
             </div>
           </div>
@@ -114,7 +114,7 @@
                     :key="index"
                     class="bg-cinema-darker/80 px-3 py-1.5 rounded-lg text-xs text-cinema-text border border-cinema-border/50"
                   >
-                    👤 {{ actor }}
+                    <span aria-hidden="true">👤</span> {{ actor }}
                   </span>
                 </div>
               </div>
@@ -143,7 +143,7 @@
           <div class="flex items-center justify-between">
             <div>
               <div class="flex items-center gap-2">
-                <span class="text-2xl">🎟️</span>
+                <span class="text-2xl" aria-hidden="true">🎟️</span>
                 <h2 class="text-2xl font-bold text-white">Séances programmées</h2>
               </div>
               <p class="text-sm text-cinema-textMuted mt-1">
@@ -170,7 +170,7 @@
 
           <!-- Empty State Séances -->
           <div v-else class="text-center py-12 bg-cinema-card/30 rounded-2xl border border-cinema-border/40 p-6">
-            <span class="text-4xl block mb-2">🕒</span>
+            <span class="text-4xl block mb-2" aria-hidden="true">🕒</span>
             <h3 class="text-lg font-bold text-white mb-1">Aucune séance aujourd'hui</h3>
             <p class="text-xs text-cinema-textMuted max-w-md mx-auto mb-4">
               Ce film n'a pas de séance active pour aujourd'hui. D'autres chefs-d'œuvre sont actuellement à l'affiche.

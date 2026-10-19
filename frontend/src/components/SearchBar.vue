@@ -3,15 +3,22 @@
     <!-- Barre de recherche principale -->
     <div class="relative flex items-center gap-3">
       <div class="relative flex-1 search-bar">
-        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-cinema-textMuted pointer-events-none flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <label for="movie-search-input" class="sr-only">
+          Rechercher un film, un réalisateur, un genre...
+        </label>
+
+        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-cinema-textMuted pointer-events-none flex items-center" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
           </svg>
         </div>
         
         <input
+          id="movie-search-input"
           v-model="searchQuery"
-          type="text"
+          type="search"
+          role="searchbox"
+          aria-label="Rechercher un film, un réalisateur, un genre..."
           placeholder="Rechercher un film, un réalisateur, un genre..."
           class="w-full h-12 pl-12 pr-12 rounded-full bg-cinema-card border border-cinema-border text-cinema-text placeholder-cinema-textMuted text-sm focus:outline-none focus:ring-2 focus:ring-accent-gold/50 focus:border-accent-gold transition-all duration-200"
           @input="handleSearch"
@@ -23,26 +30,34 @@
             class="w-8 h-8 rounded-full flex items-center justify-center text-cinema-textMuted hover:text-white hover:bg-white/10 transition-colors duration-200 cursor-pointer"
             aria-label="Effacer la recherche"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
           </button>
         </div>
       </div>
 
-      <!-- Bouton d'ouverture explicite des filtres (aligné au pixel près h-12) -->
+      <!-- Bouton d'ouverture explicite des filtres -->
       <button
         @click="showFilters = !showFilters"
+        :aria-expanded="showFilters ? 'true' : 'false'"
+        aria-controls="advanced-filters-panel"
+        aria-label="Filtres de recherche avancés"
         class="h-12 px-5 rounded-full border transition-all text-xs font-semibold flex items-center gap-2 shrink-0 cursor-pointer shadow-sm"
         :class="showFilters || hasCustomFilters ? 'bg-accent-gold text-cinema-dark border-accent-gold shadow-accent-gold/20' : 'bg-cinema-card hover:bg-cinema-cardHover text-cinema-textMuted hover:text-white border-cinema-border'"
         title="Afficher/Masquer les filtres avancés"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
         </svg>
         <span class="hidden sm:inline">Filtres</span>
-        <span class="text-[10px]">{{ showFilters ? '▲' : '▼' }}</span>
+        <span class="text-[10px]" aria-hidden="true">{{ showFilters ? '▲' : '▼' }}</span>
       </button>
+    </div>
+
+    <!-- Annonce vocale dynamique pour VoiceOver -->
+    <div class="sr-only" aria-live="polite" aria-atomic="true">
+      {{ resultsCount }} film{{ resultsCount > 1 ? 's' : '' }} correspondent à votre recherche
     </div>
 
     <!-- Filtres avancés -->
@@ -52,14 +67,19 @@
       enter-from-class="opacity-0 max-h-0 overflow-hidden"
       leave-to-class="opacity-0 max-h-0 overflow-hidden"
     >
-      <div v-if="showFilters" class="mt-4 bg-cinema-card/70 rounded-xl p-5 border border-cinema-border/60 shadow-lg">
+      <div
+        id="advanced-filters-panel"
+        v-if="showFilters"
+        class="mt-4 bg-cinema-card/70 rounded-xl p-5 border border-cinema-border/60 shadow-lg"
+      >
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- Filtre par genre -->
           <div>
-            <label class="block text-xs font-medium text-cinema-textMuted mb-2">
+            <label for="filter-genre" class="block text-xs font-medium text-cinema-textMuted mb-2">
               Genre
             </label>
             <select
+              id="filter-genre"
               v-model="selectedGenre"
               class="w-full px-3 py-2 rounded-lg bg-cinema-darker border border-cinema-border text-cinema-text text-xs focus:outline-none focus:ring-1 focus:ring-accent-gold/50"
               @change="applyFilters"
@@ -73,10 +93,11 @@
 
           <!-- Filtre par note minimale -->
           <div>
-            <label class="block text-xs font-medium text-cinema-textMuted mb-2">
+            <label for="filter-rating" class="block text-xs font-medium text-cinema-textMuted mb-2">
               Note minimale
             </label>
             <select
+              id="filter-rating"
               v-model="minRating"
               class="w-full px-3 py-2 rounded-lg bg-cinema-darker border border-cinema-border text-cinema-text text-xs focus:outline-none focus:ring-1 focus:ring-accent-gold/50"
               @change="applyFilters"
@@ -90,10 +111,11 @@
 
           <!-- Filtre par année minimale -->
           <div>
-            <label class="block text-xs font-medium text-cinema-textMuted mb-2">
+            <label for="filter-period" class="block text-xs font-medium text-cinema-textMuted mb-2">
               Période
             </label>
             <select
+              id="filter-period"
               v-model="minYear"
               class="w-full px-3 py-2 rounded-lg bg-cinema-darker border border-cinema-border text-cinema-text text-xs focus:outline-none focus:ring-1 focus:ring-accent-gold/50"
               @change="applyFilters"
