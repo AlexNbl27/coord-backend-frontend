@@ -284,20 +284,26 @@
     >
       <div
         v-if="showConfirmModal && selectedForCancel"
+        ref="confirmModalRef"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-cancel-title"
+        aria-describedby="confirm-cancel-desc"
         class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
         @click.self="showConfirmModal = false"
       >
         <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
-          <div class="w-14 h-14 mx-auto mb-4 bg-red-950/60 rounded-full flex items-center justify-center border border-red-500/30 text-red-400 text-2xl">
+          <div class="w-14 h-14 mx-auto mb-4 bg-red-950/60 rounded-full flex items-center justify-center border border-red-500/30 text-red-400 text-2xl" aria-hidden="true">
             ⚠️
           </div>
-          <h3 class="text-xl font-bold text-white text-center mb-2">Annuler la réservation ?</h3>
-          <p class="text-cinema-textMuted text-sm text-center mb-6">
+          <h2 id="confirm-cancel-title" class="text-xl font-bold text-white text-center mb-2">Annuler la réservation ?</h2>
+          <p id="confirm-cancel-desc" class="text-cinema-textMuted text-sm text-center mb-6">
             Êtes-vous sûr de vouloir annuler votre place pour <strong class="text-white">{{ selectedForCancel.movieTitle }}</strong> ({{ selectedForCancel.seat }}) ? Le créneau sera immédiatement libéré pour les autres spectateurs.
           </p>
 
           <div class="flex gap-3">
             <button
+              ref="keepButtonRef"
               @click="showConfirmModal = false"
               class="flex-1 py-2.5 rounded-xl bg-cinema-darker text-cinema-text font-semibold text-sm hover:bg-cinema-border transition-colors border border-cinema-border cursor-pointer"
             >
@@ -320,6 +326,7 @@
 import { ref, computed } from 'vue';
 import { useReservations, type UserBooking } from '../composables/useReservations';
 import { useConnectionStore } from '../stores/connection';
+import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 
 const { bookings, activeBookingsCount, cancelBooking, deleteFromHistory, downloadCalendarFile } = useReservations();
 const connectionStore = useConnectionStore();
@@ -328,6 +335,18 @@ const filter = ref<'ALL' | 'ACTIVE' | 'CANCELLED'>('ALL');
 const cancellingSlotId = ref<string | null>(null);
 const showConfirmModal = ref(false);
 const selectedForCancel = ref<UserBooking | null>(null);
+
+const confirmModalRef = ref<HTMLElement | null>(null);
+const keepButtonRef = ref<HTMLButtonElement | null>(null);
+
+useAccessibleDialog({
+  isOpen: showConfirmModal,
+  dialogRef: confirmModalRef,
+  initialFocusRef: keepButtonRef,
+  onClose: () => {
+    showConfirmModal.value = false;
+  },
+});
 
 const toastMessage = ref('');
 const toastType = ref<'success' | 'error'>('success');

@@ -1,11 +1,11 @@
 <template>
   <div
     v-if="show"
+    ref="modalRef"
     role="dialog"
     aria-modal="true"
     aria-labelledby="ab-metrics-modal-title"
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
-    @keydown.esc="$emit('close')"
     @click.self="$emit('close')"
   >
     <div class="relative w-full max-w-4xl bg-cinema-card border border-cinema-border/80 rounded-2xl shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] overflow-y-auto focus:outline-none" tabindex="-1">
@@ -32,6 +32,7 @@
         </div>
 
         <button
+          ref="closeButtonRef"
           @click="$emit('close')"
           class="p-2 rounded-lg text-cinema-textMuted hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           aria-label="Fermer le tableau de bord A/B testing"
@@ -273,15 +274,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, toRef } from 'vue';
 import { useAbTest, type AbMetric, type AbSummary } from '../composables/useAbTest';
 import { useSlots } from '../composables/useSlots';
+import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 
-defineProps<{
+const props = defineProps<{
   show: boolean;
 }>();
 
-defineEmits(['close']);
+const emit = defineEmits(['close']);
+
+const modalRef = ref<HTMLElement | null>(null);
+const closeButtonRef = ref<HTMLButtonElement | null>(null);
+
+useAccessibleDialog({
+  isOpen: toRef(props, 'show'),
+  dialogRef: modalRef,
+  initialFocusRef: closeButtonRef,
+  onClose: () => emit('close'),
+});
 
 const { variant, experimentId, exposed, measured, bookingButtonLabel, fetchMetrics, simulateData } = useAbTest();
 const { resetSlots } = useSlots();
