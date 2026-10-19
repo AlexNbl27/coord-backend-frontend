@@ -192,13 +192,15 @@
               <div class="flex flex-col sm:flex-row gap-2.5">
                 <button
                   @click="goToMovieDetail(selectedMovie._id)"
+                  :aria-label="`Consulter la fiche complète et le casting du film ${selectedMovie.title}`"
                   class="flex-1 py-2.5 px-4 rounded-xl bg-accent-gold/15 hover:bg-accent-gold/25 text-accent-gold border border-accent-gold/40 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>Fiche complète & Casting</span>
-                  <span>→</span>
+                  <span aria-hidden="true">→</span>
                 </button>
                 <button
                   @click="selectedMovie = null"
+                  :aria-label="`Fermer la prévisualisation du film ${selectedMovie.title}`"
                   class="py-2.5 px-4 rounded-xl bg-cinema-card hover:bg-cinema-border text-cinema-textMuted hover:text-white text-xs font-medium transition-all cursor-pointer"
                 >
                   Fermer

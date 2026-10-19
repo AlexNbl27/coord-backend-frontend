@@ -201,6 +201,7 @@
                   v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="downloadCalendarFile(booking)"
                   class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
+                  :aria-label="`Ajouter la séance de ${booking.movieTitle} du ${formatDateTime(booking.startsAt)} à mon agenda`"
                   title="Ajouter cet événement à mon calendrier"
                 >
                   <span aria-hidden="true">📅</span>
@@ -210,6 +211,7 @@
                   v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="printTicket"
                   class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
+                  :aria-label="`Imprimer le billet pour ${booking.movieTitle}, fauteuil ${booking.seat || 'non spécifié'}`"
                   title="Imprimer ce billet"
                 >
                   <span aria-hidden="true">🖨️</span>
@@ -222,7 +224,7 @@
                   v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="confirmCancel(booking)"
                   :disabled="cancellingSlotId === booking.slotId"
-                  :aria-label="`Annuler ma réservation pour le film ${booking.movieTitle}`"
+                  :aria-label="`Annuler ma réservation pour le film ${booking.movieTitle}, séance du ${formatDateTime(booking.startsAt)}`"
                   class="px-4 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 hover:border-red-600 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   <span v-if="cancellingSlotId === booking.slotId" class="inline-block animate-spin" aria-hidden="true">⏳</span>
@@ -231,6 +233,7 @@
                 <button
                   v-else
                   @click="deleteFromHistory(booking.bookingId)"
+                  :aria-label="`Supprimer de mon historique le billet pour ${booking.movieTitle}`"
                   class="px-3.5 py-2 rounded-xl text-xs font-medium text-cinema-textMuted hover:text-white bg-cinema-darker/50 hover:bg-cinema-darker border border-cinema-border/40 transition-all cursor-pointer"
                   title="Supprimer de l'historique"
                 >
@@ -305,12 +308,14 @@
             <button
               ref="keepButtonRef"
               @click="showConfirmModal = false"
+              :aria-label="`Conserver ma réservation pour le film ${selectedForCancel.movieTitle}`"
               class="flex-1 py-2.5 rounded-xl bg-cinema-darker text-cinema-text font-semibold text-sm hover:bg-cinema-border transition-colors border border-cinema-border cursor-pointer"
             >
               Conserver
             </button>
             <button
               @click="executeCancel"
+              :aria-label="`Confirmer définitivement l'annulation de ma place pour ${selectedForCancel.movieTitle}`"
               class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow-lg shadow-red-600/30 transition-all cursor-pointer"
             >
               Confirmer l'annulation

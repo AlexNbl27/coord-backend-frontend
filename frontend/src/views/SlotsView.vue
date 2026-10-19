@@ -92,10 +92,12 @@
         <!-- Ligne 2: Formats Technologiques & Statut -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-cinema-border/30">
           <!-- Formats techniques -->
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs text-cinema-textMuted mr-1 font-medium">Format :</span>
+          <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer les séances par format technologique">
+            <span class="text-xs text-cinema-textMuted mr-1 font-medium" aria-hidden="true">Format :</span>
             <button
               @click="techFilter = 'ALL'"
+              :aria-pressed="techFilter === 'ALL' ? 'true' : 'false'"
+              aria-label="Format : Tous les formats technologiques"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
               :class="techFilter === 'ALL' ? 'bg-accent-gold text-cinema-dark shadow-sm' : 'bg-cinema-darker text-cinema-textMuted hover:text-white border border-cinema-border/50'"
             >
@@ -103,6 +105,8 @@
             </button>
             <button
               @click="techFilter = 'IMAX'"
+              :aria-pressed="techFilter === 'IMAX' ? 'true' : 'false'"
+              aria-label="Format : Séances IMAX Laser uniquement"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
               :class="techFilter === 'IMAX' ? 'bg-blue-500 text-white shadow-sm' : 'bg-cinema-darker text-blue-400 hover:text-blue-300 border border-blue-500/30'"
             >
@@ -110,6 +114,8 @@
             </button>
             <button
               @click="techFilter = 'Dolby'"
+              :aria-pressed="techFilter === 'Dolby' ? 'true' : 'false'"
+              aria-label="Format : Séances Dolby Atmos uniquement"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
               :class="techFilter === 'Dolby' ? 'bg-purple-500 text-white shadow-sm' : 'bg-cinema-darker text-purple-400 hover:text-purple-300 border border-purple-500/30'"
             >
@@ -117,6 +123,8 @@
             </button>
             <button
               @click="techFilter = '70mm'"
+              :aria-pressed="techFilter === '70mm' ? 'true' : 'false'"
+              aria-label="Format : Séances 70mm Grand Large uniquement"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
               :class="techFilter === '70mm' ? 'bg-amber-500 text-cinema-dark shadow-sm' : 'bg-cinema-darker text-amber-400 hover:text-amber-300 border border-amber-500/30'"
             >
@@ -125,9 +133,11 @@
           </div>
 
           <!-- Filtre Statut Disponibilité -->
-          <div class="flex items-center gap-2 self-start sm:self-auto">
+          <div class="flex items-center gap-2 self-start sm:self-auto" role="group" aria-label="Filtrer les séances par disponibilité">
             <button
               @click="selectedFilter = 'ALL'"
+              :aria-pressed="selectedFilter === 'ALL' ? 'true' : 'false'"
+              aria-label="Disponibilité : Toutes les séances"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
               :class="selectedFilter === 'ALL' ? 'bg-white/20 text-white' : 'text-cinema-textMuted hover:text-white'"
             >
@@ -135,6 +145,8 @@
             </button>
             <button
               @click="selectedFilter = 'AVAILABLE'"
+              :aria-pressed="selectedFilter === 'AVAILABLE' ? 'true' : 'false'"
+              aria-label="Disponibilité : Séances disponibles uniquement"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
               :class="selectedFilter === 'AVAILABLE' ? 'bg-emerald-500 text-cinema-dark shadow-sm' : 'text-emerald-400/80 hover:text-emerald-300'"
             >
@@ -142,6 +154,8 @@
             </button>
             <button
               @click="selectedFilter = 'BOOKED'"
+              :aria-pressed="selectedFilter === 'BOOKED' ? 'true' : 'false'"
+              aria-label="Disponibilité : Séances complètes uniquement"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
               :class="selectedFilter === 'BOOKED' ? 'bg-red-500/80 text-white shadow-sm' : 'text-red-400/80 hover:text-red-300'"
             >
@@ -149,6 +163,11 @@
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- Annonce vocale dynamique pour VoiceOver des résultats de filtrage -->
+      <div class="sr-only" aria-live="polite" role="status">
+        {{ displayedSlots.length }} séance{{ displayedSlots.length > 1 ? 's' : '' }} trouvée{{ displayedSlots.length > 1 ? 's' : '' }}
       </div>
 
       <!-- Résultats : Grille des séances -->

@@ -7,6 +7,7 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby="reservation-modal-title"
+      aria-describedby="reservation-modal-summary"
       @click.self="close"
     >
       <div
@@ -14,6 +15,19 @@
         class="modal-content relative max-w-md w-full mx-4 shadow-2xl focus:outline-none"
         tabindex="-1"
       >
+        <!-- Annonce vocale dynamique pour VoiceOver lors de l'ouverture -->
+        <div class="sr-only" aria-live="polite">
+          {{ isOfflineBooking
+            ? `Réservation hors-ligne enregistrée pour le film ${movieTitle}. Fauteuil ${assignedSeat} en salle ${hall}.`
+            : `Réservation confirmée avec succès pour le film ${movieTitle}. Séance le ${formattedStartsAt} en salle ${hall}, fauteuil ${assignedSeat}. Référence ${shortBookingRef}.`
+          }}
+        </div>
+
+        <!-- Description complète contextualisée pour les lecteurs d'écran -->
+        <p id="reservation-modal-summary" class="sr-only">
+          Billet pour le film {{ movieTitle }}, séance du {{ formattedStartsAt }} en {{ hall }}. Fauteuil attribué : {{ assignedSeat }}. Référence du billet : {{ shortBookingRef }}. {{ isOfflineBooking ? 'Réservation enregistrée localement en attente de synchronisation sur le serveur.' : 'Réservation confirmée et validée en direct sur le serveur.' }}
+        </p>
+
         <!-- Close button -->
         <button
           ref="closeButtonRef"
@@ -101,6 +115,7 @@
         <div class="flex flex-col gap-2.5">
           <button
             @click="goToReservations"
+            :aria-label="`Accéder à mes billets et consulter la réservation de ${movieTitle}`"
             class="w-full py-3 rounded-xl bg-gradient-to-r from-accent-gold to-yellow-600 text-cinema-dark font-extrabold text-sm hover:brightness-110 shadow-lg shadow-accent-gold/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span aria-hidden="true">🎟️</span>
@@ -111,6 +126,7 @@
             <button
               v-if="currentBooking"
               @click="downloadCalendar"
+              :aria-label="`Ajouter la séance de ${movieTitle} du ${formattedStartsAt} à mon agenda`"
               class="flex-1 py-2.5 rounded-xl border border-cinema-border hover:border-accent-gold/50 text-cinema-text hover:text-white text-xs font-semibold bg-cinema-darker/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <span aria-hidden="true">📅</span>
@@ -119,6 +135,7 @@
 
             <button
               @click="close"
+              aria-label="Fermer la fenêtre"
               class="px-5 py-2.5 rounded-xl bg-cinema-darker hover:bg-cinema-border text-cinema-textMuted hover:text-white text-xs font-medium transition-all cursor-pointer"
             >
               Fermer

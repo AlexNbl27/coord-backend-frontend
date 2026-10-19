@@ -78,7 +78,7 @@
         v-if="slot.status === 'AVAILABLE'"
         @click.stop="handleReserve"
         class="w-full btn btn-primary text-xs py-2.5 cursor-pointer"
-        :aria-label="`Réserver une place pour ${slot.movieTitle} à ${formattedStartsAt}`"
+        :aria-label="`Réserver une place pour ${slot.movieTitle} à ${formattedStartsAt} en salle ${slot.hall}${!sseConnected ? ' (réservation hors-ligne, synchronisation différée)' : ''}`"
         :disabled="isReserving"
         :aria-busy="isReserving ? 'true' : 'false'"
       >
@@ -92,6 +92,11 @@
           <span>Réservation en cours...</span>
         </span>
       </button>
+
+      <!-- Annonce vocale dynamique pour VoiceOver lors de la réservation -->
+      <span v-if="isReserving" class="sr-only" aria-live="polite">
+        Réservation en cours pour {{ slot.movieTitle }}...
+      </span>
 
       <!-- Message si séance complète ou en attente de synchro -->
       <div v-else class="text-center py-2">
