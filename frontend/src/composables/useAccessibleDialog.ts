@@ -1,4 +1,4 @@
-import { ref, watch, onMounted, onUnmounted, nextTick, type Ref } from 'vue';
+import { watch, onMounted, onUnmounted, nextTick, type Ref } from 'vue';
 
 export interface UseAccessibleDialogOptions {
   isOpen: Ref<boolean>;
