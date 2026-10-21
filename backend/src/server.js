@@ -6,6 +6,7 @@ import cluster from 'node:cluster';
 import os from 'node:os';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import { trace, isSpanContextValid, SpanStatusCode } from '@opentelemetry/api';
 import { movieRouter } from './routes/movieRoutes.js';
 import { abRouter } from './routes/abRoutes.js';
 import { slotRouter } from './routes/slotRoutes.js';
@@ -32,10 +33,21 @@ function createServer() {
   app.use(cors({
     origin: true,
     credentials: true,
+    exposedHeaders: ['X-Trace-Id'],
     maxAge: 86400
   }));
   app.use(express.json());
   app.use(cookieParser());
+
+  // Corrélation Front/Back : renvoie l'identifiant de trace dans l'en-tête X-Trace-Id
+  app.use((req, res, next) => {
+    const span = trace.getActiveSpan();
+    const ctx = span?.spanContext();
+    if (ctx && isSpanContextValid(ctx)) {
+      res.setHeader('X-Trace-Id', ctx.traceId);
+    }
+    next();
+  });
 
   // Racine
   app.get('/', (req, res) => {
@@ -77,6 +89,23 @@ function createServer() {
   app.use('/api/movies', movieRouter);
   app.use('/api/slots', slotRouter);
   app.use('/api/ab', abRouter);
+
+  // Gestionnaire d'erreurs global : enregistre l'exception dans le span actif
+  app.use((err, req, res, _next) => {
+    const span = trace.getActiveSpan();
+    const ctx = span?.spanContext();
+    if (span) {
+      span.recordException(err);
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+    }
+    if (ctx && isSpanContextValid(ctx) && !res.headersSent) {
+      res.setHeader('X-Trace-Id', ctx.traceId);
+    }
+    const status = err.status || 500;
+    res.status(status).json({
+      message: status >= 500 ? 'Le service est momentanément indisponible.' : err.message
+    });
+  });
 
   return app;
 }
