@@ -151,14 +151,27 @@ export async function seedInitialSlotsIfEmpty() {
  */
 export async function allSlots() {
   await seedInitialSlotsIfEmpty();
-  const slots = await Slot.find().sort({ startsAt: 1 });
-  // T2 : requête N+1 (un findOne par séance) visible dans Jaeger par la répétition des spans MongoDB
-  for (const slot of slots) {
-    if (slot.movieTitle) {
-      await Movie.findOne({ title: slot.movieTitle }).select('_id title').lean();
-    }
+  const slots = await Slot.find().sort({ startsAt: 1 }).lean();
+  // Résolution T2 : une seule requête groupée ($in) au lieu d'une boucle N+1
+  const titles = [...new Set(slots.map((s) => s.movieTitle).filter(Boolean))];
+  if (titles.length > 0) {
+    await Movie.find({ title: { $in: titles } }).select('_id title').lean();
   }
   return slots.map(toSlotView);
+}
+
+/**
+ * Envoi asynchrone non-bloquant de la confirmation SMS (résolution T1)
+ */
+function dispatchSmsConfirmation(bookingId, slotId) {
+  if (!SMS_GATEWAY_URL) return;
+  fetch(SMS_GATEWAY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bookingId, slotId })
+  }).catch((err) => {
+    console.warn(`[SMS] Échec asynchrone pour ${bookingId}:`, err.message);
+  });
 }
 
 /**
@@ -200,14 +213,8 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured) {
         throw error;
       }
 
-      // T1 : appel synchrone vers la passerelle SMS de confirmation de billet
-      if (SMS_GATEWAY_URL) {
-        await fetch(SMS_GATEWAY_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookingId: winner.bookingId, slotId: winner._id })
-        });
-      }
+      // Résolution T1 : envoi SMS asynchrone pour ne pas bloquer la réponse HTTP
+      dispatchSmsConfirmation(winner.bookingId, winner._id);
 
       span.setAttribute('cineslot.reservation.id', String(winner.bookingId));
       span.setAttribute('cineslot.status', String(winner.status));
@@ -276,18 +283,15 @@ export async function createDemoSlot() {
  * Preuve de réservation (pour vérification des compteurs)
  */
 export async function getSlotProof(slotId) {
-  const slot = await Slot.findById(slotId);
+  const slot = await Slot.findById(slotId).lean();
   if (!slot) {
     const error = new Error('Créneau inconnu');
     error.status = 404;
     throw error;
   }
-  // T3 : erreur 500 intermittente sur certaines séances (ex: The Matrix) pour diagnostic via X-Trace-Id
-  if (slot.movieTitle === 'The Matrix') {
-    throw new Error(`Configuration de salle absente pour le créneau ${slotId}`);
-  }
   return {
     id: slot._id,
+    hall: slot.hall || 'Salle Principale',
     status: slot.status,
     claimCount: slot.claimCount,
     version: slot.version,
