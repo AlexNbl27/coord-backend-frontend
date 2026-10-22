@@ -1,13 +1,4 @@
-/**
- * Utilitaires de calculs statistiques pour l'A/B Testing
- * Rigueur mathématique : Test Z de deux proportions, p-value, intervalles de confiance et SRM.
- */
-
-/**
- * Fonction de répartition de la loi normale standard (approximation erf)
- */
 export function normalCdf(x) {
-  // Approximation de Abramowitz et Stegun (précision 1.5e-7)
   const a1 = 0.254829592;
   const a2 = -0.284496736;
   const a3 = 1.421413741;
@@ -24,17 +15,13 @@ export function normalCdf(x) {
   return 0.5 * (1.0 + sign * erf);
 }
 
-/**
- * Calcule l'intervalle de confiance (95%) pour une proportion (Intervalle de Wilson)
- * Plus robuste que l'approximation de Wald, notamment pour les faibles effectifs.
- */
-export function calculateConfidenceInterval(converted, exposed, confidence = 0.95) {
+export function calculateConfidenceInterval(converted, exposed) {
   if (!exposed || exposed <= 0) {
     return [0, 0];
   }
 
   const p = converted / exposed;
-  const z = 1.95996; // pour 95% de confiance
+  const z = 1.95996;
   const z2 = z * z;
 
   const denom = 1 + z2 / exposed;
@@ -47,24 +34,15 @@ export function calculateConfidenceInterval(converted, exposed, confidence = 0.9
   return [parseFloat(lower.toFixed(4)), parseFloat(upper.toFixed(4))];
 }
 
-/**
- * Test SRM (Sample Ratio Mismatch) via test du Chi-deux (χ²)
- * Vérifie si la répartition des exposés A vs B est conforme au ratio théorique 50/50.
- */
 export function calculateSrm(exposedA, exposedB) {
   const total = exposedA + exposedB;
   if (total < 20) {
-    // Échantillon trop faible pour un test SRM significatif
     return { hasMismatch: false, pValue: 1.0, chiSquare: 0 };
   }
 
   const expected = total / 2;
   const chiSquare = Math.pow(exposedA - expected, 2) / expected + Math.pow(exposedB - expected, 2) / expected;
-
-  // Pour 1 ddl : p-value = 1 - cdf_chi2(chiSquare) = 2 * (1 - normalCdf(sqrt(chiSquare)))
   const pValue = 2 * (1 - normalCdf(Math.sqrt(chiSquare)));
-
-  // Seuil conservateur standard : p < 0.001 pour déclencher une alerte SRM formelle
   const hasMismatch = pValue < 0.001;
 
   return {
@@ -74,10 +52,6 @@ export function calculateSrm(exposedA, exposedB) {
   };
 }
 
-/**
- * Test Z de comparaison de deux proportions indépendantes
- * Compare le taux de conversion de la variante B (test) vs variante A (contrôle).
- */
 export function calculateTwoProportionZTest(exposedA, convertedA, exposedB, convertedB) {
   if (!exposedA || !exposedB || exposedA < 5 || exposedB < 5) {
     return {
@@ -104,10 +78,8 @@ export function calculateTwoProportionZTest(exposedA, convertedA, exposedB, conv
   }
 
   const zScore = (pB - pA) / se;
-  // Test bilatéral (two-sided)
   const pValue = 2 * (1 - normalCdf(Math.abs(zScore)));
   const isSignificant = pValue < 0.05;
-
   const relativeLift = pA > 0 ? ((pB - pA) / pA) * 100 : 0;
 
   return {
@@ -117,4 +89,3 @@ export function calculateTwoProportionZTest(exposedA, convertedA, exposedB, conv
     relativeLift: parseFloat(relativeLift.toFixed(2))
   };
 }
-

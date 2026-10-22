@@ -26,7 +26,7 @@ const movieSchema = new mongoose.Schema({
     trim: true
   }],
   duration: {
-    type: Number, // en minutes
+    type: Number, // in minutes
     min: 1
   },
   ratings: {
@@ -60,7 +60,7 @@ const movieSchema = new mongoose.Schema({
   collection: 'movies'
 });
 
-// Index B-Tree pour accélérer les requêtes de filtrage et de tri du test de charge
+// B-Tree indexes for filtering and sorting queries
 movieSchema.index({ genres: 1, 'ratings.imdb': -1 });
 movieSchema.index({ year: -1 });
 movieSchema.index({ 'ratings.imdb': -1 });
