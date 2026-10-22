@@ -5,8 +5,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <div class="flex items-center gap-3">
-            <span class="text-3xl" aria-hidden="true">🎟️</span>
-            <h1 class="text-3xl font-extrabold text-white tracking-tight">Mes Réservations</h1>
+            <h1 class="font-display text-3xl font-bold text-white tracking-tight">Mes Réservations</h1>
           </div>
           <p class="text-cinema-textMuted text-sm mt-1">
             Retrouvez tous vos billets de cinéma et gérez vos séances en temps réel
@@ -56,7 +55,7 @@
           :class="toastType === 'success' ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-200' : 'bg-red-950/80 border border-red-500/50 text-red-200'"
         >
           <div class="flex items-center gap-3">
-            <span aria-hidden="true" class="text-xl">{{ toastType === 'success' ? '✓' : '⚠️' }}</span>
+            <span aria-hidden="true" class="text-base font-bold">{{ toastType === 'success' ? '✓' : '!' }}</span>
             <p class="text-sm font-medium">{{ toastMessage }}</p>
           </div>
           <button @click="toastMessage = ''" class="text-sm opacity-70 hover:opacity-100 cursor-pointer" aria-label="Fermer la notification">✕</button>
@@ -68,9 +67,6 @@
         v-if="displayedBookings.length === 0"
         class="bg-cinema-card/50 border border-cinema-border/50 rounded-2xl p-12 text-center max-w-xl mx-auto backdrop-blur-sm"
       >
-        <div class="w-20 h-20 mx-auto mb-4 bg-cinema-darker/60 rounded-full flex items-center justify-center border border-cinema-border" aria-hidden="true">
-          <span class="text-4xl">🎬</span>
-        </div>
         <h2 class="text-xl font-bold text-white mb-2">
           {{ filter === 'ALL' ? 'Aucune réservation enregistrée' : filter === 'ACTIVE' ? 'Aucune séance active' : 'Aucune réservation annulée' }}
         </h2>
@@ -79,7 +75,7 @@
         </p>
         <router-link
           to="/slots"
-          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-accent-gold to-yellow-600 text-cinema-dark font-bold text-sm hover:brightness-110 shadow-lg shadow-accent-gold/20 transition-all cursor-pointer"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-accent-gold hover:bg-accent-goldLight text-cinema-dark font-bold text-sm transition-colors cursor-pointer"
         >
           <span>Voir les séances disponibles</span>
           <span>→</span>
@@ -104,8 +100,8 @@
               :alt="`Affiche de ${booking.movieTitle}`"
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
-            <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-cinema-border/40 to-cinema-darker" aria-hidden="true">
-              <span class="text-5xl opacity-40">🎞️</span>
+            <div v-else class="w-full h-full flex items-center justify-center bg-cinema-darker text-xs text-cinema-textMuted" aria-hidden="true">
+              Affiche indisponible
             </div>
             <div class="absolute inset-0 bg-gradient-to-t from-cinema-card md:from-transparent md:bg-gradient-to-r md:via-transparent md:to-cinema-card/40" aria-hidden="true"></div>
             
@@ -165,29 +161,25 @@
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-cinema-border/40">
                 <div>
                   <span class="text-xs text-cinema-textMuted">Date & Heure</span>
-                  <p class="text-sm font-semibold text-white mt-0.5 flex items-center gap-1.5">
-                    <span aria-hidden="true">🕒</span>
+                  <p class="text-sm font-mono tabular-nums font-semibold text-white mt-0.5">
                     <span>{{ formatDateTime(booking.startsAt) }}</span>
                   </p>
                 </div>
                 <div>
                   <span class="text-xs text-cinema-textMuted">Fauteuil</span>
-                  <p class="text-sm font-semibold text-emerald-400 mt-0.5 flex items-center gap-1.5">
-                    <span aria-hidden="true">💺</span>
+                  <p class="text-sm font-semibold text-emerald-400 mt-0.5">
                     <span>{{ booking.seat || 'Rangée E · Fauteuil 12' }}</span>
                   </p>
                 </div>
                 <div>
                   <span class="text-xs text-cinema-textMuted">Réservé le</span>
-                  <p class="text-sm font-semibold text-white mt-0.5 flex items-center gap-1.5">
-                    <span aria-hidden="true">📅</span>
+                  <p class="text-sm font-mono tabular-nums font-semibold text-white mt-0.5">
                     <span>{{ formatDate(booking.bookedAt) }}</span>
                   </p>
                 </div>
                 <div>
                   <span class="text-xs text-cinema-textMuted">Accès</span>
-                  <p class="text-sm font-semibold text-accent-gold mt-0.5 flex items-center gap-1.5">
-                    <span aria-hidden="true">⚡</span>
+                  <p class="text-sm font-semibold text-accent-gold mt-0.5">
                     <span>e-Billet Borne</span>
                   </p>
                 </div>
@@ -209,7 +201,6 @@
                   :aria-label="`Ajouter la séance de ${booking.movieTitle} du ${formatDateTime(booking.startsAt)} à mon agenda`"
                   title="Ajouter cet événement à mon calendrier"
                 >
-                  <span aria-hidden="true">📅</span>
                   <span>Agenda (.ics)</span>
                 </button>
                 <button
@@ -219,7 +210,6 @@
                   :aria-label="`Imprimer le billet pour ${booking.movieTitle}, fauteuil ${booking.seat || 'non spécifié'}`"
                   title="Imprimer ce billet"
                 >
-                  <span aria-hidden="true">🖨️</span>
                   <span>Imprimer</span>
                 </button>
               </div>
@@ -232,7 +222,6 @@
                   :aria-label="`Annuler ma réservation pour le film ${booking.movieTitle}, séance du ${formatDateTime(booking.startsAt)}`"
                   class="px-4 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 hover:border-red-600 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
-                  <span v-if="cancellingSlotId === booking.slotId" class="inline-block animate-spin" aria-hidden="true">⏳</span>
                   <span>{{ cancellingSlotId === booking.slotId ? 'Annulation...' : 'Annuler ma réservation' }}</span>
                 </button>
                 <button
@@ -301,8 +290,8 @@
         @click.self="showConfirmModal = false"
       >
         <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
-          <div class="w-14 h-14 mx-auto mb-4 bg-red-950/60 rounded-full flex items-center justify-center border border-red-500/30 text-red-400 text-2xl" aria-hidden="true">
-            ⚠️
+          <div class="w-12 h-12 mx-auto mb-4 bg-red-950/60 rounded-full flex items-center justify-center border border-red-500/30 text-red-400 text-xl font-bold" aria-hidden="true">
+            !
           </div>
           <h2 id="confirm-cancel-title" class="text-xl font-bold text-white text-center mb-2">Annuler la réservation ?</h2>
           <p id="confirm-cancel-desc" class="text-cinema-textMuted text-sm text-center mb-6">

@@ -180,7 +180,7 @@ export function useReservations() {
       `DTSTAMP:${formatIcsDate(new Date())}`,
       `DTSTART:${formatIcsDate(startDate)}`,
       `DTEND:${formatIcsDate(endDate)}`,
-      `SUMMARY:🎬 ${booking.movieTitle} - CinéSlot`,
+      `SUMMARY:${booking.movieTitle} - CinéSlot`,
       `DESCRIPTION:Séance pour ${booking.movieTitle}\\nSalle: ${booking.hall}\\nSiège: ${booking.seat}\\nBillet N°: ${booking.bookingId}`,
       `LOCATION:CinéSlot - ${booking.hall}`,
       'STATUS:CONFIRMED',

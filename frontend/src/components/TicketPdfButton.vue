@@ -9,7 +9,6 @@
         @click="run(false)"
         class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent-gold/15 hover:bg-accent-gold/25 text-accent-gold border border-accent-gold/40 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
       >
-        <span aria-hidden="true">📄</span>
         <span>{{ loading ? 'Préparation…' : 'Mon billet (PDF)' }}</span>
       </button>
 
@@ -21,7 +20,6 @@
         @click="run(true)"
         class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
       >
-        <span aria-hidden="true">⬇️</span>
         <span>Enregistrer</span>
       </button>
     </div>

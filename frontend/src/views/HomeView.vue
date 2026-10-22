@@ -1,42 +1,31 @@
 <template>
   <div class="min-h-screen">
-    <!-- Hero Section -->
-    <section class="relative py-16 sm:py-20 px-4 overflow-hidden border-b border-cinema-border/40">
-      <div class="absolute inset-0 bg-gradient-to-b from-black/80 via-cinema-dark to-cinema-dark pointer-events-none"></div>
-      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-accent-gold/15 via-transparent to-transparent pointer-events-none"></div>
-      
+    <section class="relative py-16 sm:py-20 px-4 border-b border-cinema-border">
       <div class="relative z-10 text-center max-w-4xl mx-auto">
-        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
-          <span aria-hidden="true">✨</span>
-          <span>Expérience Cinéma Haute Fidélité · Temps Réel</span>
-        </div>
+        <p class="text-xs font-mono uppercase tracking-[0.2em] text-accent-gold mb-3">
+          Programmation & Billetterie
+        </p>
 
-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight mb-4">
-          L'émotion du grand écran, <br />
-          <span class="bg-gradient-to-r from-accent-gold via-yellow-300 to-amber-500 bg-clip-text text-transparent">
-            réservée en un battement de cil.
-          </span>
+        <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight leading-[1.12] mb-5">
+          La salle obscure, à l'heure de votre séance.
         </h1>
 
         <p class="text-base sm:text-lg text-cinema-textMuted max-w-2xl mx-auto mb-8 leading-relaxed">
           Découvrez les plus grands chefs-d'œuvre du cinéma en IMAX & Dolby Atmos. Les disponibilités s'actualisent instantanément sans recharger votre page.
         </p>
 
-        <!-- CTA Buttons (Hiérarchie visuelle claire : 1 Primaire + 1 Secondaire) -->
         <div class="flex flex-wrap items-center justify-center gap-4">
           <router-link
             to="/slots"
-            class="px-7 py-3.5 rounded-xl bg-gradient-to-r from-accent-gold to-yellow-600 text-cinema-dark font-extrabold text-sm hover:brightness-110 shadow-lg shadow-accent-gold/25 transition-all flex items-center gap-2 cursor-pointer"
+            class="px-7 py-3.5 rounded-md bg-accent-gold hover:bg-accent-goldLight text-cinema-dark font-bold text-sm transition-colors flex items-center gap-2 cursor-pointer"
           >
-            <span aria-hidden="true">🎟️</span>
             <span>Réserver une séance</span>
           </router-link>
 
           <router-link
             to="/movies"
-            class="px-7 py-3.5 rounded-xl bg-cinema-card/80 hover:bg-cinema-border border border-cinema-border text-white font-semibold text-sm transition-all flex items-center gap-2 cursor-pointer"
+            class="px-7 py-3.5 rounded-md bg-cinema-card hover:bg-cinema-cardHover border border-cinema-border text-white font-semibold text-sm transition-colors flex items-center gap-2 cursor-pointer"
           >
-            <span aria-hidden="true">🎬</span>
             <span>Explorer le catalogue</span>
           </router-link>
         </div>
@@ -48,7 +37,7 @@
       <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between mb-8">
           <div>
-            <h2 class="text-3xl font-bold text-white mb-2">Films populaires</h2>
+            <h2 class="font-display text-3xl font-bold text-white mb-2">Films populaires</h2>
             <p class="text-gray-400">Sélection de films culte notés 8.5+</p>
           </div>
           <router-link to="/movies" class="text-sm font-semibold text-accent-gold hover:underline flex items-center gap-1">
@@ -76,7 +65,7 @@
       <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between mb-8">
           <div>
-            <h2 class="text-3xl font-bold text-white mb-2">Séances en temps réel</h2>
+            <h2 class="font-display text-3xl font-bold text-white mb-2">Séances en temps réel</h2>
             <p class="text-gray-400">Synchronisation SSE instantanée</p>
           </div>
           <router-link to="/slots" class="text-sm font-semibold text-accent-gold hover:underline flex items-center gap-1">
@@ -156,8 +145,7 @@
               <!-- Séances disponibles pour ce film -->
               <div class="mb-5 p-3.5 bg-cinema-card/70 rounded-xl border border-cinema-border/50">
                 <div class="flex items-center justify-between mb-2.5">
-                  <span class="text-xs font-bold uppercase tracking-wider text-accent-gold flex items-center gap-1.5">
-                    <span aria-hidden="true">🎟️</span>
+                  <span class="text-xs font-bold uppercase tracking-wider text-accent-gold">
                     <span>Séances programmées ({{ movieSlots.length }})</span>
                   </span>
                   <span v-if="movieSlots.length > 0" class="text-[11px] text-emerald-400 font-medium">Temps réel</span>
@@ -171,9 +159,8 @@
                     :aria-label="`Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}`"
                     class="group px-3 py-2 rounded-lg bg-cinema-darker hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
                   >
-                    <span class="flex items-center gap-1">
-                      <span aria-hidden="true">🕒</span>
-                      <span>{{ formatSlotTime(slot.startsAt) }}</span>
+                    <span class="font-mono tabular-nums">
+                      {{ formatSlotTime(slot.startsAt) }}
                     </span>
                     <span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 group-hover:bg-black/20 text-cinema-textMuted group-hover:text-cinema-dark">
                       {{ slot.hall }}

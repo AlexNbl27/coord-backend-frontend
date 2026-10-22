@@ -136,7 +136,6 @@ export function useMovies() {
     }
     activeAbortController = new AbortController();
 
-    // 1. Récupération immédiate du cache persistant
     const persistentCache = cacheManager.get<MoviesResponse>(CacheKeys.MOVIES);
     if (persistentCache?.data?.data && movies.value.length === 0) {
       const filtered = applyClientFilters(persistentCache.data.data, filters);
@@ -151,7 +150,6 @@ export function useMovies() {
       });
     }
 
-    // 2. Si déjà hors-ligne, filtrer et servir le cache immédiatement en 0ms
     try {
       if (useConnectionStore().isOffline) {
         if (persistentCache?.data?.data) {
@@ -170,7 +168,6 @@ export function useMovies() {
     } catch {}
     
     try {
-      // 3. N'afficher de skeleton QUE si la liste est complètement vide
       const hasExistingMovies = movies.value.length > 0 || !!(persistentCache?.data?.data?.length);
       if (!hasExistingMovies) {
         loading.value = true;
@@ -298,19 +295,16 @@ export function useMovies() {
   // Récupérer un film par ID avec résilience
   const fetchMovieById = async (id: string) => {
     try {
-      // 1. Vérifier le cache mémoire
       if (movieDetailsCache.value.has(id)) {
         return movieDetailsCache.value.get(id)!;
       }
 
-      // 2. Vérifier le cache persistant
       const cachedDetail = cacheManager.get<Movie>(`${CacheKeys.MOVIE_DETAIL_PREFIX}${id}`);
       if (cachedDetail && !cachedDetail.isStale) {
         movieDetailsCache.value.set(id, cachedDetail.data);
         return cachedDetail.data;
       }
 
-      // 3. Appel API
       const response = await apiClient.get<Movie>(`${API_BASE_URL}/${id}`);
       
       movieDetailsCache.value.set(id, response.data);

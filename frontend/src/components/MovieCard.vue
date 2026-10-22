@@ -45,9 +45,9 @@
               <!-- Badge cinéma réel -->
               <div
                 v-if="movie.ratings?.imdb && movie.ratings.imdb >= 8.6"
-                class="bg-amber-500/20 text-accent-gold text-xs px-2.5 py-1 rounded-full border border-amber-500/40 font-semibold backdrop-blur-md inline-flex items-center gap-1 shadow-sm leading-none"
+                class="bg-amber-500/20 text-accent-gold text-xs px-2.5 py-1 rounded border border-amber-500/40 font-semibold backdrop-blur-md inline-flex items-center gap-1 shadow-sm leading-none"
               >
-                <span aria-hidden="true">🏆</span>
+                <span aria-hidden="true">★</span>
                 <span>Coup de Cœur</span>
               </div>
               <div
@@ -60,7 +60,7 @@
             
             <!-- Bottom: Title + Genres -->
             <div class="pointer-events-auto">
-              <h3 class="text-white font-bold text-lg line-clamp-1 drop-shadow-md group-hover:text-accent-gold transition-colors">
+              <h3 class="font-display text-white font-bold text-lg line-clamp-1 drop-shadow-md group-hover:text-accent-gold transition-colors">
                 {{ movie.title }}
               </h3>
               <p class="text-xs text-gray-300 font-medium mt-0.5">
@@ -80,8 +80,7 @@
           
           <!-- Hover action pill -->
           <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-[2px] pointer-events-none" aria-hidden="true">
-            <div class="px-4 py-2 rounded-xl bg-cinema-dark/95 backdrop-blur-md flex items-center gap-2 border border-accent-gold/60 text-accent-gold shadow-lg shadow-black/80 transform group-hover:scale-105 transition-transform duration-300">
-              <span class="text-sm">🎟️</span>
+            <div class="px-4 py-2 rounded-md bg-cinema-dark/95 flex items-center gap-2 border border-accent-gold/60 text-accent-gold shadow-lg">
               <span class="text-xs font-bold text-white tracking-wide">Séances & Détails</span>
               <span class="text-accent-gold text-xs">→</span>
             </div>
@@ -126,7 +125,7 @@ const handleClick = () => {
 
 <style scoped>
 .movie-card:hover {
-  transform: scale(1.03) translateY(-6px);
+  transform: translateY(-2px);
 }
 
 .drop-shadow-md {

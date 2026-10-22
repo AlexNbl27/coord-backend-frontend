@@ -66,15 +66,12 @@ export function useSlots() {
   const slots = computed(() => slotsStore.slots);
   const sseConnected = computed(() => slotsStore.sseConnected);
 
-  // Récupérer toutes les séances avec Stale-While-Revalidate (0ms de chargement si données en cache)
   const fetchSlots = async () => {
-    // 1. Si on a des données en cache local, les injecter immédiatement
     const cached = cacheManager.get<Slot[]>(CacheKeys.SLOTS);
     if (cached?.data && cached.data.length > 0 && slotsStore.slots.length === 0) {
       slotsStore.setSlots(cached.data);
     }
 
-    // 2. Si l'application est déjà marquée hors-ligne, ne pas lancer de requête réseau qui traînerait
     try {
       if (useConnectionStore().isOffline) {
         if (cached?.data && cached.data.length > 0) {
@@ -86,7 +83,6 @@ export function useSlots() {
       }
     } catch {}
 
-    // 3. N'afficher le skeleton de chargement QUE si on n'a strictement aucune séance à afficher
     const hasExistingSlots = slotsStore.slots.length > 0 || (cached?.data && cached.data.length > 0);
     if (!hasExistingSlots) {
       loading.value = true;
@@ -232,17 +228,14 @@ export function useSlots() {
         
         const tempBookingId = `temp_bk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         
-        // 1. Mise à jour optimiste immédiate dans l'UI
         slotsStore.updateSlotStatus(slotId, 'BOOKED');
 
-        // 2. Ajout dans la file d'attente persistante
         offlineQueue.enqueue('RESERVE_SLOT', {
           slotId,
           customerId,
           tempBookingId,
         });
 
-        // 3. Renvoi du résultat pour permettre au modal de confirmation de s'afficher sans erreur
         return {
           bookingId: tempBookingId,
           slotId,

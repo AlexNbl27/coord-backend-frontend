@@ -8,27 +8,18 @@
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
     @click.self="$emit('close')"
   >
-    <div class="relative w-full max-w-4xl bg-cinema-card border border-cinema-border/80 rounded-2xl shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] overflow-y-auto focus:outline-none" tabindex="-1">
-      <!-- Glow d'arrière-plan -->
-      <div class="absolute -top-24 -right-24 w-72 h-72 bg-accent-gold/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
-
-      <!-- En-tête -->
+    <div class="relative w-full max-w-4xl bg-cinema-card border border-cinema-border rounded-lg shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] overflow-y-auto focus:outline-none" tabindex="-1">
       <div class="flex items-center justify-between pb-4 border-b border-cinema-border/50">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-accent-gold/15 border border-accent-gold/30 flex items-center justify-center text-xl shadow-inner" aria-hidden="true">
-            🧪
-          </div>
-          <div>
-            <h2 id="ab-metrics-modal-title" class="text-xl font-black text-white tracking-tight flex items-center gap-2">
-              Tableau de bord A/B Testing
-              <span class="text-xs px-2.5 py-0.5 rounded-full bg-accent-gold/15 text-accent-gold border border-accent-gold/30 font-semibold uppercase">
-                {{ experimentId }}
-              </span>
-            </h2>
-            <p class="text-xs text-cinema-textMuted mt-0.5">
-              Évaluation statistique rigoureuse : Z-test, p-value, intervalles de confiance & SRM
-            </p>
-          </div>
+        <div>
+          <h2 id="ab-metrics-modal-title" class="font-display text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            Tableau de bord A/B Testing
+            <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-accent-gold/15 text-accent-gold border border-accent-gold/30 font-semibold uppercase">
+              {{ experimentId }}
+            </span>
+          </h2>
+          <p class="text-xs text-cinema-textMuted mt-0.5">
+            Z-test, p-value, intervalles de confiance à 95 % et détection SRM
+          </p>
         </div>
 
         <button
@@ -172,8 +163,8 @@
         <div class="p-5 rounded-2xl bg-cinema-darker/80 border border-cinema-border/70 space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-accent-gold flex items-center gap-1.5">
-                <span aria-hidden="true">📊</span> Analyse Statistique & Décision
+              <span class="text-xs font-bold uppercase tracking-wider text-accent-gold">
+                Analyse Statistique & Décision
               </span>
               <span
                 v-if="summary?.isSignificant"
@@ -194,7 +185,7 @@
               class="text-xs px-2.5 py-1 rounded-md font-semibold flex items-center gap-1.5"
               :class="summary?.srm?.hasMismatch ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'"
             >
-              <span>{{ summary?.srm?.hasMismatch ? '⚠️ SRM Détecté' : '✓ Équilibre 50/50 validé' }}</span>
+              <span>{{ summary?.srm?.hasMismatch ? '! SRM Détecté' : '✓ Équilibre 50/50 validé' }}</span>
               <span class="text-[10px] opacity-75 font-mono">(p={{ summary?.srm?.pValue ?? '1.0' }})</span>
             </div>
           </div>
@@ -227,11 +218,11 @@
 
           <p class="text-xs text-cinema-textMuted leading-relaxed">
             <span v-if="summary?.isSignificant">
-              <span aria-hidden="true">💡</span> <strong>Conclusion :</strong> La différence observée est statistiquement significative avec un niveau de confiance supérieur à 95%.
+              <strong>Conclusion :</strong> La différence observée est statistiquement significative avec un niveau de confiance supérieur à 95%.
               La variante <strong class="text-accent-gold">{{ summary?.recommendation }}</strong> produit un impact mesurable réel.
             </span>
             <span v-else>
-              <span aria-hidden="true">ℹ️</span> <strong>Conclusion :</strong> L'écart actuel peut être imputable au bruit aléatoire. Il est recommandé de collecter davantage d'expositions avant de prendre une décision finale.
+              <strong>Conclusion :</strong> L'écart actuel peut être imputable au bruit aléatoire. Il est recommandé de collecter davantage d'expositions avant de prendre une décision finale.
             </span>
           </p>
         </div>
@@ -245,25 +236,22 @@
             <button
               @click="handleSimulate"
               :disabled="simulating"
-              class="px-3.5 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-xs font-semibold text-purple-300 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              class="px-3.5 py-2 rounded-md bg-cinema-darker hover:bg-cinema-cardHover border border-cinema-border text-xs font-semibold text-cinema-text transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
               title="Simuler un jeu de données A/B pour observer le comportement statistique"
             >
-              <span aria-hidden="true">🧪</span>
               <span>{{ simulating ? 'Simulation...' : 'Simuler 160 visiteurs' }}</span>
             </button>
             <button
               @click="handleResetSlots"
-              class="px-3.5 py-2 rounded-xl bg-cinema-darker hover:bg-white/5 border border-cinema-border text-xs font-semibold text-cinema-text hover:text-white transition-all flex items-center gap-2 cursor-pointer"
+              class="px-3.5 py-2 rounded-md bg-cinema-darker hover:bg-cinema-cardHover border border-cinema-border text-xs font-semibold text-cinema-text hover:text-white transition-colors flex items-center gap-2 cursor-pointer"
               title="Libérer tous les créneaux"
             >
-              <span aria-hidden="true">🎟️</span>
               <span>Libérer les créneaux</span>
             </button>
             <button
               @click="loadMetrics"
-              class="px-3.5 py-2 rounded-xl bg-accent-gold/15 hover:bg-accent-gold/25 border border-accent-gold/30 text-xs font-semibold text-accent-gold transition-all flex items-center gap-2 cursor-pointer"
+              class="px-3.5 py-2 rounded-md bg-accent-gold/15 hover:bg-accent-gold/25 border border-accent-gold/30 text-xs font-semibold text-accent-gold transition-colors flex items-center gap-2 cursor-pointer"
             >
-              <span aria-hidden="true">🔄</span>
               <span>Actualiser</span>
             </button>
           </div>

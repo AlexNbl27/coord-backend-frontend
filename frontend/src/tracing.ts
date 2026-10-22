@@ -17,8 +17,7 @@ import {
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 
 /**
- * Processeur garde-fou RGPD : supprime les paramètres de requête (?q=...)
- * de l'attribut `url.full` avant que le span ne quitte le navigateur.
+ * Strips query parameters (?q=...) from `url.full` before spans leave the browser.
  */
 class SanitizingSpanProcessor implements SpanProcessor {
   onStart(span: Span): void {
@@ -28,9 +27,7 @@ class SanitizingSpanProcessor implements SpanProcessor {
     }
   }
 
-  onEnd(_span: ReadableSpan): void {
-    // Aucune action en fin de span
-  }
+  onEnd(_span: ReadableSpan): void {}
 
   async shutdown(): Promise<void> {}
   async forceFlush(): Promise<void> {}
