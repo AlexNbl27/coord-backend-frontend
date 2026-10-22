@@ -37,6 +37,7 @@ frontend/node_modules/
 # Node.js
 backend/dist/
 backend/build/
+backend/target/
 
 # Vue/Vite
 frontend/dist/

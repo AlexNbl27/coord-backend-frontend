@@ -196,7 +196,12 @@
 
             <!-- Ticket Footer / Actions -->
             <div class="flex flex-wrap items-center justify-between gap-3 mt-6 pt-4 border-t border-cinema-border/30">
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <TicketPdfButton
+                  v-if="booking.status === 'ACTIVE'"
+                  :booking-id="booking.bookingId"
+                  :movie-title="booking.movieTitle"
+                />
                 <button
                   v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="downloadCalendarFile(booking)"
@@ -332,6 +337,7 @@ import { ref, computed } from 'vue';
 import { useReservations, type UserBooking } from '../composables/useReservations';
 import { useConnectionStore } from '../stores/connection';
 import { useAccessibleDialog } from '../composables/useAccessibleDialog';
+import TicketPdfButton from '../components/TicketPdfButton.vue';
 
 const { bookings, activeBookingsCount, cancelBooking, deleteFromHistory, downloadCalendarFile } = useReservations();
 const connectionStore = useConnectionStore();
@@ -412,7 +418,8 @@ const formatDateTime = (dateStr: string) => {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Europe/Paris'
     });
   } catch {
     return dateStr;
@@ -428,7 +435,8 @@ const formatDate = (dateStr: string) => {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Europe/Paris'
     });
   } catch {
     return dateStr;

@@ -2,7 +2,9 @@ import crypto from 'node:crypto';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { Slot } from '../models/Slot.js';
 import { Movie } from '../models/Movie.js';
+import { Booking } from '../models/Booking.js';
 import { EXP, attribution } from './abService.js';
+import { DEFAULT_CINEMA_ADDRESS, generateSeatLabel } from '../utils/ticketFormatters.js';
 
 const tracer = trace.getTracer('cineslot-api');
 const SMS_GATEWAY_URL = process.env.SMS_GATEWAY_URL || '';
@@ -177,7 +179,7 @@ function dispatchSmsConfirmation(bookingId, slotId) {
 /**
  * Réservation d'un créneau avec attribution conditionnelle A/B et span métier OpenTelemetry
  */
-export async function reserveSlot(slotId, customerId, visitorId, isMeasured) {
+export async function reserveSlot(slotId, customerId, visitorId, isMeasured, sessionUser = null) {
   return tracer.startActiveSpan('cineslot.reservation', async (span) => {
     span.setAttribute('cineslot.slot.id', String(slotId));
     try {
@@ -192,13 +194,18 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured) {
         }
       }
 
+      const ownerId = sessionUser?.id || 'spectator-1';
+      const ownerName = sessionUser?.name || customerId || 'Hélène Durand';
+      const bookingId = crypto.randomUUID();
+      const bookedAt = new Date();
+
       const filter = { _id: slotId, status: 'AVAILABLE' };
       const update = {
         $set: {
           status: 'BOOKED',
-          bookedBy: customerId || 'Anonyme',
-          bookingId: crypto.randomUUID(),
-          bookedAt: new Date(),
+          bookedBy: ownerName,
+          bookingId,
+          bookedAt,
           experimentId,
           subjectId
         },
@@ -213,6 +220,21 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured) {
         throw error;
       }
 
+      const seat = generateSeatLabel(winner._id, bookingId);
+      await Booking.create({
+        _id: bookingId,
+        slotId: winner._id,
+        ownerId,
+        ownerName,
+        movieTitle: winner.movieTitle || 'Séance Cinéma',
+        hall: winner.hall || 'Salle Principale',
+        address: DEFAULT_CINEMA_ADDRESS,
+        startsAt: winner.startsAt,
+        seat,
+        status: 'CONFIRMED',
+        bookedAt
+      });
+
       // Résolution T1 : envoi SMS asynchrone pour ne pas bloquer la réponse HTTP
       dispatchSmsConfirmation(winner.bookingId, winner._id);
 
@@ -223,7 +245,8 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured) {
       return {
         bookingId: winner.bookingId,
         slotId: winner._id,
-        status: winner.status
+        status: winner.status,
+        seat
       };
     } catch (err) {
       span.recordException(err);
@@ -253,6 +276,11 @@ export async function cancelSlot(slotId) {
     error.status = exists ? 400 : 404;
     throw error;
   }
+
+  await Booking.updateMany(
+    { slotId, status: 'CONFIRMED' },
+    { $set: { status: 'CANCELLED', cancelledAt: new Date() } }
+  );
 
   broadcastSlotChange(updated);
   return toSlotView(updated);
@@ -310,6 +338,11 @@ export async function resetAllSlots() {
     $unset: { bookedBy: 1, bookingId: 1, bookedAt: 1, experimentId: 1, subjectId: 1 },
     $inc: { version: 1 }
   });
+
+  await Booking.updateMany(
+    { status: 'CONFIRMED' },
+    { $set: { status: 'CANCELLED', cancelledAt: new Date() } }
+  );
 
   // Notifie tous les clients SSE connectés de recharger leurs listes
   sendToLocalClients('ready', { action: 'reload' });
