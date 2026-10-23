@@ -23,5 +23,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[sms-passerelle] En écoute sur :${PORT} (latence simulée ${DELAY_MS}ms)`);
+  console.log(`[sms-gateway] Listening on :${PORT} (simulated delay ${DELAY_MS}ms)`);
 });

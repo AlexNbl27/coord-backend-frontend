@@ -31,22 +31,14 @@ frontend/node_modules/
 .idea/*.xml
 .vscode/*.json
 
-# =============================================================================
-# Build et distribution
-# =============================================================================
-# Node.js
+# Build outputs
 backend/dist/
 backend/build/
 backend/target/
-
-# Vue/Vite
 frontend/dist/
 frontend/.vite/
 frontend/.output/
 *.tsbuildinfo
-
-# Java / Maven
-services/cineslot-sse/target/
 *.class
 *.jar
 *.war
@@ -151,8 +143,3 @@ nyc_output/
 # Fichiers générés par k6
 # =============================================================================
 k6-metrics.db
-
-# =============================================================================
-# Anciens dossiers (à supprimer après migration)
-# =============================================================================
-Kit TP SSE Depart Code-20261008/
