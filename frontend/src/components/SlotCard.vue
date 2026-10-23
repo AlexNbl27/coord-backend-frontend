@@ -3,7 +3,7 @@
     class="slot-card transition-all duration-300 flex flex-col h-full justify-between"
     :class="{
       'slot-card-available': slot.status === 'AVAILABLE',
-      'slot-card-booked': slot.status === 'BOOKED'
+      'slot-card-booked': slot.status === 'BOOKED',
     }"
     @click="handleSlotClick"
   >
@@ -12,39 +12,58 @@
       <!-- En-tête avec titre du film et statut -->
       <div class="flex justify-between items-start gap-2 mb-3">
         <div class="flex-1">
-          <h4 class="font-display text-white font-bold text-base sm:text-lg line-clamp-1 leading-snug">
+          <h4
+            class="font-display text-white font-bold text-base sm:text-lg line-clamp-1 leading-snug"
+          >
             {{ slot.movieTitle }}
           </h4>
           <p class="text-cinema-textMuted text-xs mt-1">
             {{ slot.hall }}
           </p>
         </div>
-        
+
         <!-- Badge de statut (double encodage icône + texte pour daltonisme) -->
         <span
           class="badge whitespace-nowrap shrink-0 inline-flex items-center gap-1.5"
           :class="{
             'badge-available': slot.status === 'AVAILABLE',
-            'badge-booked': slot.status === 'BOOKED'
+            'badge-booked': slot.status === 'BOOKED',
           }"
         >
-          <span aria-hidden="true" class="font-black text-[11px]">{{ slot.status === 'AVAILABLE' ? '✓' : '⊘' }}</span>
-          {{ slot.status === 'AVAILABLE' ? 'Disponible' : 'Complet' }}
+          <span aria-hidden="true" class="font-black text-[11px]">{{
+            slot.status === "AVAILABLE" ? "✓" : "⊘"
+          }}</span>
+          {{ slot.status === "AVAILABLE" ? "Disponible" : "Complet" }}
         </span>
       </div>
 
       <!-- Horaires -->
       <div class="flex items-center gap-2 mb-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cinema-textMuted shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 text-cinema-textMuted shrink-0"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+            clip-rule="evenodd"
+          />
         </svg>
-        <span class="text-cinema-text text-xs font-mono tabular-nums font-semibold">
+        <span
+          class="text-cinema-text text-xs font-mono tabular-nums font-semibold"
+        >
           {{ formattedStartsAt }}
         </span>
       </div>
 
       <!-- Hall / Technology Tags -->
-      <div class="flex items-center gap-1.5 flex-wrap mb-4" aria-label="Caractéristiques de la séance">
+      <div
+        class="flex items-center gap-1.5 flex-wrap mb-4"
+        aria-label="Caractéristiques de la séance"
+      >
         <span
           v-if="slot.hall && slot.hall.includes('IMAX')"
           class="px-2 py-0.5 rounded-sm text-[10px] font-mono uppercase tracking-wider bg-cinema-darker text-cinema-textLight border border-cinema-borderLight"
@@ -82,12 +101,22 @@
         :disabled="isReserving"
         :aria-busy="isReserving ? 'true' : 'false'"
       >
-        <span v-if="!isReserving" class="flex items-center justify-center gap-2">
+        <span
+          v-if="!isReserving"
+          class="flex items-center justify-center gap-2"
+        >
           <span>{{ bookingButtonLabel }}</span>
-          <span v-if="!sseConnected" class="text-[10px] text-amber-200 opacity-80">(différé)</span>
+          <span
+            v-if="!sseConnected"
+            class="text-[10px] text-amber-200 opacity-80"
+            >(différé)</span
+          >
         </span>
         <span v-else class="flex items-center justify-center gap-2">
-          <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
+          <div
+            class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+            aria-hidden="true"
+          ></div>
           <span>Réservation en cours...</span>
         </span>
       </button>
@@ -99,7 +128,10 @@
 
       <!-- Message si séance complète ou en attente de synchro -->
       <div v-else class="text-center py-2">
-        <span v-if="isPendingSync" class="inline-flex items-center gap-1.5 text-xs text-amber-300 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/30">
+        <span
+          v-if="isPendingSync"
+          class="inline-flex items-center gap-1.5 text-xs text-amber-300 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/30"
+        >
           <span>En attente de synchronisation</span>
         </span>
         <p v-else class="text-xs text-cinema-textMuted/70 font-medium">
@@ -111,10 +143,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
-import type { Slot } from '../composables/useSlots';
-import { useAbTest } from '../composables/useAbTest';
-import { offlineQueue } from '../services/offlineQueue';
+import { ref, computed } from "vue";
+import type { Slot } from "../composables/useSlots";
+import { useAbTest } from "../composables/useAbTest";
+import { offlineQueue } from "../services/offlineQueue";
+import { useSession } from "../composables/useSession";
 
 const { bookingButtonLabel } = useAbTest();
 
@@ -124,54 +157,41 @@ const props = defineProps<{
   index?: number;
 }>();
 
-const emit = defineEmits(['reserve', 'click']);
+const emit = defineEmits(["reserve", "click"]);
 
 const isReserving = ref(false);
-const isPendingSync = computed(() => offlineQueue.isSlotPendingReservation(props.slot.id));
+const isPendingSync = computed(() =>
+  offlineQueue.isSlotPendingReservation(props.slot.id),
+);
 
-// Injecter la fonction pour ouvrir le modal
-const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
+const { currentUser } = useSession();
 
 // Formater la date de la séance
 const formattedStartsAt = computed(() => {
   const date = new Date(props.slot.startsAt);
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Paris',
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Paris",
   });
 });
 
-// Gérer la réservation
-const handleReserve = async () => {
+const handleReserve = () => {
+  if (isReserving.value) return;
   isReserving.value = true;
-  emit('reserve', props.slot);
-
-  try {
-    // Si la fonction modal est disponible, l'appeler
-    if (openReservationModal) {
-      setTimeout(() => {
-        openReservationModal(
-          `BK-${props.slot.id}-${Date.now().toString().slice(-4)}`,
-          props.slot.movieTitle,
-          props.slot.startsAt,
-          props.slot.hall
-        );
-        isReserving.value = false;
-      }, 400);
-    } else {
-      isReserving.value = false;
-    }
-  } catch (error) {
-    console.error('Erreur réservation:', error);
+  const customerId =
+    currentUser.value?.id ??
+    `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
+  emit("reserve", props.slot.id, customerId);
+  setTimeout(() => {
     isReserving.value = false;
-  }
+  }, 400);
 };
 
 const handleSlotClick = () => {
-  emit('click', props.slot);
+  emit("click", props.slot);
 };
 </script>
