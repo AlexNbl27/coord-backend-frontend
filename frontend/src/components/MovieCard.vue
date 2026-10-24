@@ -21,13 +21,11 @@
             </svg>
           </div>
           
-          <!-- Movie poster (if available) -->
           <img
             v-if="movie.poster"
             :src="movie.poster"
             :alt="`Affiche officielle du film ${movie.title}`"
-            class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            style="height: 100% !important; width: 100% !important; object-fit: cover !important;"
+            class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             loading="lazy"
           />
           

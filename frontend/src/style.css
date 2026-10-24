@@ -13,7 +13,6 @@
     min-height: 100vh;
   }
 
-  /* Custom scrollbar for dark mode */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -33,12 +32,10 @@
     background: rgba(200, 164, 86, 0.85);
   }
 
-  /* Selection styling */
   ::selection {
     @apply bg-accent-gold text-cinema-dark;
   }
 
-  /* Focus styling */
   :focus-visible {
     @apply outline-none ring-2 ring-accent-gold ring-offset-2 ring-offset-cinema-dark;
   }
@@ -66,7 +63,6 @@
     @apply border-accent-red/50 opacity-70 cursor-not-allowed;
   }
 
-  /* Badges */
   .badge {
     @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold;
   }
@@ -87,7 +83,6 @@
     @apply bg-accent-gold/20 text-accent-gold border border-accent-gold/30;
   }
 
-  /* Buttons */
   .btn {
     @apply inline-flex items-center justify-center px-6 py-2 rounded-lg
            font-semibold transition-all duration-200
@@ -100,36 +95,12 @@
            focus:ring-accent-gold/50 focus:ring-offset-cinema-dark;
   }
 
-  .btn-secondary {
-    @apply bg-cinema-card border border-cinema-border text-cinema-text
-           hover:bg-cinema-cardHover hover:border-cinema-borderLight
-           focus:ring-cinema-border/50;
-  }
-
-  .btn-danger {
-    @apply bg-accent-red hover:bg-accent-redLight text-white
-           focus:ring-accent-red/50;
-  }
-
   .btn-outline {
     @apply bg-transparent border border-cinema-border text-cinema-text
            hover:bg-cinema-card hover:border-cinema-borderLight
            focus:ring-cinema-border/50;
   }
 
-  /* Form Inputs */
-  .input {
-    @apply w-full px-4 py-3 rounded-lg bg-cinema-card border border-cinema-border
-           text-cinema-text placeholder-cinema-textMuted
-           focus:outline-none focus:ring-2 focus:ring-accent-gold/50
-           focus:border-accent-gold transition-all duration-200;
-  }
-
-  .input::placeholder {
-    @apply text-cinema-textMuted;
-  }
-
-  /* Search Bar */
   .search-bar {
     @apply relative flex items-center;
   }
@@ -141,57 +112,11 @@
            focus:border-accent-gold transition-all duration-200;
   }
 
-  /* Navbar */
   .navbar {
     @apply fixed top-0 left-0 right-0 z-50 bg-cinema-dark/95 backdrop-blur-sm
            border-b border-cinema-border/50;
   }
 
-  /* Page Container */
-  .page-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
-  }
-
-  /* Section */
-  .section {
-    @apply py-12 px-4 sm:px-6 lg:px-8;
-  }
-
-  .section-title {
-    @apply text-3xl sm:text-4xl font-bold text-cinema-text mb-2;
-  }
-
-  .section-subtitle {
-    @apply text-cinema-textMuted max-w-2xl;
-  }
-
-  /* Grid */
-  .movies-grid {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6;
-  }
-
-  .slots-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
-  }
-
-  /* Rating Stars */
-  .rating-stars {
-    @apply flex items-center;
-  }
-
-  .star {
-    @apply text-xl;
-  }
-
-  .star-filled {
-    @apply text-accent-gold;
-  }
-
-  .star-empty {
-    @apply text-cinema-border;
-  }
-
-  /* Modal */
   .modal-overlay {
     @apply fixed inset-0 z-50 bg-black/70 backdrop-blur-sm
            flex items-center justify-center p-4;
@@ -203,17 +128,6 @@
            transform transition-all duration-300 scale-100;
   }
 
-  .modal-close {
-    @apply absolute top-4 right-4 text-cinema-textMuted hover:text-cinema-text
-           text-2xl transition-colors duration-200;
-  }
-
-  /* Loading Spinner */
-  .spinner {
-    @apply animate-spin rounded-full border-4 border-cinema-border border-t-accent-gold;
-  }
-
-  /* Tooltip */
   .tooltip {
     @apply relative inline-block;
   }
@@ -230,34 +144,8 @@
     @apply visible;
   }
 
-  /* Skeleton Loading */
   .skeleton {
     @apply animate-pulse bg-cinema-border/20 rounded-lg;
-  }
-
-  /* Error State */
-  .error-message {
-    @apply text-red-400 bg-red-900/20 border border-red-600/30
-           px-4 py-3 rounded-lg;
-  }
-
-  /* Success Message */
-  .success-message {
-    @apply text-green-400 bg-green-900/20 border border-green-600/30
-           px-4 py-3 rounded-lg;
-  }
-
-  /* Empty State */
-  .empty-state {
-    @apply text-center py-12 px-4;
-  }
-
-  .empty-state-icon {
-    @apply text-6xl mb-4 text-cinema-textMuted;
-  }
-
-  .empty-state-text {
-    @apply text-cinema-textMuted;
   }
 }
 
@@ -271,7 +159,6 @@
     display: none;
   }
 
-  /* Line clamp utilities */
   .line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;
@@ -296,35 +183,8 @@
     overflow: hidden;
   }
 
-  /* Aspect ratio utilities */
   .aspect-poster {
     aspect-ratio: 2/3;
-  }
-
-  .aspect-video {
-    aspect-ratio: 16/9;
-  }
-
-  .glass {
-    @apply bg-white/10 backdrop-blur-sm border border-white/20;
-  }
-}
-
-@layer utilities {
-  .hidden-mobile {
-    @apply hidden sm:block;
-  }
-
-  .hidden-tablet {
-    @apply hidden md:block;
-  }
-
-  .hidden-desktop {
-    @apply block lg:hidden;
-  }
-
-  .text-responsive {
-    @apply text-lg sm:text-xl md:text-2xl lg:text-3xl;
   }
 }
 
