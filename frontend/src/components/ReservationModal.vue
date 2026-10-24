@@ -200,7 +200,7 @@ const assignedSeat = computed(() => {
   if (currentBooking.value?.seat) {
     return currentBooking.value.seat;
   }
-  return 'Rangée E · Fauteuil 14';
+  return 'Rangée E · Fauteuil 12';
 });
 
 const goToReservations = () => {

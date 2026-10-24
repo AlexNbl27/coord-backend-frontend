@@ -211,7 +211,6 @@ import { useMovies } from '../composables/useMovies';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
 import SlotCard from '../components/SlotCard.vue';
-import type { Slot } from '../composables/useSlots';
 
 const slotsStore = useSlotsStore();
 const moviesStore = useMoviesStore();

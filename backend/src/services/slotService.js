@@ -223,13 +223,11 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
 
 export async function cancelSlot(slotId, sessionUser = null) {
   const safeSlotId = String(slotId);
-  if (sessionUser) {
-    const activeBooking = await Booking.findOne({ slotId: safeSlotId, status: 'CONFIRMED' }).lean();
-    if (activeBooking && activeBooking.ownerId !== sessionUser.id) {
-      const error = new Error('Vous ne pouvez pas annuler la réservation d\'un autre spectateur');
-      error.status = 403;
-      throw error;
-    }
+  const activeBooking = await Booking.findOne({ slotId: safeSlotId, status: 'CONFIRMED' }).lean();
+  if (activeBooking && sessionUser && activeBooking.ownerId !== sessionUser.id) {
+    const error = new Error('Vous ne pouvez pas annuler la réservation d\'un autre spectateur');
+    error.status = 403;
+    throw error;
   }
 
   const filter = { _id: safeSlotId, status: 'BOOKED' };

@@ -61,7 +61,7 @@
               </div>
 
               <!-- Note IMDB Badge -->
-              <div class="absolute top-3 right-3 bg-cinema-dark/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-accent-gold/40 shadow-md flex items-center gap-1.5" aria-label="`Note IMDB : ${movie.ratings?.imdb?.toFixed(1) || 'N/A'} sur 10`">
+              <div class="absolute top-3 right-3 bg-cinema-dark/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-accent-gold/40 shadow-md flex items-center gap-1.5" :aria-label="`Note IMDB : ${movie.ratings?.imdb?.toFixed(1) || 'N/A'} sur 10`">
                 <span class="text-accent-gold text-base" aria-hidden="true">★</span>
                 <span class="text-white font-bold text-sm">{{ movie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
                 <span class="text-cinema-textMuted text-xs" aria-hidden="true">/10</span>

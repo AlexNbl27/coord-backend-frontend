@@ -6,7 +6,7 @@ Projet académique YNOV - Module Coordination Backend & Frontend.
 
 ---
 
-## ️ Architecture
+##  Architecture
 
 ```
 coord-backend-frontend/

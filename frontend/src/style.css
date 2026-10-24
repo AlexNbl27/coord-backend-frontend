@@ -24,13 +24,13 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(212, 175, 55, 0.45);
+    background: rgba(200, 164, 86, 0.45);
     border-radius: 9999px;
     border: 2px solid #0f0f11;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(212, 175, 55, 0.85);
+    background: rgba(200, 164, 86, 0.85);
   }
 
   /* Selection styling */
@@ -305,61 +305,28 @@
     aspect-ratio: 16/9;
   }
 
-  /* Glass effect */
   .glass {
     @apply bg-white/10 backdrop-blur-sm border border-white/20;
   }
-
-  /* Shimmer effect for loading */
-  .shimmer {
-    @apply relative overflow-hidden;
-  }
-
-  .shimmer::after {
-    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent
-           animate-shimmer;
-    content: '';
-  }
-
-  @keyframes shimmer {
-    0% {
-      transform: translateX(-100%);
-    }
-    100% {
-      transform: translateX(100%);
-    }
-  }
 }
 
-/* ===========================================================================
-   Responsive Utilities
-   =========================================================================== */
-
 @layer utilities {
-  /* Hide on mobile, show on tablet and up */
   .hidden-mobile {
     @apply hidden sm:block;
   }
 
-  /* Hide on tablet, show on desktop and up */
   .hidden-tablet {
     @apply hidden md:block;
   }
 
-  /* Hide on desktop, show on mobile and tablet */
   .hidden-desktop {
     @apply block lg:hidden;
   }
 
-  /* Text size responsive */
   .text-responsive {
     @apply text-lg sm:text-xl md:text-2xl lg:text-3xl;
   }
 }
-
-/* ===========================================================================
-   Print Styles
-   =========================================================================== */
 
 @media print {
   .no-print {
@@ -375,10 +342,6 @@
     @apply border border-gray-300 shadow-none;
   }
 }
-
-/* ===========================================================================
-   Reduced Motion
-   =========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
   *,

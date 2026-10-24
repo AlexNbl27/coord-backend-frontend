@@ -159,7 +159,6 @@
           </div>
         </div>
 
-        <!-- Encart : Rigueur Statistique & Verdict Industriel -->
         <div class="p-5 rounded-2xl bg-cinema-darker/80 border border-cinema-border/70 space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center gap-2">
@@ -227,10 +226,9 @@
           </p>
         </div>
 
-        <!-- Synthèse comparative & Boutons d'action -->
         <div class="p-4 rounded-xl bg-cinema-card border border-cinema-border/60 flex flex-wrap items-center justify-between gap-3">
           <div class="text-xs text-cinema-textMuted leading-relaxed max-w-md">
-            <strong class="text-white">Attribution robuste :</strong> Écriture différée (Lazy Write), protection anti-course critique et dédoublonnage strict par sujet unique.
+            Données calculées sur les expositions enregistrées par visiteur unique.
           </div>
           <div class="flex items-center gap-2 flex-wrap shrink-0">
             <button
@@ -323,8 +321,7 @@ const handleResetSlots = async () => {
 const handleSimulate = async () => {
   simulating.value = true;
   try {
-    // 80 exposés A avec 16 conversions (20%) vs 80 exposés B avec 32 conversions (40%)
-    await simulateData({ countA: 80, convA: 16, countB: 80, convB: 32 });
+    await simulateData({ countA: 80, convA: 16, countB: 80, convB: 30 });
     await loadMetrics();
   } finally {
     simulating.value = false;
