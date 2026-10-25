@@ -271,15 +271,15 @@
       </div>
     </div>
 
-    <!-- Modal Confirmation Annulation -->
-    <transition
-      enter-active-class="transition duration-200 ease-out"
-      leave-active-class="transition duration-150 ease-in"
-      enter-from-class="opacity-0 scale-95"
-      leave-to-class="opacity-0 scale-95"
-    >
-      <div
-        v-if="showConfirmModal && selectedForCancel"
+    <Teleport to="body">
+      <transition
+        enter-active-class="transition duration-200 ease-out"
+        leave-active-class="transition duration-150 ease-in"
+        enter-from-class="opacity-0 scale-95"
+        leave-to-class="opacity-0 scale-95"
+      >
+        <div
+          v-if="showConfirmModal && selectedForCancel"
         ref="confirmModalRef"
         role="alertdialog"
         aria-modal="true"
@@ -316,7 +316,8 @@
           </div>
         </div>
       </div>
-    </transition>
+      </transition>
+    </Teleport>
   </div>
 </template>
 

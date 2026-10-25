@@ -73,7 +73,11 @@
 
     <!-- Contenu bas (ancré) -->
     <div class="mt-auto pt-2 border-t border-cinema-border/30">
-      <!-- Bouton de réservation -->
+      <!-- Annonce vocale dynamique pour VoiceOver lors de la réservation -->
+      <span v-if="isReserving" class="sr-only" aria-live="polite">
+        Réservation en cours pour {{ slot.movieTitle }}...
+      </span>
+
       <button
         v-if="slot.status === 'AVAILABLE'"
         @click.stop="handleReserve"
@@ -91,11 +95,6 @@
           <span>Réservation en cours...</span>
         </span>
       </button>
-
-      <!-- Annonce vocale dynamique pour VoiceOver lors de la réservation -->
-      <span v-if="isReserving" class="sr-only" aria-live="polite">
-        Réservation en cours pour {{ slot.movieTitle }}...
-      </span>
 
       <!-- Message si séance complète ou en attente de synchro -->
       <div v-else class="text-center py-2">
