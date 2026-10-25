@@ -92,19 +92,3 @@ onMounted(() => {
   connectSse();
 });
 </script>
-
-<style scoped>
-/* Animations globales */
-.router-view {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-</style>

@@ -283,11 +283,11 @@ const resetFilters = () => {
   techFilter.value = 'ALL';
 };
 
-const handleReserve = async (slotId: string, customerId: string) => {
+const handleReserve = async (slotId: string, customerId = '') => {
   try {
     const result = await reserveSlot(slotId, customerId);
     const targetSlot = allSlots.value.find(s => s.id === slotId);
-    
+
     if (targetSlot) {
       const movie = moviesStore.movies.find(m => m.title.toLowerCase() === targetSlot.movieTitle.toLowerCase());
       saveBooking({
@@ -296,6 +296,7 @@ const handleReserve = async (slotId: string, customerId: string) => {
         movieTitle: targetSlot.movieTitle,
         startsAt: targetSlot.startsAt,
         hall: targetSlot.hall,
+        seat: result.seat,
         poster: movie?.poster
       });
 

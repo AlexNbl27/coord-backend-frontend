@@ -251,11 +251,11 @@ const loadMovie = async () => {
   }
 };
 
-const handleReserve = async (slotId: string, customerId: string) => {
+const handleReserve = async (slotId: string, customerId = '') => {
   try {
     const result = await reserveSlot(slotId, customerId);
     const slot = allSlots.value.find(s => s.id === slotId);
-    
+
     if (slot && movie.value) {
       saveBooking({
         bookingId: result.bookingId,
@@ -263,6 +263,7 @@ const handleReserve = async (slotId: string, customerId: string) => {
         movieTitle: movie.value.title,
         startsAt: slot.startsAt,
         hall: slot.hall,
+        seat: result.seat,
         poster: movie.value.poster
       });
 
