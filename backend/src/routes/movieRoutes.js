@@ -71,21 +71,27 @@ movieRouter.get('/', async (req, res) => {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const skip = (page - 1) * limit;
 
-    // .lean() permet d'éviter l'overhead d'hydratation Mongoose (x5 plus rapide)
-    const movies = await Movie.find(filter)
-      .sort({ year: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    // Exécution parallèle du comptage total et de la récupération projetée (.lean() + .select())
+    const [totalCount, movies] = await Promise.all([
+      Movie.countDocuments(filter),
+      Movie.find(filter)
+        .select('title director year genres duration ratings.imdb poster')
+        .sort({ year: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
 
     const responsePayload = {
-      count: movies.length,
+      count: totalCount,
+      total: totalCount,
       page,
       limit,
       data: movies
     };
 
     setCache(cacheKey, responsePayload);
+    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
     res.json(responsePayload);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -190,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, inject } from 'vue';
+import { ref, computed, onMounted, inject, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMovies } from '../composables/useMovies';
 import { useSlots } from '../composables/useSlots';
@@ -277,6 +277,12 @@ const goBack = () => {
     router.push('/movies');
   }
 };
+
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    loadMovie();
+  }
+});
 
 onMounted(async () => {
   connectSse();

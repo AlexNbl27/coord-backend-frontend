@@ -64,6 +64,8 @@ const movieSchema = new mongoose.Schema({
 movieSchema.index({ genres: 1, 'ratings.imdb': -1 });
 movieSchema.index({ year: -1 });
 movieSchema.index({ 'ratings.imdb': -1 });
+movieSchema.index({ director: 1 });
+movieSchema.index({ title: 'text', director: 'text', tags: 'text' }, { weights: { title: 5, director: 3, tags: 1 }, default_language: 'french' });
 
 export const Movie = mongoose.model('Movie', movieSchema);
 

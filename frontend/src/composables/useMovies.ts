@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import axios, { type CancelTokenSource } from 'axios';
+import axios from 'axios';
 import { useMoviesStore } from '../stores/movies';
 
 // Interface pour un film
@@ -32,6 +32,7 @@ export interface Movie {
 // Interface pour la réponse de l'API avec pagination
 export interface MoviesResponse {
   count: number;
+  total?: number;
   page: number;
   limit: number;
   data: Movie[];
@@ -50,9 +51,10 @@ export interface MovieFilters {
 // URL de base de l'API (utilise le proxy Vite en développement)
 const API_BASE_URL = '/api/movies';
 
-// Cache local pour éviter les requêtes répétées
-const moviesCache = ref<Map<string, MoviesResponse>>(new Map());
-const CACHE_TTL_MS = 5000; // 5 secondes
+// Cache local LRU (max 25 entrées) pour éviter toute fuite mémoire
+const MAX_CACHE_ENTRIES = 25;
+const moviesCache = ref<Map<string, MoviesResponse & { timestamp: number }>>(new Map());
+const CACHE_TTL_MS = 10000; // 10 secondes
 
 // Cache pour les détails d'un film
 const movieDetailsCache = ref<Map<string, Movie>>(new Map());
@@ -67,24 +69,21 @@ export function useMovies() {
   const currentLimit = ref(20);
   const hasMore = ref(false);
   
-  // Gestion de l'annulation des requêtes
-  const cancelTokenSource = ref<CancelTokenSource | null>(null);
+  // Gestion standard de l'annulation des requêtes réseau (remplace CancelToken déprécié)
+  let activeAbortController: AbortController | null = null;
   
-  // Identifiant de recherche pour éviter les réponses anciennes
+  // Identifiant de recherche pour éviter les réponses obsolètes
   const searchId = ref(0);
 
   // Récupérer tous les films avec filtres et pagination
   const fetchMovies = async (filters: MovieFilters = {}, resetCache: boolean = false) => {
-    // Incrémenter l'identifiant de recherche pour cette nouvelle requête
     const currentSearchId = ++searchId.value;
     
-    // Annuler la requête précédente si elle existe
-    if (cancelTokenSource.value) {
-      cancelTokenSource.value.cancel('Requête annulée - nouvelle recherche en cours');
+    // Annuler la requête précédente si elle est toujours en transit
+    if (activeAbortController) {
+      activeAbortController.abort();
     }
-    
-    // Créer un nouveau token d'annulation
-    cancelTokenSource.value = axios.CancelToken.source();
+    activeAbortController = new AbortController();
     
     try {
       loading.value = true;
@@ -93,15 +92,15 @@ export function useMovies() {
       // Générer la clé de cache
       const cacheKey = JSON.stringify(filters);
       
-      // Vérifier le cache
+      // Vérifier le cache local
       if (!resetCache && moviesCache.value.has(cacheKey)) {
         const cached = moviesCache.value.get(cacheKey)!;
-        if (Date.now() - (cached as any).timestamp < CACHE_TTL_MS) {
+        if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
           movies.value = cached.data;
-          totalCount.value = cached.count;
+          totalCount.value = cached.total ?? cached.count;
           currentPage.value = cached.page;
           currentLimit.value = cached.limit;
-          hasMore.value = cached.page * cached.limit < cached.count;
+          hasMore.value = cached.page * cached.limit < totalCount.value;
           loading.value = false;
           moviesStore.setMovies(cached);
           return;
@@ -131,16 +130,20 @@ export function useMovies() {
       params.set('limit', limit.toString());
 
       const response = await axios.get<MoviesResponse>(`${API_BASE_URL}?${params.toString()}`, {
-        cancelToken: cancelTokenSource.value.token,
+        signal: activeAbortController.signal,
       });
       
-      // Vérifier que cette réponse correspond à la recherche actuelle
-      // (éviter de remplacer avec une réponse ancienne)
+      // Vérifier que cette réponse correspond bien à la dernière recherche demandée
       if (currentSearchId !== searchId.value) {
-        console.log('Réponse ignorée - recherche plus récente en cours');
         return;
       }
       
+      // Éviction LRU : purge de la plus ancienne entrée si le cache dépasse la limite
+      if (moviesCache.value.size >= MAX_CACHE_ENTRIES) {
+        const oldestKey = moviesCache.value.keys().next().value;
+        if (oldestKey) moviesCache.value.delete(oldestKey);
+      }
+
       // Mettre en cache avec timestamp
       const responseWithTimestamp = {
         ...response.data,
@@ -148,30 +151,27 @@ export function useMovies() {
       };
       moviesCache.value.set(cacheKey, responseWithTimestamp);
 
+      const effectiveTotal = response.data.total ?? response.data.count;
       movies.value = response.data.data;
-      totalCount.value = response.data.count;
+      totalCount.value = effectiveTotal;
       currentPage.value = response.data.page;
       currentLimit.value = response.data.limit;
-      hasMore.value = response.data.page * response.data.limit < response.data.count;
+      hasMore.value = response.data.page * response.data.limit < effectiveTotal;
       moviesStore.setMovies(response.data);
       
-    } catch (err) {
-      // Ne pas afficher d'erreur si la requête a été annulée
-      if (axios.isCancel(err)) {
-        console.log('Requête annulée:', err.message);
+    } catch (err: any) {
+      // Ignorer silencieusement si la requête a été volontairement annulée par AbortController
+      if (axios.isCancel(err) || err.name === 'CanceledError' || err.name === 'AbortError') {
         return;
       }
       
-      // Vérifier que cette erreur correspond à la recherche actuelle
       if (currentSearchId !== searchId.value) {
-        console.log('Erreur ignorée - recherche plus récente en cours');
         return;
       }
       
       error.value = 'Impossible de récupérer les films. Veuillez réessayer.';
       console.error('Erreur lors de la récupération des films:', err);
     } finally {
-      // Ne pas mettre loading à false si cette réponse est ancienne
       if (currentSearchId === searchId.value) {
         loading.value = false;
       }

@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cluster from 'node:cluster';
 import os from 'node:os';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { movieRouter } from './routes/movieRoutes.js';
 import { abRouter } from './routes/abRoutes.js';
@@ -20,10 +21,15 @@ const numCPUs = process.env.WEB_CONCURRENCY
 function createServer() {
   const app = express();
 
+  // Optimisations réseau
+  app.disable('x-powered-by');
+  app.use(compression());
+
   // Middlewares
   app.use(cors({
     origin: true,
-    credentials: true
+    credentials: true,
+    maxAge: 86400
   }));
   app.use(express.json());
   app.use(cookieParser());
@@ -93,13 +99,26 @@ async function startWorker() {
 // Gestion du clustering multi-cœurs
 if (cluster.isPrimary && numCPUs > 1) {
   console.log(`[Cluster] Master ${process.pid} lance ${numCPUs} workers...`);
+  
+  const setupWorker = (w) => {
+    w.on('message', (msg) => {
+      if (msg && msg.type === 'BROADCAST_SSE') {
+        for (const id in cluster.workers) {
+          cluster.workers[id]?.send(msg);
+        }
+      }
+    });
+  };
+
   for (let i = 0; i < numCPUs; i++) {
-    cluster.fork();
+    const worker = cluster.fork();
+    setupWorker(worker);
   }
 
   cluster.on('exit', (worker) => {
     console.log(`[Cluster] Worker ${worker.process.pid} arrêté. Redémarrage...`);
-    cluster.fork();
+    const newWorker = cluster.fork();
+    setupWorker(newWorker);
   });
 } else {
   startWorker();

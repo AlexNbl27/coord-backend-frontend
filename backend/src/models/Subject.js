@@ -12,4 +12,6 @@ const subjectSchema = new mongoose.Schema({
   versionKey: false
 });
 
+subjectSchema.index({ experimentId: 1, variant: 1, exposed: 1 });
+
 export const Subject = mongoose.model('Subject', subjectSchema);

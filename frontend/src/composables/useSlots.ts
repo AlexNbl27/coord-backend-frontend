@@ -97,7 +97,6 @@ export function useSlots() {
         slotsStore.setSseConnected(true);
         sseError.value = null;
         console.log('Connexion SSE etablie');
-        fetchSlots();
       };
 
       sharedEventSource.onerror = (event) => {

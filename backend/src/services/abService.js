@@ -93,27 +93,50 @@ export async function attribution(visitorId) {
 
 /**
  * Calcul des indicateurs A/B agrégés avec dédoublonnage strict des visiteurs convertis
+ * Optimisé via pipeline d'agrégation MongoDB pour éviter le surcoût mémoire
  */
 export async function getMetrics() {
   const result = [];
   for (const v of ['A', 'B']) {
     const assigned = await Subject.countDocuments({ experimentId: EXP, variant: v });
-
-    const exposedSubjects = await Subject.find(
-      { experimentId: EXP, variant: v, exposed: true },
-      { _id: 1 }
-    );
-    const exposedIds = exposedSubjects.map(s => s._id);
-    const exposed = exposedIds.length;
+    const exposed = await Subject.countDocuments({ experimentId: EXP, variant: v, exposed: true });
 
     let converted = 0;
-    if (exposedIds.length > 0) {
-      const distinctSubjects = await Slot.distinct('subjectId', {
-        experimentId: EXP,
-        status: 'BOOKED',
-        subjectId: { $in: exposedIds }
-      });
-      converted = distinctSubjects.length;
+    if (exposed > 0) {
+      const conversionData = await Slot.aggregate([
+        {
+          $match: {
+            experimentId: EXP,
+            status: 'BOOKED',
+            subjectId: { $ne: null }
+          }
+        },
+        {
+          $lookup: {
+            from: 'ab_subjects',
+            localField: 'subjectId',
+            foreignField: '_id',
+            as: 'subject'
+          }
+        },
+        { $unwind: '$subject' },
+        {
+          $match: {
+            'subject.variant': v,
+            'subject.exposed': true
+          }
+        },
+        {
+          $group: {
+            _id: '$subjectId'
+          }
+        },
+        {
+          $count: 'total'
+        }
+      ]);
+
+      converted = conversionData[0]?.total || 0;
     }
 
     const rate = exposed === 0 ? null : converted / exposed;
