@@ -36,4 +36,23 @@ public class SlotService {
     events.changed(winner);
     return winner;
   }
+
+  public Slot cancel(String id) {
+    var filter = Query.query(Criteria.where("_id").is(id)
+      .and("status").is("BOOKED"));
+    var change = new Update().set("status", "AVAILABLE")
+      .unset("bookedBy")
+      .unset("bookingId")
+      .inc("version", 1);
+    Slot updated = mongo.findAndModify(filter, change,
+      FindAndModifyOptions.options().returnNew(true), Slot.class);
+    if (updated == null) {
+      boolean exists = mongo.exists(
+        Query.query(Criteria.where("_id").is(id)), Slot.class);
+      throw new ResponseStatusException(exists ? HttpStatus.BAD_REQUEST
+        : HttpStatus.NOT_FOUND, exists ? "Créneau non réservé ou déjà annulé" : "Créneau inconnu");
+    }
+    events.changed(updated);
+    return updated;
+  }
 }
