@@ -158,13 +158,23 @@
             <strong class="text-white">Règle d'attribution :</strong> Attribution si la réservation intervient dans les 24h suivant l'exposition du navigateur.
             Plusieurs réservations du même visiteur ne comptent que pour <span class="text-accent-gold font-bold">1 visiteur converti unique</span>.
           </div>
-          <button
-            @click="loadMetrics"
-            class="ml-4 shrink-0 px-3.5 py-2 rounded-xl bg-cinema-darker hover:bg-white/5 border border-cinema-border text-xs font-semibold text-cinema-text hover:text-white transition-all flex items-center gap-2"
-          >
-            <span>🔄</span>
-            <span>Actualiser</span>
-          </button>
+          <div class="flex items-center gap-2 ml-4 shrink-0">
+            <button
+              @click="handleResetSlots"
+              class="px-3.5 py-2 rounded-xl bg-cinema-darker hover:bg-white/5 border border-cinema-border text-xs font-semibold text-cinema-text hover:text-white transition-all flex items-center gap-2 cursor-pointer"
+              title="Libérer tous les créneaux"
+            >
+              <span>🎟️</span>
+              <span>Libérer les créneaux</span>
+            </button>
+            <button
+              @click="loadMetrics"
+              class="px-3.5 py-2 rounded-xl bg-accent-gold/15 hover:bg-accent-gold/25 border border-accent-gold/30 text-xs font-semibold text-accent-gold transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <span>🔄</span>
+              <span>Actualiser</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -174,6 +184,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useAbTest, type AbMetric } from '../composables/useAbTest';
+import { useSlots } from '../composables/useSlots';
 
 defineProps<{
   show: boolean;
@@ -182,6 +193,12 @@ defineProps<{
 defineEmits(['close']);
 
 const { variant, experimentId, exposed, measured, bookingButtonLabel, fetchMetrics } = useAbTest();
+const { resetSlots } = useSlots();
+
+const handleResetSlots = async () => {
+  await resetSlots();
+  await loadMetrics();
+};
 
 const loading = ref(false);
 const metrics = ref<AbMetric[]>([]);

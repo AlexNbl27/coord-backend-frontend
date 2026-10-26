@@ -204,6 +204,19 @@ export function useSlots() {
     fetchSlots();
   };
 
+  // Réinitialiser toutes les séances au statut disponible
+  const resetSlots = async () => {
+    try {
+      loading.value = true;
+      await axios.post(`${API_SLOTS_URL}/reset`, {}, { withCredentials: true });
+      await fetchSlots();
+    } catch (err) {
+      console.error('Erreur réinitialisation créneaux:', err);
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     slots,
     availableSlots,
@@ -217,6 +230,7 @@ export function useSlots() {
     disconnectSse,
     reserveSlot,
     generateDemoSlot,
+    resetSlots,
     getSlotsByMovie,
     getSlotsByStatus,
     refreshSlots,

@@ -5,7 +5,8 @@ import {
   cancelSlot,
   subscribeSse,
   createDemoSlot,
-  getSlotProof
+  getSlotProof,
+  resetAllSlots
 } from '../services/slotService.js';
 
 export const slotRouter = Router();
@@ -97,6 +98,19 @@ slotRouter.get('/:id/proof', async (req, res, next) => {
     if (err.status) {
       return res.status(err.status).json({ message: err.message });
     }
+    next(err);
+  }
+});
+
+/**
+ * POST /api/slots/reset
+ * Réinitialise tous les créneaux pour qu'ils soient de nouveau disponibles
+ */
+slotRouter.post('/reset', async (req, res, next) => {
+  try {
+    const result = await resetAllSlots();
+    res.json(result);
+  } catch (err) {
     next(err);
   }
 });
