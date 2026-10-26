@@ -24,14 +24,24 @@
       :hall="currentHall"
       @close="closeReservationModal"
     />
+
+    <!-- A/B Testing Metrics Modal (global) -->
+    <AbMetricsModal
+      :show="showAbMetricsModal"
+      @close="showAbMetricsModal = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, provide } from 'vue';
+import { ref, provide, onMounted } from 'vue';
 import Navbar from './components/Navbar.vue';
 import Footer from './components/Footer.vue';
 import ReservationModal from './components/ReservationModal.vue';
+import AbMetricsModal from './components/AbMetricsModal.vue';
+import { useAbTest } from './composables/useAbTest';
+
+const { initAssignment } = useAbTest();
 
 // Modal state
 const showReservationModal = ref(false);
@@ -39,6 +49,8 @@ const currentBookingId = ref('');
 const currentMovieTitle = ref('');
 const currentStartsAt = ref('');
 const currentHall = ref('');
+
+const showAbMetricsModal = ref(false);
 
 // Function to open reservation modal
 const openReservationModal = (
@@ -59,9 +71,18 @@ const closeReservationModal = () => {
   showReservationModal.value = false;
 };
 
+const openAbMetricsModal = () => {
+  showAbMetricsModal.value = true;
+};
+
 // Provide modal functions to child components
 provide('openReservationModal', openReservationModal);
 provide('closeReservationModal', closeReservationModal);
+provide('openAbMetricsModal', openAbMetricsModal);
+
+onMounted(() => {
+  initAssignment();
+});
 </script>
 
 <style scoped>

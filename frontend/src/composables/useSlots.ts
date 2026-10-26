@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import axios from 'axios';
 import { useSlotsStore } from '../stores/slots';
+import { useAbTest } from './useAbTest';
 
 // Interface pour une séance (slot)
 export interface Slot {
@@ -60,7 +61,9 @@ export function useSlots() {
       error.value = null;
       slotsStore.setLoading(true);
       
-      const response = await axios.get<SlotView[]>(API_SLOTS_URL);
+      const response = await axios.get<SlotView[]>(API_SLOTS_URL, {
+        withCredentials: true
+      });
       const mappedSlots: Slot[] = response.data.map(slot => ({
         id: slot.id,
         startsAt: slot.startsAt,
@@ -145,9 +148,17 @@ export function useSlots() {
   // Réserver une séance
   const reserveSlot = async (slotId: string, customerId: string): Promise<BookingView> => {
     try {
-      const response = await axios.post<BookingView>(`${API_SLOTS_URL}/${slotId}/reservations`, {
-        customerId,
-      });
+      const { measured } = useAbTest();
+      const response = await axios.post<BookingView>(
+        `${API_SLOTS_URL}/${slotId}/reservations`,
+        { customerId },
+        {
+          headers: {
+            'X-AB-Measure': String(measured.value)
+          },
+          withCredentials: true
+        }
+      );
       
       // La séance sera mise à jour automatiquement via SSE
       return response.data;

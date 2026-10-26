@@ -81,7 +81,7 @@
       >
         <span v-if="!isReserving" class="flex items-center justify-center gap-2">
           <span>🎟️</span>
-          <span>Réserver cette séance</span>
+          <span>{{ bookingButtonLabel }}</span>
         </span>
         <span v-else class="flex items-center justify-center gap-2">
           <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -109,6 +109,9 @@
 <script setup lang="ts">
 import { ref, computed, inject } from 'vue';
 import type { Slot } from '../composables/useSlots';
+import { useAbTest } from '../composables/useAbTest';
+
+const { bookingButtonLabel } = useAbTest();
 
 const props = defineProps<{
   slot: Slot;

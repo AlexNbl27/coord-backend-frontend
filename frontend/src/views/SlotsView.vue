@@ -157,12 +157,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted } from 'vue';
+import { ref, computed, inject, onMounted, watch } from 'vue';
 import { useSlotsStore } from '../stores/slots';
 import { useMoviesStore } from '../stores/movies';
 import { useSlots } from '../composables/useSlots';
 import { useMovies } from '../composables/useMovies';
 import { useReservations } from '../composables/useReservations';
+import { useAbTest } from '../composables/useAbTest';
 import SlotCard from '../components/SlotCard.vue';
 import type { Slot } from '../composables/useSlots';
 
@@ -171,6 +172,7 @@ const moviesStore = useMoviesStore();
 const { fetchMovies } = useMovies();
 const { fetchSlots, connectSse, reserveSlot, sseConnected } = useSlots();
 const { saveBooking } = useReservations();
+const { exposeIfAvailable } = useAbTest();
 
 const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
 
@@ -261,6 +263,12 @@ const handleReserve = async (slotId: string, customerId: string) => {
     console.error('Reservation error:', err);
   }
 };
+
+watch(availableSlotsCount, (count) => {
+  if (count > 0) {
+    exposeIfAvailable(true);
+  }
+}, { immediate: true });
 
 onMounted(async () => {
   loading.value = true;
