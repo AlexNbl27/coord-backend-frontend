@@ -255,21 +255,30 @@ export function useSlots() {
       // Si le backend est déconnecté ou en panne : Outbox Pattern & Résilience
       if (isNetworkOrServer) {
         console.warn(`[useSlots] Backend hors-ligne : mise en file d'attente de la réservation pour le créneau ${slotId}.`);
-        
+
         const tempBookingId = `temp_bk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        
-        slotsStore.updateSlotStatus(slotId, 'BOOKED');
+        const currentSlot = slotsStore.slots.find((s) => s.id === slotId);
+        const qty = tickets?.reduce((sum, t) => sum + t.quantity, 0) || 1;
+        const newAvailable = Math.max(0, (currentSlot?.availableSeats ?? currentSlot?.capacity ?? 40) - qty);
+
+        slotsStore.updateSlot(slotId, {
+          availableSeats: newAvailable,
+          status: newAvailable <= 0 ? 'BOOKED' : 'AVAILABLE',
+        });
 
         offlineQueue.enqueue('RESERVE_SLOT', {
           slotId,
           customerId,
           tempBookingId,
+          tickets,
         });
 
         return {
           bookingId: tempBookingId,
           slotId,
-          status: 'BOOKED',
+          status: newAvailable <= 0 ? 'BOOKED' : 'AVAILABLE',
+          totalQuantity: qty,
+          availableSeats: newAvailable,
         };
       }
 
