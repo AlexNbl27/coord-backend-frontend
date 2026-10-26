@@ -10,60 +10,39 @@ Projet académique YNOV - Module Coordination Backend & Frontend.
 
 ```
 coord-backend-frontend/
-├── backend/                             # API REST Node.js/Express (Port 3000)
+├── backend/                             # API REST & SSE Node.js/Express (Port 3000)
 │   ├── Dockerfile                       # Build Node.js 22
-│   ├── package.json                    # Dépendances Express + Mongoose
+│   ├── package.json                    # Dépendances Express + Mongoose + Compression
 │   └── src/
-│       ├── server.js                    # Cluster + MongoDB + CORS
-│       ├── models/Movie.js              # Schéma Mongoose + index B-Tree
-│       └── routes/movieRoutes.js        # CRUD + Cache TTL 5s
+│       ├── server.js                    # Cluster multi-cœurs + IPC SSE + Compression + CORS
+│       ├── models/                      # Schémas Mongoose (Movie, Slot, Subject A/B)
+│       ├── routes/                      # Routes (movieRoutes, slotRoutes, abRoutes)
+│       └── services/                    # Services métier (slotService SSE, abService A/B)
 │
-├── services/
-│   └── cineslot-sse/                    # Service SSE Spring Boot (Port 8086)
-│       ├── Dockerfile                   # Build Spring Boot
-│       ├── compose.yaml                 # Config MongoDB locale
-│       ├── pom.xml                      # Maven + Spring Boot 3.5.6
-│       └── src/main/java/fr/medislot/    # Contrôleurs REST + SSE
-│
-├── frontend/                            # Application Vue 3 + Vite (Port 5173)
+├── frontend/                            # Application Vue 3 + Vite + TypeScript (Port 5173 / 3001)
 │   ├── index.html                      # Entrée HTML
-│   ├── package.json                    # Dépendances Vite + Vue + Pinia
-│   ├── vite.config.ts                  # Proxy vers APIs backend
+│   ├── package.json                    # Dépendances Vite + Vue + Pinia + Axios
+│   ├── vite.config.ts                  # Proxy unifié /api vers backend
 │   ├── tailwind.config.js              # Thème cinéma dark-mode
 │   └── src/
 │       ├── main.ts                     # Initialisation Vue + Pinia + Router
 │       ├── App.vue                     # Layout principal
-│       ├── router.ts                  # Vue Router
-│       ├── style.css                  # Styles globaux + animations
-│       ├── components/                # Composants réutilisables
-│       │   ├── Navbar.vue              # Barre de navigation
-│       │   ├── MovieCard.vue           # Carte film avec infos
-│       │   ├── SlotCard.vue            # Carte séance avec SSE
-│       │   ├── SearchBar.vue           # Recherche + filtres
-│       │   ├── SseStatus.vue           # Indicateur connexion SSE
-│       │   └── ReservationModal.vue    # Modal confirmation réservation
-│       ├── composables/               # Logique métier
-│       │   ├── useMovies.ts            # Appels API films
-│       │   └── useSlots.ts             # Appels API séances + SSE
-│       ├── stores/                    # State management (Pinia)
-│       │   ├── movies.ts               # Store films
-│       │   └── slots.ts                # Store séances
-│       └── views/                     # Pages
-│           ├── HomeView.vue           # Accueil (populaires, récents, séances)
-│           ├── MoviesView.vue          # Liste complète des films
-│           ├── SlotsView.vue           # Liste des séances
-│           ├── AboutView.vue           # À propos
-│           └── NotFoundView.vue        # 404
+│       ├── router.ts                  # Vue Router (avec routes dynamiques & 404)
+│       ├── style.css                  # Styles globaux + animations cinéma
+│       ├── components/                # Composants réutilisables (Navbar, Cards, Modals...)
+│       ├── composables/               # Composables (useMovies, useSlots, useAbTest, useReservations)
+│       ├── stores/                    # State management (Pinia stores)
+│       └── views/                     # Pages (Home, Movies, MovieDetail, Slots, About, 404)
 │
 ├── database/                            # Données MongoDB
-│   └── seed_movies.js                   # 12 films + index composites
+│   └── seed_cinematheque.js             # Initialisation films, séances & index composites
 │
 ├── tests-k6/                            # Tests de charge Grafana k6
-│   ├── load-test.js                     # Scénarios avec paliers dynamiques
-│   ├── run-ci-local.ps1                 # Script Windows
-│   └── run-ci-local.sh                  # Script Linux
+│   ├── load-test.js                     # Scénarios avec paliers dynamiques (10%, 30%, 60%, 100%)
+│   ├── run-ci-local.ps1                 # Script de simulation CI Windows
+│   └── run-ci-local.sh                  # Script de simulation CI Linux
 │
-├── docker-compose.yml                  # Orchestration complète
+├── docker-compose.yml                  # Orchestration complète (MongoDB, Backend, Frontend, k6)
 ├── .env.example                        # Template variables d'environnement
 ├── .gitignore                          # Exclusions Git
 └── README.md                           # Documentation
@@ -76,8 +55,7 @@ coord-backend-frontend/
 ### Prérequis
 
 - **Docker & Docker Compose** (v20.10+)
-- **Node.js** 20+ (optionnel pour le développement frontend local)
-- **Java** 21+ (optionnel pour builder le service SSE localement)
+- **Node.js** 20+ (optionnel pour le développement local sans Docker)
 
 ### 1. Lancer la stack complète avec Docker
 
@@ -90,18 +68,18 @@ docker compose up -d --build
 
 | Service | URL | Port | Description |
 |---------|-----|------|-------------|
-| API Films | http://localhost:3000 | 3000 | Backend Node.js + Express |
-| Santé API | http://localhost:3000/health | - | Vérification statut |
-| Billetterie SSE | http://localhost:8086 | 8086 | Service Spring Boot |
-| SSE Events | http://localhost:8086/api/slots/events | - | Flux Server-Sent Events |
-| Frontend | http://localhost:5173 | 5173 | Application Vue 3 |
+| API Backend & SSE | http://localhost:3000 | 3000 | Backend Node.js Express (Films, Séances, SSE, A/B) |
+| Santé API | http://localhost:3000/health | 3000 | Statut serveur & connexion MongoDB |
+| SSE Events | http://localhost:3000/api/slots/events | 3000 | Flux Server-Sent Events temps réel |
+| Frontend Dev | http://localhost:5173 | 5173 | Application Vue 3 (Vite hot-reload) |
+| Frontend Prod | http://localhost:3001 | 3001 | Application Vue 3 servie par Nginx |
 | MongoDB | localhost:27017 | 27017 | Base de données |
 | k6 Dashboard | http://localhost:5665 | 5665 | Tests de charge (profil test) |
 
-### 2. Lancer uniquement les backends (sans frontend)
+### 2. Lancer uniquement le backend et la base de données
 
 ```bash
-docker compose up -d mongodb backend cineslot-sse
+docker compose up -d mongodb backend
 ```
 
 ### 3. Développer le frontend localement (avec hot-reload)
