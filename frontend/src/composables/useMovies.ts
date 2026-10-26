@@ -1,8 +1,9 @@
 import { ref, computed } from 'vue';
-import axios from 'axios';
+import axios, { type CancelTokenSource } from 'axios';
+import { useMoviesStore } from '../stores/movies';
 
 // Interface pour un film
-interface Movie {
+export interface Movie {
   _id: string;
   title: string;
   director: string;
@@ -29,7 +30,7 @@ interface Movie {
 }
 
 // Interface pour la réponse de l'API avec pagination
-interface MoviesResponse {
+export interface MoviesResponse {
   count: number;
   page: number;
   limit: number;
@@ -37,7 +38,7 @@ interface MoviesResponse {
 }
 
 // Interface pour les filtres
-interface MovieFilters {
+export interface MovieFilters {
   search?: string;
   genre?: string;
   minRating?: number;
@@ -57,6 +58,7 @@ const CACHE_TTL_MS = 5000; // 5 secondes
 const movieDetailsCache = ref<Map<string, Movie>>(new Map());
 
 export function useMovies() {
+  const moviesStore = useMoviesStore();
   const movies = ref<Movie[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
@@ -64,9 +66,26 @@ export function useMovies() {
   const currentPage = ref(1);
   const currentLimit = ref(20);
   const hasMore = ref(false);
+  
+  // Gestion de l'annulation des requêtes
+  const cancelTokenSource = ref<CancelTokenSource | null>(null);
+  
+  // Identifiant de recherche pour éviter les réponses anciennes
+  const searchId = ref(0);
 
   // Récupérer tous les films avec filtres et pagination
   const fetchMovies = async (filters: MovieFilters = {}, resetCache: boolean = false) => {
+    // Incrémenter l'identifiant de recherche pour cette nouvelle requête
+    const currentSearchId = ++searchId.value;
+    
+    // Annuler la requête précédente si elle existe
+    if (cancelTokenSource.value) {
+      cancelTokenSource.value.cancel('Requête annulée - nouvelle recherche en cours');
+    }
+    
+    // Créer un nouveau token d'annulation
+    cancelTokenSource.value = axios.CancelToken.source();
+    
     try {
       loading.value = true;
       error.value = null;
@@ -84,6 +103,7 @@ export function useMovies() {
           currentLimit.value = cached.limit;
           hasMore.value = cached.page * cached.limit < cached.count;
           loading.value = false;
+          moviesStore.setMovies(cached);
           return;
         }
       }
@@ -110,7 +130,16 @@ export function useMovies() {
       params.set('page', page.toString());
       params.set('limit', limit.toString());
 
-      const response = await axios.get<MoviesResponse>(`${API_BASE_URL}?${params.toString()}`);
+      const response = await axios.get<MoviesResponse>(`${API_BASE_URL}?${params.toString()}`, {
+        cancelToken: cancelTokenSource.value.token,
+      });
+      
+      // Vérifier que cette réponse correspond à la recherche actuelle
+      // (éviter de remplacer avec une réponse ancienne)
+      if (currentSearchId !== searchId.value) {
+        console.log('Réponse ignorée - recherche plus récente en cours');
+        return;
+      }
       
       // Mettre en cache avec timestamp
       const responseWithTimestamp = {
@@ -124,12 +153,28 @@ export function useMovies() {
       currentPage.value = response.data.page;
       currentLimit.value = response.data.limit;
       hasMore.value = response.data.page * response.data.limit < response.data.count;
+      moviesStore.setMovies(response.data);
       
     } catch (err) {
+      // Ne pas afficher d'erreur si la requête a été annulée
+      if (axios.isCancel(err)) {
+        console.log('Requête annulée:', err.message);
+        return;
+      }
+      
+      // Vérifier que cette erreur correspond à la recherche actuelle
+      if (currentSearchId !== searchId.value) {
+        console.log('Erreur ignorée - recherche plus récente en cours');
+        return;
+      }
+      
       error.value = 'Impossible de récupérer les films. Veuillez réessayer.';
       console.error('Erreur lors de la récupération des films:', err);
     } finally {
-      loading.value = false;
+      // Ne pas mettre loading à false si cette réponse est ancienne
+      if (currentSearchId === searchId.value) {
+        loading.value = false;
+      }
     }
   };
 
@@ -224,6 +269,14 @@ export function useMovies() {
     return Array.from(genresSet).sort();
   });
 
+  // Annuler la requête en cours
+  const cancelCurrentRequest = () => {
+    if (cancelTokenSource.value) {
+      cancelTokenSource.value.cancel('Requête annulée - composant démonté');
+      cancelTokenSource.value = null;
+    }
+  };
+
   // Films filtrés par note minimale
   const getMoviesByRating = (minRating: number) => {
     return movies.value.filter(movie => movie.ratings?.imdb >= minRating);
@@ -267,5 +320,7 @@ export function useMovies() {
     popularMovies,
     recentMovies,
     getMoviesByDirector,
+    cancelCurrentRequest,
+    searchId,
   };
 }

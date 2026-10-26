@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router';
 
 const routes = [
   {
@@ -39,6 +39,15 @@ const routes = [
     },
   },
   {
+    path: '/reservations',
+    name: 'reservations',
+    component: () => import('./views/ReservationsView.vue'),
+    meta: {
+      title: 'CinéSlot - Mes Réservations',
+      description: 'Gérez vos billets et annulez vos réservations',
+    },
+  },
+  {
     path: '/about',
     name: 'about',
     component: () => import('./views/AboutView.vue'),
@@ -53,7 +62,7 @@ const routes = [
     component: () => import('./views/NotFoundView.vue'),
     meta: {
       title: 'CinéSlot - Page non trouvée',
-      description: 'La page que vous cherchez n\'existe pas',
+      description: "La page que vous cherchez n'existe pas",
     },
   },
 ];
@@ -61,7 +70,7 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(to: RouteLocationNormalized, from: RouteLocationNormalized, savedPosition) {
     // Toujours faire défiler vers le haut lors de la navigation
     if (to.hash) {
       return {
@@ -73,9 +82,10 @@ const router = createRouter({
   },
 });
 
-// Navigation guard pour mettre à jour le titre de la pageouter.beforeEach((to) => {
-  const title = to.meta.title as string || 'CinéSlot - Réservation de films en temps réel';
-  const description = to.meta.description as string || 'Découvrez et réservez vos films préférés en temps réel avec synchronisation SSE';
+// Navigation guard pour mettre à jour le titre de la page
+router.beforeEach((to) => {
+  const title = (to.meta.title as string) || 'CinéSlot - Réservation de films en temps réel';
+  const description = (to.meta.description as string) || 'Découvrez et réservez vos films préférés en temps réel avec synchronisation SSE';
   
   // Mettre à jour le titre de la page
   document.title = title;

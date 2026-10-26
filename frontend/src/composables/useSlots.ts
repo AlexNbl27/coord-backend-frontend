@@ -1,8 +1,9 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 import axios from 'axios';
+import { useSlotsStore } from '../stores/slots';
 
 // Interface pour une séance (slot)
-interface Slot {
+export interface Slot {
   id: string;
   startsAt: string;
   status: 'AVAILABLE' | 'BOOKED';
@@ -14,7 +15,7 @@ interface Slot {
 }
 
 // Interface pour la vue d'une séance (API)
-interface SlotView {
+export interface SlotView {
   id: string;
   startsAt: string;
   status: string;
@@ -24,14 +25,14 @@ interface SlotView {
 }
 
 // Interface pour la réservation
-interface BookingView {
+export interface BookingView {
   bookingId: string;
   slotId: string;
   status: string;
 }
 
 // Interface pour l'événement SSE
-interface SseEvent {
+export interface SseEvent {
   slotId: string;
   status: string;
   version: number;
@@ -41,23 +42,26 @@ interface SseEvent {
 const API_SLOTS_URL = '/api/slots';
 const API_SSE_EVENTS_URL = '/api/slots/events';
 
+let sharedEventSource: EventSource | null = null;
+
 export function useSlots() {
-  const slots = ref<Slot[]>([]);
+  const slotsStore = useSlotsStore();
   const loading = ref(false);
   const error = ref<string | null>(null);
-  const sseConnected = ref(false);
   const sseError = ref<string | null>(null);
-  
-  let eventSource: EventSource | null = null;
+
+  const slots = computed(() => slotsStore.slots);
+  const sseConnected = computed(() => slotsStore.sseConnected);
 
   // Récupérer toutes les séances
   const fetchSlots = async () => {
     try {
       loading.value = true;
       error.value = null;
+      slotsStore.setLoading(true);
       
       const response = await axios.get<SlotView[]>(API_SLOTS_URL);
-      slots.value = response.data.map(slot => ({
+      const mappedSlots: Slot[] = response.data.map(slot => ({
         id: slot.id,
         startsAt: slot.startsAt,
         status: slot.status as 'AVAILABLE' | 'BOOKED',
@@ -65,70 +69,64 @@ export function useSlots() {
         movieTitle: slot.movieTitle,
         hall: slot.hall,
       }));
+      slotsStore.setSlots(mappedSlots);
       
     } catch (err) {
       error.value = 'Impossible de récupérer les séances. Veuillez réessayer.';
+      slotsStore.setError(error.value);
       console.error('Erreur lors de la récupération des séances:', err);
     } finally {
       loading.value = false;
+      slotsStore.setLoading(false);
     }
   };
 
   // Connexion au flux SSE
   const connectSse = () => {
-    // Fermer la connexion existante
-    disconnectSse();
+    if (sharedEventSource && sharedEventSource.readyState !== EventSource.CLOSED) {
+      return;
+    }
 
     try {
-      // Créer une nouvelle connexion EventSource
-      eventSource = new EventSource(API_SSE_EVENTS_URL);
+      sharedEventSource = new EventSource(API_SSE_EVENTS_URL);
 
-      // Événement d'ouverture de la connexion
-      eventSource.onopen = () => {
-        sseConnected.value = true;
+      sharedEventSource.onopen = () => {
+        slotsStore.setSseConnected(true);
         sseError.value = null;
-        console.log('✅ Connexion SSE établie');
-        
-        // Recharger les séances à la connexion
+        console.log('Connexion SSE etablie');
         fetchSlots();
       };
 
-      // Événement d'erreur
-      eventSource.onerror = (event) => {
-        sseConnected.value = false;
+      sharedEventSource.onerror = (event) => {
+        slotsStore.setSseConnected(false);
         sseError.value = 'Erreur de connexion SSE. Tentative de reconnexion...';
-        console.error('❌ Erreur SSE:', event);
-        
-        // Tentative de reconnexion après 5 secondes
-        setTimeout(connectSse, 5000);
+        console.error('Erreur SSE:', event);
       };
 
-      // Événement initial "ready"
-      eventSource.addEventListener('ready', (event) => {
-        const data = JSON.parse(event.data);
-        if (data.action === 'reload') {
-          fetchSlots();
+      sharedEventSource.addEventListener('ready', (event: any) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.action === 'reload') {
+            fetchSlots();
+          }
+        } catch (e) {
+          console.error('Erreur parsing SSE ready event:', e);
         }
       });
 
-      // Événement de mise à jour de séance
-      eventSource.addEventListener('slot-updated', (event) => {
-        const data: SseEvent = JSON.parse(event.data);
-        
-        // Mettre à jour la séance correspondante
-        const index = slots.value.findIndex(slot => slot.id === data.slotId);
-        if (index !== -1) {
-          slots.value[index] = {
-            ...slots.value[index],
-            status: data.status as 'AVAILABLE' | 'BOOKED',
-            version: data.version,
-          };
-          console.log(`🎟️ Séance ${data.slotId} mise à jour: ${data.status}`);
+      sharedEventSource.addEventListener('slot-updated', (event: any) => {
+        try {
+          const data: SseEvent = JSON.parse(event.data);
+          slotsStore.updateSlotStatus(data.slotId, data.status as 'AVAILABLE' | 'BOOKED');
+          slotsStore.updateSlot(data.slotId, { version: data.version });
+          console.log(`Seance ${data.slotId} mise a jour: ${data.status}`);
+        } catch (e) {
+          console.error('Erreur parsing SSE slot-updated event:', e);
         }
       });
 
     } catch (err) {
-      sseConnected.value = false;
+      slotsStore.setSseConnected(false);
       sseError.value = 'Impossible d\'établir la connexion SSE.';
       console.error('Erreur lors de la création de EventSource:', err);
     }
@@ -136,11 +134,11 @@ export function useSlots() {
 
   // Déconnecter SSE
   const disconnectSse = () => {
-    if (eventSource) {
-      eventSource.close();
-      eventSource = null;
-      sseConnected.value = false;
-      console.log('🔌 Connexion SSE fermée');
+    if (sharedEventSource) {
+      sharedEventSource.close();
+      sharedEventSource = null;
+      slotsStore.setSseConnected(false);
+      console.log('Connexion SSE fermee');
     }
   };
 
@@ -183,27 +181,12 @@ export function useSlots() {
     return slots.value.filter(slot => slot.status === status);
   };
 
-  // Filtrer les séances disponibles
-  const availableSlots = ref<Slot[]>([]);
-  
-  // Filtrer les séances réservées
-  const bookedSlots = ref<Slot[]>([]);
+  // Filtrer les séances disponibles et réservées depuis le store
+  const availableSlots = computed(() => slotsStore.availableSlots);
+  const bookedSlots = computed(() => slotsStore.bookedSlots);
 
-  // Mettre à jour les listes de séances
-  const updateSlotLists = () => {
-    availableSlots.value = getSlotsByStatus('AVAILABLE');
-    bookedSlots.value = getSlotsByStatus('BOOKED');
-  };
-
-  // Hooks de cycle de vie
-  onMounted(() => {
-    connectSse();
-    fetchSlots();
-  });
-
-  onUnmounted(() => {
-    disconnectSse();
-  });
+  // Mettre à jour les listes de séances (compatibilité)
+  const updateSlotLists = () => {};
 
   // Rafraîchir manuellement les séances
   const refreshSlots = () => {
