@@ -40,8 +40,8 @@ export default {
           border: '#2a2a2a',   // Bordures
           borderLight: '#3a3a3a',
           text: '#ffffff',     // Texte principal
-          textMuted: '#a0a0a0',
-          textLight: '#d0d0d0',
+          textMuted: '#b8b8b8', // Rehaussé pour contraste WCAG AA
+          textLight: '#e0e0e0',
         },
       },
       fontFamily: {
