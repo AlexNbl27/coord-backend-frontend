@@ -54,8 +54,16 @@ movieRouter.get('/', async (req, res) => {
     if (minRating) {
       filter['ratings.imdb'] = { $gte: parseFloat(minRating) };
     }
-    if (search) {
-      filter.$text = { $search: search };
+    if (search && search.trim()) {
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escaped, 'i');
+      filter.$or = [
+        { title: searchRegex },
+        { director: searchRegex },
+        { genres: searchRegex },
+        { tags: searchRegex },
+        { synopsis: searchRegex }
+      ];
     }
 
     // Pagination pour préserver la mémoire vive sous forte affluence
