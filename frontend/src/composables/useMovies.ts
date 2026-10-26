@@ -271,9 +271,9 @@ export function useMovies() {
 
   // Annuler la requête en cours
   const cancelCurrentRequest = () => {
-    if (cancelTokenSource.value) {
-      cancelTokenSource.value.cancel('Requête annulée - composant démonté');
-      cancelTokenSource.value = null;
+    if (activeAbortController) {
+      activeAbortController.abort();
+      activeAbortController = null;
     }
   };
 
