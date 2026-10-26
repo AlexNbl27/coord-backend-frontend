@@ -4,7 +4,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cluster from 'node:cluster';
 import os from 'node:os';
+import cookieParser from 'cookie-parser';
 import { movieRouter } from './routes/movieRoutes.js';
+import { abRouter } from './routes/abRoutes.js';
+import { slotRouter } from './routes/slotRoutes.js';
 
 dotenv.config();
 
@@ -18,8 +21,12 @@ function createServer() {
   const app = express();
 
   // Middlewares
-  app.use(cors());
+  app.use(cors({
+    origin: true,
+    credentials: true
+  }));
   app.use(express.json());
+  app.use(cookieParser());
 
   // Racine
   app.get('/', (req, res) => {
@@ -33,7 +40,13 @@ function createServer() {
         getOneMovie: 'GET /api/movies/:id',
         createMovie: 'POST /api/movies',
         updateMovie: 'PUT /api/movies/:id',
-        deleteMovie: 'DELETE /api/movies/:id'
+        deleteMovie: 'DELETE /api/movies/:id',
+        slots: 'GET /api/slots',
+        slotReservations: 'POST /api/slots/:id/reservations',
+        slotEvents: 'GET /api/slots/events',
+        abAssignment: 'GET /api/ab/assignment',
+        abExposure: 'POST /api/ab/exposure',
+        abMetrics: 'GET /api/ab/metrics'
       }
     });
   });
@@ -49,8 +62,10 @@ function createServer() {
     });
   });
 
-  // Routes CRUD
+  // Routes API
   app.use('/api/movies', movieRouter);
+  app.use('/api/slots', slotRouter);
+  app.use('/api/ab', abRouter);
 
   return app;
 }
