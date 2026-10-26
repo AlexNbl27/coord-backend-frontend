@@ -42,6 +42,7 @@ backend/build/
 frontend/dist/
 frontend/.vite/
 frontend/.output/
+*.tsbuildinfo
 
 # Java / Maven
 services/cineslot-sse/target/

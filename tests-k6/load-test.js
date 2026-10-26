@@ -13,6 +13,7 @@ const MAX_PING_MS = parseInt(__ENV.MAX_PING_MS || '500', 10);
 
 // Métriques personnalisées
 const postMovieDuration = new Trend('post_movie_duration');
+const deleteMovieDuration = new Trend('delete_movie_duration');
 const customErrorRate = new Rate('custom_error_rate');
 
 // Calcul dynamique des paliers en % du maximum
@@ -65,7 +66,7 @@ export default function () {
     const ok = check(res, { 'status is 200': (r) => r.status === 200 });
     customErrorRate.add(!ok);
 
-  } else if (rand < 0.90) {
+  } else if (rand < 0.85) {
     // 3. Filtrage dynamique
     const genre = GENRES[Math.floor(Math.random() * GENRES.length)];
     const res = http.get(`${BASE_URL}/api/movies?genre=${genre}&minRating=7`);
@@ -73,7 +74,7 @@ export default function () {
     customErrorRate.add(!ok);
 
   } else {
-    // 4. Écriture concurrente
+    // 4. Écriture & Suppression immédiate (Validation du cycle CRUD sous charge)
     const id = `${Date.now()}-${__VU}-${__ITER}`;
     const payload = JSON.stringify({
       title: `Film k6 ${id}`,
@@ -82,14 +83,51 @@ export default function () {
       genres: ['Sci-Fi'],
       duration: 120,
       ratings: { imdb: 8.0 },
-      synopsis: 'Test palier k6 en pourcentage',
+      synopsis: 'Test palier k6 avec suppression automatique',
     });
     const params = { headers: { 'Content-Type': 'application/json' } };
     const res = http.post(`${BASE_URL}/api/movies`, payload, params);
     postMovieDuration.add(res.timings.duration);
-    const ok = check(res, { 'created 201': (r) => r.status === 201 });
-    customErrorRate.add(!ok);
+    const postOk = check(res, { 'created 201': (r) => r.status === 201 });
+    customErrorRate.add(!postOk);
+
+    // Test de suppression (DELETE) pour nettoyer au fur et à mesure et tester la route
+    if (postOk) {
+      try {
+        const body = JSON.parse(res.body);
+        const movieId = body?.data?._id;
+        if (movieId) {
+          const delRes = http.del(`${BASE_URL}/api/movies/${movieId}`);
+          deleteMovieDuration.add(delRes.timings.duration);
+          const delOk = check(delRes, { 'deleted 200': (r) => r.status === 200 });
+          customErrorRate.add(!delOk);
+        }
+      } catch (e) {
+        customErrorRate.add(1);
+      }
+    }
   }
 
   sleep(Math.random() * 0.2 + 0.1);
+}
+
+// Nettoyage final de sécurité en fin de test (teardown k6)
+export function teardown() {
+  console.log('🧹 Exécution du teardown k6 : vérification et nettoyage des résidus...');
+  // Récupérer et purger les éventuels films k6 restants
+  const res = http.get(`${BASE_URL}/api/movies?limit=100`);
+  if (res.status === 200) {
+    try {
+      const payload = JSON.parse(res.body);
+      const residual = (payload.data || []).filter(
+        (m) => m.director === 'k6 Tester' || (m.title && m.title.startsWith('Film k6'))
+      );
+      for (const m of residual) {
+        http.del(`${BASE_URL}/api/movies/${m._id}`);
+      }
+      console.log(`✅ Nettoyage terminé (${residual.length} films résiduels supprimés).`);
+    } catch (e) {
+      console.error('Erreur lors du teardown:', e);
+    }
+  }
 }

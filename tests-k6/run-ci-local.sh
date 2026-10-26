@@ -39,12 +39,15 @@ docker compose run --rm -e MAX_VUS="$MAX_VUS" -e MAX_PING_MS="$MAX_PING_MS" k6-c
 k6_exit_code=$?
 set -e
 
-echo -e "\n[4/4] Résumé de l'exécution..."
+echo -e "\n[4/4] Résumé de l'exécution et nettoyage..."
 if [ $k6_exit_code -eq 0 ]; then
   echo "🎉 SUCCÈS : Tous les seuils de qualité ont été respectés !"
 else
   echo "❌ ÉCHEC : Seuils non respectés (code retour $k6_exit_code)."
 fi
+
+echo -e "\nNettoyage des résidus de tests k6 dans MongoDB..."
+docker exec ynov-mongodb mongosh cours_db --quiet --eval "db.movies.deleteMany({\$or: [{director: 'k6 Tester'}, {title: /^Film k6/}]})" || true
 
 echo -e "\nNettoyage de l'environnement..."
 docker compose down

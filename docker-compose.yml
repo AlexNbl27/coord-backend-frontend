@@ -64,7 +64,7 @@ services:
       - ynov-network
 
   # ===========================================================================
-  # 4. Frontend (Vite + Vue 3 + TypeScript)
+  # 4. Frontend Production (Nginx + Vue 3)
   # ===========================================================================
   frontend:
     build:
@@ -73,7 +73,26 @@ services:
     container_name: ynov-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+      - "${FRONTEND_PORT:-3001}:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - ynov-network
+    depends_on:
+      - backend
+      - cineslot-sse
+
+  # ===========================================================================
+  # 4b. Frontend Development (Vite + Vue 3 + TypeScript)
+  # ===========================================================================
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: ynov-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_DEV_PORT:-5173}:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -88,6 +107,8 @@ services:
     depends_on:
       - backend
       - cineslot-sse
+    profiles:
+      - dev
 
   # ===========================================================================
   # 5. Tests de charge k6 avec Web Dashboard (profil 'test')

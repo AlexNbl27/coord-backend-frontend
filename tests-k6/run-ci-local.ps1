@@ -56,12 +56,15 @@ docker compose run --rm -e MAX_VUS="$MaxVus" -e MAX_PING_MS="$MaxPingMs" k6-ci
 $k6ExitCode = $LASTEXITCODE
 
 # 4. Résumé et nettoyage
-Write-Host "`n[4/4] Résumé de l'exécution..." -ForegroundColor Yellow
+Write-Host "`n[4/4] Résumé de l'exécution et nettoyage..." -ForegroundColor Yellow
 if ($k6ExitCode -eq 0) {
     Write-Host "🎉 SUCCÈS : Tous les seuils de qualité (thresholds) ont été respectés !" -ForegroundColor Green
 } else {
     Write-Host "❌ ÉCHEC : Les seuils de performance ou de taux d'erreur ont été dépassés." -ForegroundColor Red
 }
+
+Write-Host "`nNettoyage des résidus de tests k6 dans MongoDB..." -ForegroundColor Cyan
+docker exec ynov-mongodb mongosh cours_db --quiet --eval "db.movies.deleteMany({`$or: [{director: 'k6 Tester'}, {title: /^Film k6/}]})"
 
 Write-Host "`nNettoyage de l'environnement (arrêt des conteneurs)..." -ForegroundColor Yellow
 docker compose down
