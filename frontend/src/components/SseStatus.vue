@@ -19,7 +19,7 @@
       ></div>
       
       <!-- Texte de statut -->
-      <Transition name="fade" mode="out-in">
+      <transition name="fade" mode="out-in">
         <span
           v-if="sseConnected"
           key="connected"
@@ -34,7 +34,7 @@
         >
           {{ reconnecting ? 'Reconnexion...' : 'SSE déconnecté' }}
         </span>
-      </Transition>
+      </transition>
       
       <!-- Icône de synchronization -->
       <div
@@ -50,32 +50,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useSlotsStore } from '../stores/slots';
+import { ref, watch } from 'vue';
 import { useSlots } from '../composables/useSlots';
 
-const slotsStore = useSlotsStore();
 const { sseConnected, connectSse, disconnectSse } = useSlots();
 
 const showStatus = ref(false);
 const reconnecting = ref(false);
-
-// Synchroniser le store avec le composable
-onMounted(() => {
-  // Mettre à jour le store quand sseConnected change
-  const unsubscribe = slotsStore.$subscribe((mutation, state) => {
-    if (mutation.events.key === 'sseConnected') {
-      // Si déconnecté, tenter de se reconnecter
-      if (!state.sseConnected && !reconnecting.value) {
-        reconnect();
-      }
-    }
-  });
-
-  onUnmounted(() => {
-    unsubscribe();
-  });
-});
 
 // Fonction de reconnexion automatique
 const reconnect = () => {
@@ -88,8 +69,12 @@ const reconnect = () => {
   }, 3000);
 };
 
-// Exposer sseConnected pour le template
-expose({ sseConnected });
+// Surveiller la perte de connexion pour reconnecter si nécessaire
+watch(sseConnected, (connected) => {
+  if (!connected && !reconnecting.value) {
+    reconnect();
+  }
+});
 </script>
 
 <style scoped>

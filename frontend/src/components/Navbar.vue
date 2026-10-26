@@ -1,11 +1,11 @@
 <template>
   <nav class="navbar">
-    <div class="page-container">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
         <!-- Logo -->
         <router-link to="/" class="flex items-center gap-3">
           <div class="relative">
-            <div class="w-10 h-10 bg-gradient-to-br from-accent-gold to-accent-red rounded-xl flex items-center justify-center">
+            <div class="w-10 h-10 bg-gradient-to-br from-accent-gold to-accent-red rounded-xl flex items-center justify-center shadow-md">
               <span class="text-xl font-black text-cinema-dark">C</span>
             </div>
             <div class="absolute -top-1 -right-1 w-4 h-4 bg-accent-gold rounded-full border-2 border-cinema-dark flex items-center justify-center">
@@ -19,7 +19,7 @@
         </router-link>
 
         <!-- Navigation Links -->
-        <div class="hidden md:flex items-center gap-8">
+        <div class="hidden md:flex items-center gap-7">
           <router-link
             to="/"
             class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium"
@@ -41,30 +41,48 @@
           >
             Séances
           </router-link>
+          <router-link
+            to="/about"
+            class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium"
+            active-class="text-accent-gold font-semibold"
+          >
+            À propos
+          </router-link>
         </div>
 
-        <!-- Right side: Status + User -->
-        <div class="flex items-center gap-4">
+        <!-- Right side: Status + User Tickets -->
+        <div class="flex items-center gap-3">
           <!-- SSE Status (mini indicator) -->
-          <div class="hidden lg:flex items-center gap-2">
+          <div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-cinema-card/70 border border-cinema-border/40">
             <div
               class="w-2 h-2 rounded-full transition-all duration-300"
               :class="{
-                'bg-green-500': sseConnected,
+                'bg-green-500 shadow-sm shadow-green-500/50': sseConnected,
                 'bg-red-500 animate-pulse': !sseConnected
               }"
             ></div>
-            <span class="text-sm text-cinema-textMuted">
-              {{ sseConnected ? 'En ligne' : 'Hors ligne' }}
+            <span class="text-xs text-cinema-textMuted">
+              {{ sseConnected ? 'Synchronisé' : 'Hors ligne' }}
             </span>
           </div>
 
-          <!-- User / Reservations -->
-          <button class="p-2 rounded-full hover:bg-cinema-card transition-colors duration-200">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cinema-textMuted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          <!-- User / Mes Billets Quick Action Button -->
+          <router-link
+            to="/reservations"
+            class="relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cinema-card hover:bg-cinema-border/80 border border-cinema-border text-cinema-text text-xs font-semibold transition-all hover:border-accent-gold/50 shadow-sm"
+            title="Consulter mes billets"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
-          </button>
+            <span class="hidden sm:inline">Mes Billets</span>
+            <span
+              v-if="activeBookingsCount > 0"
+              class="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-accent-gold text-cinema-dark ml-0.5"
+            >
+              {{ activeBookingsCount }}
+            </span>
+          </router-link>
 
           <!-- Mobile menu button -->
           <button
@@ -79,7 +97,7 @@
       </div>
 
       <!-- Mobile Menu -->
-      <Transition
+      <transition
         enter-active-class="transition-all duration-300 ease-out"
         leave-active-class="transition-all duration-200 ease-in"
         enter-from-class="opacity-0 scale-95 -translate-y-2"
@@ -111,19 +129,47 @@
             >
               Séances
             </router-link>
+            <router-link
+              to="/about"
+              class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2"
+              active-class="text-accent-gold font-semibold"
+              @click="mobileMenuOpen = false"
+            >
+              À propos
+            </router-link>
+            <router-link
+              to="/reservations"
+              class="text-accent-gold hover:text-white transition-colors duration-200 font-medium py-2 flex items-center justify-between border-t border-cinema-border/30 pt-3"
+              active-class="text-accent-gold font-bold"
+              @click="mobileMenuOpen = false"
+            >
+              <span class="flex items-center gap-2">
+                <span>🎫</span>
+                <span>Mes Billets</span>
+              </span>
+              <span
+                v-if="activeBookingsCount > 0"
+                class="px-2 py-0.5 text-xs font-bold rounded-full bg-accent-gold text-cinema-dark"
+              >
+                {{ activeBookingsCount }}
+              </span>
+            </router-link>
           </div>
         </div>
-      </Transition>
+      </transition>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useSlotsStore } from '../stores/slots';
+import { useReservations } from '../composables/useReservations';
 
 const slotsStore = useSlotsStore();
-const { sseConnected } = slotsStore;
+const { sseConnected } = storeToRefs(slotsStore);
+const { activeBookingsCount } = useReservations();
 
 const mobileMenuOpen = ref(false);
 

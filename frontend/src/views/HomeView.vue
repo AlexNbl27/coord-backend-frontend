@@ -1,58 +1,66 @@
 <template>
   <div class="min-h-screen">
     <!-- Hero Section -->
-    <section class="relative py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      <!-- Background -->
-      <div class="absolute inset-0 bg-gradient-to-br from-cinema-dark via-cinema-darker to-cinema-dark"></div>
-      <div class="absolute inset-0 opacity-10">
-        <div class="absolute top-0 left-0 w-96 h-96 bg-accent-gold rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-        <div class="absolute bottom-0 right-0 w-96 h-96 bg-accent-red rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
-      </div>
+    <section class="relative py-16 sm:py-20 px-4 overflow-hidden border-b border-cinema-border/40">
+      <div class="absolute inset-0 bg-gradient-to-b from-black/80 via-cinema-dark to-cinema-dark pointer-events-none"></div>
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-accent-gold/15 via-transparent to-transparent pointer-events-none"></div>
       
-      <!-- Content -->
-      <div class="relative z-10 text-center">
-        <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4">
-          Découvrez vos films <span class="text-gradient">préférés</span>
+      <div class="relative z-10 text-center max-w-4xl mx-auto">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
+          <span>✨</span>
+          <span>Expérience Cinéma Haute Fidélité · Temps Réel</span>
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight mb-4">
+          L'émotion du grand écran, <br />
+          <span class="bg-gradient-to-r from-accent-gold via-yellow-300 to-amber-500 bg-clip-text text-transparent">
+            réservée en un battement de cil.
+          </span>
         </h1>
-        <p class="text-lg sm:text-xl text-cinema-textMuted max-w-3xl mx-auto mb-8">
-          Réservez des places en temps réel avec synchronisation instantanée entre tous les appareils.
+
+        <p class="text-base sm:text-lg text-cinema-textMuted max-w-2xl mx-auto mb-8 leading-relaxed">
+          Découvrez les plus grands chefs-d'œuvre du cinéma en IMAX & Dolby Atmos. Les disponibilités s'actualisent instantanément sans recharger votre page.
         </p>
-        
-        <!-- Barre de recherche -->
-        <div class="max-w-2xl mx-auto">
-          <SearchBar
-            v-model:search="searchQuery"
-            v-model:genre="selectedGenre"
-            v-model:minRating="minRating"
-            :results-count="filteredMovies.length"
-            :available-genres="availableGenres"
-            @search="applyFilters"
-          />
+
+        <!-- CTA Buttons (Hiérarchie visuelle claire : 1 Primaire + 1 Secondaire) -->
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <router-link
+            to="/slots"
+            class="px-7 py-3.5 rounded-xl bg-gradient-to-r from-accent-gold to-yellow-600 text-cinema-dark font-extrabold text-sm hover:brightness-110 shadow-lg shadow-accent-gold/25 transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <span>🎟️</span>
+            <span>Réserver une séance</span>
+          </router-link>
+
+          <router-link
+            to="/movies"
+            class="px-7 py-3.5 rounded-xl bg-cinema-card/80 hover:bg-cinema-border border border-cinema-border text-white font-semibold text-sm transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <span>🎬</span>
+            <span>Explorer le catalogue</span>
+          </router-link>
         </div>
       </div>
     </section>
 
     <!-- Section Films populaires -->
-    <section class="section">
-      <div class="page-container">
+    <section class="py-12 px-4">
+      <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between mb-8">
           <div>
-            <h2 class="section-title">🎬 Films populaires</h2>
-            <p class="section-subtitle">Note IMDB >= 8.5</p>
+            <h2 class="text-3xl font-bold text-white mb-2">Films populaires</h2>
+            <p class="text-gray-400">Sélection de films culte notés 8.5+</p>
           </div>
-          <router-link
-            to="/movies"
-            class="text-accent-gold hover:text-accent-gold/80 transition-colors duration-200 font-medium"
-          >
-            Voir tous →
+          <router-link to="/movies" class="text-sm font-semibold text-accent-gold hover:underline flex items-center gap-1">
+            <span>Tous les films</span>
+            <span>→</span>
           </router-link>
         </div>
         
-        <!-- Grille de films populaires -->
-        <div v-if="loadingPopular" class="movies-grid">
-          <div v-for="n in 6" :key="n" class="skeleton h-80 rounded-xl"></div>
+        <div v-if="loadingPopular" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div v-for="n in 4" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
         </div>
-        <div v-else class="movies-grid">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <MovieCard
             v-for="movie in popularMovies"
             :key="movie._id"
@@ -63,331 +71,259 @@
       </div>
     </section>
 
-    <!-- Section Films récents -->
-    <section class="section bg-cinema-darker/50">
-      <div class="page-container">
-        <div class="flex items-center justify-between mb-8">
-          <div>
-            <h2 class="section-title">🎥 Nouveautés</h2>
-            <p class="section-subtitle">Sorties récentes</p>
-          </div>
-        </div>
-        
-        <!-- Grille de films récents -->
-        <div v-if="loadingRecent" class="movies-grid">
-          <div v-for="n in 6" :key="n" class="skeleton h-80 rounded-xl"></div>
-        </div>
-        <div v-else class="movies-grid">
-          <MovieCard
-            v-for="movie in recentMovies"
-            :key="movie._id"
-            :movie="movie"
-            @click="selectMovie(movie)"
-          />
-        </div>
-      </div>
-    </section>
-
     <!-- Section Séances disponibles -->
-    <section class="section">
-      <div class="page-container">
+    <section class="py-12 px-4">
+      <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between mb-8">
           <div>
-            <h2 class="section-title">🎟️ Séances disponibles</h2>
-            <p class="section-subtitle">Réservez en temps réel avec synchronisation SSE</p>
+            <h2 class="text-3xl font-bold text-white mb-2">Séances en temps réel</h2>
+            <p class="text-gray-400">Synchronisation SSE instantanée</p>
           </div>
-          <button
-            @click="generateDemoSlot"
-            class="btn btn-primary"
-            :disabled="!sseConnected"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-            </svg>
-            Nouvelle séance
-          </button>
+          <router-link to="/slots" class="text-sm font-semibold text-accent-gold hover:underline flex items-center gap-1">
+            <span>Toutes les séances</span>
+            <span>→</span>
+          </router-link>
         </div>
 
-        <!-- Indicateur de statut SSE -->
-        <div v-if="!sseConnected" class="mb-6 p-4 bg-red-900/20 border border-red-600/30 rounded-lg text-red-400">
-          <p class="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-            </svg>
-            Connexion SSE en cours... Les séances seront chargées automatiquement.
-          </p>
+        <div v-if="!sseConnected" class="mb-6 p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg text-yellow-400">
+          <p>Connexion SSE en cours...</p>
         </div>
 
-        <!-- Grille de séances -->
-        <div v-if="loadingSlots" class="slots-grid">
-          <div v-for="n in 6" :key="n" class="skeleton h-40 rounded-lg"></div>
+        <div v-if="loadingSlots" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div v-for="n in 6" :key="n" class="bg-gray-800 h-40 rounded-lg animate-pulse"></div>
         </div>
-        <div v-else-if="availableSlots.length === 0 && !loadingSlots" class="empty-state">
-          <div class="empty-state-icon">🎬</div>
-          <p class="empty-state-text">Aucune séance disponible pour le moment.</p>
-          <p class="empty-state-text mt-2">Appuyez sur "Nouvelle séance" pour en créer une.</p>
+        <div v-else-if="availableSlots.length === 0 && !loadingSlots" class="text-center py-12">
+          <p class="text-gray-400">Aucune séance disponible.</p>
         </div>
-        <div v-else class="slots-grid">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <SlotCard
             v-for="slot in availableSlots"
             :key="slot.id"
             :slot="slot"
             :sse-connected="sseConnected"
             @reserve="handleReserve"
-            @click="selectSlot(slot)"
           />
         </div>
       </div>
     </section>
 
     <!-- Modal de détails de film -->
-    <Transition name="modal">
-      <div v-if="selectedMovie" class="modal-overlay" @click.self="selectedMovie = null">
-        <div class="modal-content max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-          <button @click="selectedMovie = null" class="modal-close">&times;</button>
+    <transition name="modal">
+      <div v-if="selectedMovie" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="selectedMovie = null">
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl">
+          <button
+            @click="selectedMovie = null"
+            class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-cinema-textMuted hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xl"
+            aria-label="Fermer"
+          >
+            ✕
+          </button>
           
           <div class="flex flex-col md:flex-row gap-6">
-            <!-- Affiche -->
             <div class="w-full md:w-1/3">
-              <div class="aspect-poster bg-cinema-border rounded-xl overflow-hidden">
+              <div class="aspect-[2/3] bg-gray-800 rounded-xl overflow-hidden">
                 <img
                   v-if="selectedMovie.poster"
                   :src="selectedMovie.poster"
                   :alt="selectedMovie.title"
                   class="w-full h-full object-cover"
                 />
-                <div v-else class="w-full h-full bg-gradient-to-br from-cinema-border to-cinema-darker flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-cinema-border/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                <div v-else class="w-full h-full bg-gray-700 flex items-center justify-center">
+                  <p class="text-gray-500">Pas d'affiche</p>
                 </div>
               </div>
             </div>
             
-            <!-- Détails -->
             <div class="flex-1">
-              <h2 class="text-2xl font-bold text-white mb-2">{{ selectedMovie.title }}</h2>
-              
-              <div class="flex items-center gap-4 mb-4">
-                <div class="flex items-center gap-1">
-                  <span class="text-yellow-400 text-xl">★</span>
-                  <span class="text-white font-bold">{{ selectedMovie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
+              <div class="flex items-start justify-between">
+                <div>
+                  <h2 class="text-2xl font-bold text-white">{{ selectedMovie.title }}</h2>
+                  <p class="text-gray-400 text-sm mt-0.5">{{ selectedMovie.year }} • {{ selectedMovie.duration }} min • Dir. {{ selectedMovie.director }}</p>
                 </div>
-                <span class="text-cinema-textMuted">•</span>
-                <span class="text-cinema-textMuted">{{ selectedMovie.year }}</span>
-                <span class="text-cinema-textMuted">•</span>
-                <span class="text-cinema-textMuted">{{ selectedMovie.duration }} min</span>
+                <div class="flex items-center gap-1 bg-accent-gold/15 px-2.5 py-1 rounded-full border border-accent-gold/30">
+                  <span class="text-accent-gold text-sm">★</span>
+                  <span class="text-white text-xs font-bold">{{ selectedMovie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
+                </div>
               </div>
-              
-              <p class="text-cinema-textMuted mb-4">
-                Réalisé par <span class="text-white">{{ selectedMovie.director || 'Inconnu' }}</span>
-              </p>
-              
-              <div class="flex flex-wrap gap-2 mb-4">
-                <span
-                  v-for="(genre, index) in selectedMovie.genres"
-                  :key="index"
-                  class="badge-genre"
+
+              <p class="text-gray-300 text-sm mt-3 mb-4 line-clamp-3 leading-relaxed">{{ selectedMovie.synopsis || 'Aucun synopsis disponible.' }}</p>
+
+              <!-- Séances disponibles pour ce film -->
+              <div class="mb-5 p-3.5 bg-cinema-card/70 rounded-xl border border-cinema-border/50">
+                <div class="flex items-center justify-between mb-2.5">
+                  <span class="text-xs font-bold uppercase tracking-wider text-accent-gold flex items-center gap-1.5">
+                    <span>🎟️</span>
+                    <span>Séances programmées ({{ movieSlots.length }})</span>
+                  </span>
+                  <span v-if="movieSlots.length > 0" class="text-[11px] text-emerald-400 font-medium">Temps réel</span>
+                </div>
+
+                <div v-if="movieSlots.length > 0" class="flex flex-wrap gap-2">
+                  <button
+                    v-for="slot in movieSlots"
+                    :key="slot.id"
+                    @click="handleReserveFromModal(slot.id)"
+                    class="group px-3 py-2 rounded-lg bg-cinema-darker hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>🕒 {{ formatSlotTime(slot.startsAt) }}</span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 group-hover:bg-black/20 text-cinema-textMuted group-hover:text-cinema-dark">
+                      {{ slot.hall }}
+                    </span>
+                  </button>
+                </div>
+                <div v-else class="text-xs text-cinema-textMuted py-2 flex items-center justify-between">
+                  <span>Aucune séance disponible pour ce film aujourd'hui.</span>
+                  <router-link to="/slots" @click="selectedMovie = null" class="text-accent-gold hover:underline font-semibold ml-2">
+                    Voir toutes les séances →
+                  </router-link>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex flex-col sm:flex-row gap-2.5">
+                <button
+                  @click="goToMovieDetail(selectedMovie._id)"
+                  class="flex-1 py-2.5 px-4 rounded-xl bg-accent-gold/15 hover:bg-accent-gold/25 text-accent-gold border border-accent-gold/40 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  {{ genre }}
-                </span>
-              </div>
-              
-              <p class="text-cinema-textMuted text-sm mb-6">
-                {{ selectedMovie.synopsis || 'Aucun synopsis disponible.' }}
-              </p>
-              
-              <!-- Boutons d'action -->
-              <div class="flex gap-4">
-                <button class="flex-1 btn btn-primary">
-                  Réserver
+                  <span>Fiche complète & Casting</span>
+                  <span>→</span>
                 </button>
-                <button @click="selectedMovie = null" class="flex-1 btn btn-outline">
+                <button
+                  @click="selectedMovie = null"
+                  class="py-2.5 px-4 rounded-xl bg-cinema-card hover:bg-cinema-border text-cinema-textMuted hover:text-white text-xs font-medium transition-all cursor-pointer"
+                >
                   Fermer
                 </button>
               </div>
             </div>
           </div>
         </div>
-      </Transition>
-    </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, inject } from 'vue';
+import { useRouter } from 'vue-router';
 import { useMoviesStore } from '../stores/movies';
 import { useSlotsStore } from '../stores/slots';
 import { useMovies } from '../composables/useMovies';
 import { useSlots } from '../composables/useSlots';
-import SearchBar from '../components/SearchBar.vue';
+import { useReservations } from '../composables/useReservations';
 import MovieCard from '../components/MovieCard.vue';
 import SlotCard from '../components/SlotCard.vue';
 import type { Movie } from '../composables/useMovies';
 import type { Slot } from '../composables/useSlots';
 
+const router = useRouter();
 const moviesStore = useMoviesStore();
 const slotsStore = useSlotsStore();
-const { fetchMovies, searchMovies, filterByGenre, filterByRating } = useMovies();
-const { fetchSlots, reserveSlot, generateDemoSlot, sseConnected, availableSlots, loading: loadingSlots } = useSlots();
-
-// État de recherche
-const searchQuery = ref('');
-const selectedGenre = ref<string | undefined>();
-const minRating = ref<number | undefined>();
-
-// État de chargement
-const loadingPopular = ref(false);
-const loadingRecent = ref(false);
-
-// Sélections
-const selectedMovie = ref<Movie | null>(null);
-const selectedSlot = ref<Slot | null>(null);
-
-// Injecter les fonctions de modal
+const { fetchMovies } = useMovies();
+const { fetchSlots, connectSse, reserveSlot, sseConnected, loading: loadingSlots } = useSlots();
+const { saveBooking } = useReservations();
 const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
 
-// Films calculés
-const availableGenres = computed(() => moviesStore.availableGenres);
-const filteredMovies = computed(() => moviesStore.filteredMovies);
+const loadingPopular = ref(false);
+const loadingRecent = ref(false);
+const selectedMovie = ref<Movie | null>(null);
+
 const popularMovies = computed(() => moviesStore.popularMovies);
-const recentMovies = computed(() => moviesStore.recentMovies);
+const availableSlots = computed(() => slotsStore.availableSlots);
 
-// Appliquer les filtres
-const applyFilters = () => {
-  moviesStore.setSearchQuery(searchQuery.value);
-  moviesStore.setSelectedGenre(selectedGenre.value);
-  moviesStore.setMinRating(minRating.value);
-  
-  // Recharger les films avec les filtres
-  fetchMovies({
-    search: searchQuery.value,
-    genre: selectedGenre.value,
-    minRating: minRating.value,
-  });
-};
+const movieSlots = computed(() => {
+  if (!selectedMovie.value) return [];
+  return availableSlots.value.filter(
+    s => s.movieTitle.toLowerCase() === selectedMovie.value?.title.toLowerCase()
+  );
+});
 
-// Sélectionner un film
 const selectMovie = (movie: Movie) => {
   selectedMovie.value = movie;
-  moviesStore.setSelectedMovieTitle(movie.title);
 };
 
-// Sélectionner une séance
-const selectSlot = (slot: Slot) => {
-  selectedSlot.value = slot;
+const formatSlotTime = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleString('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return dateStr;
+  }
 };
 
-// Gérer la réservation
+const goToMovieDetail = (movieId: string) => {
+  selectedMovie.value = null;
+  router.push(`/movies/${movieId}`);
+};
+
+const handleReserveFromModal = async (slotId: string) => {
+  selectedMovie.value = null;
+  const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
+  await handleReserve(slotId, customerId);
+};
+
 const handleReserve = async (slotId: string, customerId: string) => {
   try {
     const result = await reserveSlot(slotId, customerId);
     
-    // Trouver la séance correspondante
+    // Find the slot to get details
     const slot = availableSlots.value.find(s => s.id === slotId);
     if (slot) {
-      // Ouvrir le modal de confirmation
-      openReservationModal?.(
-        result.bookingId,
-        slot.movieTitle,
-        slot.startsAt,
-        slot.hall
-      );
+      const movie = moviesStore.movies.find(m => m.title.toLowerCase() === slot.movieTitle.toLowerCase());
+      saveBooking({
+        bookingId: result.bookingId,
+        slotId: slot.id,
+        movieTitle: slot.movieTitle,
+        startsAt: slot.startsAt,
+        hall: slot.hall,
+        poster: movie?.poster
+      });
+
+      if (openReservationModal) {
+        openReservationModal(result.bookingId, slot.movieTitle, slot.startsAt, slot.hall);
+      }
     }
   } catch (err) {
-    console.error('Erreur lors de la réservation:', err);
+    console.error('Reservation error:', err);
   }
 };
 
-// Générer une nouvelle séance de démonstration
-const generateDemoSlot = async () => {
-  try {
-    await generateDemoSlot();
-  } catch (err) {
-    console.error('Erreur lors de la génération d\'une séance:', err);
+const reserveForMovie = async (movie: Movie | null) => {
+  if (!movie) return;
+  const slot = availableSlots.value.find(
+    s => s.movieTitle.toLowerCase() === movie.title.toLowerCase() && s.status === 'AVAILABLE'
+  );
+  if (slot) {
+    selectedMovie.value = null;
+    const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
+    await handleReserve(slot.id, customerId);
+  } else {
+    selectedMovie.value = null;
+    router.push('/slots');
   }
 };
 
-// Charger les données au montage
 onMounted(async () => {
   loadingPopular.value = true;
-  loadingRecent.value = true;
-  
+  connectSse();
   try {
-    // Charger tous les films
     await fetchMovies();
-    
-    // Charger les séances
     await fetchSlots();
-    
   } catch (err) {
-    console.error('Erreur lors du chargement des données:', err);
+    console.error('Error loading data:', err);
   } finally {
     loadingPopular.value = false;
-    loadingRecent.value = false;
   }
 });
 </script>
 
 <style scoped>
-/* Animation pour le hero */
-.hero-section {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Animation pour les cartes */
-.movie-card {
-  animation: slideUp 0.5s ease-out;
-}
-
-.movie-card:nth-child(1) { animation-delay: 0.1s; }
-.movie-card:nth-child(2) { animation-delay: 0.2s; }
-.movie-card:nth-child(3) { animation-delay: 0.3s; }
-.movie-card:nth-child(4) { animation-delay: 0.4s; }
-.movie-card:nth-child(5) { animation-delay: 0.5s; }
-.movie-card:nth-child(6) { animation-delay: 0.6s; }
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Animation pour les séances */
-.slot-card {
-  animation: fadeIn 0.5s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Modal transitions */
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
-}
-
-.modal-enter-to,
-.modal-leave-from {
-  opacity: 1;
-  transform: scale(1);
+.aspect-\[2\/3\] {
+  aspect-ratio: 2/3;
 }
 </style>
