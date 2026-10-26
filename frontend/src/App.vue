@@ -53,7 +53,6 @@ const { initAssignment } = useAbTest();
 const { connectSse } = useSlots();
 const { initConnectionWatcher } = useConnection();
 
-// Modal state
 const showReservationModal = ref(false);
 const currentBookingId = ref('');
 const currentMovieTitle = ref('');
@@ -62,7 +61,6 @@ const currentHall = ref('');
 
 const showAbMetricsModal = ref(false);
 
-// Function to open reservation modal
 const openReservationModal = (
   bookingId: string,
   movieTitle: string,
@@ -76,7 +74,6 @@ const openReservationModal = (
   showReservationModal.value = true;
 };
 
-// Function to close reservation modal
 const closeReservationModal = () => {
   showReservationModal.value = false;
 };
@@ -85,7 +82,6 @@ const openAbMetricsModal = () => {
   showAbMetricsModal.value = true;
 };
 
-// Provide modal functions to child components
 provide('openReservationModal', openReservationModal);
 provide('closeReservationModal', closeReservationModal);
 provide('openAbMetricsModal', openAbMetricsModal);
@@ -96,19 +92,3 @@ onMounted(() => {
   connectSse();
 });
 </script>
-
-<style scoped>
-/* Animations globales */
-.router-view {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-</style>

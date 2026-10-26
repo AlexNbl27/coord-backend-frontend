@@ -47,7 +47,7 @@
         </div>
         
         <div v-if="loadingPopular && popularMovies.length === 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div v-for="n in 4" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
+          <div v-for="n in 4" :key="n" class="bg-cinema-card h-96 rounded-lg animate-pulse"></div>
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <MovieCard
@@ -75,7 +75,7 @@
         </div>
 
         <div v-if="loadingSlots && availableSlots.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="n in 6" :key="n" class="bg-gray-800 h-40 rounded-lg animate-pulse"></div>
+          <div v-for="n in 6" :key="n" class="bg-cinema-card h-40 rounded-lg animate-pulse"></div>
         </div>
         <div v-else-if="availableSlots.length === 0 && !loadingSlots" class="text-center py-12">
           <p class="text-gray-400">Aucune séance disponible.</p>
@@ -86,16 +86,17 @@
             :key="slot.id"
             :slot="slot"
             :sse-connected="sseConnected"
+            :already-booked="bookedSlotIds.has(slot.id)"
             @reserve="handleReserve"
           />
         </div>
       </div>
     </section>
 
-    <!-- Modal de détails de film -->
-    <transition name="modal">
-      <div
-        v-if="selectedMovie"
+    <Teleport to="body">
+      <transition name="modal">
+        <div
+          v-if="selectedMovie"
         ref="movieModalRef"
         class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
         role="dialog"
@@ -197,7 +198,8 @@
           </div>
         </div>
       </div>
-    </transition>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -214,19 +216,24 @@ import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 import MovieCard from '../components/MovieCard.vue';
 import SlotCard from '../components/SlotCard.vue';
 import type { Movie } from '../composables/useMovies';
-import type { Slot } from '../composables/useSlots';
 
 const router = useRouter();
 const moviesStore = useMoviesStore();
 const slotsStore = useSlotsStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse, reserveSlot, sseConnected, loading: loadingSlots } = useSlots();
-const { saveBooking } = useReservations();
+const { fetchSlots, connectSse, sseConnected, loading: loadingSlots } = useSlots();
+const { bookings } = useReservations();
 const { exposeIfAvailable } = useAbTest();
-const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
+
+const bookedSlotIds = computed(() =>
+  new Set(
+    (bookings?.value ?? [])
+      .filter((b) => b.status === 'ACTIVE' || b.status === 'PENDING_SYNC')
+      .map((b) => b.slotId)
+  )
+);
 
 const loadingPopular = ref(false);
-const loadingRecent = ref(false);
 const selectedMovie = ref<Movie | null>(null);
 
 const movieModalRef = ref<HTMLElement | null>(null);
@@ -281,51 +288,13 @@ const goToMovieDetail = (movieId: string) => {
   router.push(`/movies/${movieId}`);
 };
 
-const handleReserveFromModal = async (slotId: string) => {
+const handleReserveFromModal = (slotId: string) => {
   selectedMovie.value = null;
-  const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
-  await handleReserve(slotId, customerId);
+  router.push(`/slots/${slotId}/book`);
 };
 
-const handleReserve = async (slotId: string, customerId: string) => {
-  try {
-    const result = await reserveSlot(slotId, customerId);
-    
-    // Find the slot to get details
-    const slot = availableSlots.value.find(s => s.id === slotId);
-    if (slot) {
-      const movie = moviesStore.movies.find(m => m.title.toLowerCase() === slot.movieTitle.toLowerCase());
-      saveBooking({
-        bookingId: result.bookingId,
-        slotId: slot.id,
-        movieTitle: slot.movieTitle,
-        startsAt: slot.startsAt,
-        hall: slot.hall,
-        poster: movie?.poster
-      });
-
-      if (openReservationModal) {
-        openReservationModal(result.bookingId, slot.movieTitle, slot.startsAt, slot.hall);
-      }
-    }
-  } catch (err) {
-    console.error('Reservation error:', err);
-  }
-};
-
-const reserveForMovie = async (movie: Movie | null) => {
-  if (!movie) return;
-  const slot = availableSlots.value.find(
-    s => s.movieTitle.toLowerCase() === movie.title.toLowerCase() && s.status === 'AVAILABLE'
-  );
-  if (slot) {
-    selectedMovie.value = null;
-    const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
-    await handleReserve(slot.id, customerId);
-  } else {
-    selectedMovie.value = null;
-    router.push('/slots');
-  }
+const handleReserve = (slotId: string) => {
+  router.push(`/slots/${slotId}/book`);
 };
 
 onMounted(async () => {
@@ -343,9 +312,3 @@ onMounted(async () => {
   }
 });
 </script>
-
-<style scoped>
-.aspect-\[2\/3\] {
-  aspect-ratio: 2/3;
-}
-</style>

@@ -134,7 +134,7 @@ if (cluster.isPrimary && numCPUs > 1) {
 
   const setupWorker = (w) => {
     w.on('message', (msg) => {
-      if (msg && msg.type === 'BROADCAST_SSE') {
+      if (msg && (msg.type === 'BROADCAST_SSE' || msg.type === 'CLEAR_MOVIE_CACHE')) {
         for (const id in cluster.workers) {
           cluster.workers[id]?.send(msg);
         }

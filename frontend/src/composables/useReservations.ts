@@ -12,7 +12,10 @@ export interface UserBooking {
   poster?: string;
   bookedAt: string;
   seat: string;
-  status: "ACTIVE" | "CANCELLED" | "PENDING_SYNC" | "CANCELLED_PENDING_SYNC";
+  tickets?: Array<{ category: string; label?: string; unitPrice?: number; quantity: number }>;
+  totalQuantity?: number;
+  totalAmount?: number;
+  status: 'ACTIVE' | 'CANCELLED' | 'PENDING_SYNC' | 'CANCELLED_PENDING_SYNC';
 }
 
 const STORAGE_KEY = "cineslot_my_bookings";
@@ -43,17 +46,24 @@ export function buildGoogleCalendarUrl(booking: UserBooking): string {
 // État partagé réactif
 const bookings = ref<UserBooking[]>(loadInitialBookings());
 
-function generateSeat(slotId: string, bookingId: string): string {
-  const rows = ["D", "E", "F", "G", "H", "J", "K"];
+function generateSeat(slotId: string, bookingId: string, quantity = 1): string {
+  const rows = ['D', 'E', 'F', 'G', 'H', 'J', 'K'];
+  const combined = `${slotId}:${bookingId}`;
   let hash = 0;
-  const str = slotId + bookingId;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
+  for (let i = 0; i < combined.length; i += 1) {
+    hash = (hash * 31 + combined.charCodeAt(i)) | 0;
   }
-  const row = rows[Math.abs(hash) % rows.length];
-  const seatNum = (Math.abs(hash >> 2) % 20) + 1;
-  return `Rangée ${row} · Fauteuil ${seatNum}`;
+  const positive = Math.abs(hash);
+  const row = rows[positive % rows.length];
+  const baseSeat = ((positive >> 2) % 20) + 1;
+  const qty = Math.max(1, Math.min(Number(quantity) || 1, 10));
+  if (qty === 1) {
+    return `Rangée ${row} · Fauteuil ${baseSeat}`;
+  }
+  const maxSeat = 20;
+  const startSeat = baseSeat + qty - 1 > maxSeat ? Math.max(1, maxSeat - qty + 1) : baseSeat;
+  const seats = Array.from({ length: qty }, (_, i) => startSeat + i);
+  return `Rangée ${row} · Fauteuils ${seats.join(', ')}`;
 }
 
 function loadInitialBookings(): UserBooking[] {
@@ -128,12 +138,13 @@ export function useReservations() {
     hall: string;
     poster?: string;
     seat?: string;
-    status?: "ACTIVE" | "PENDING_SYNC";
+    tickets?: Array<{ category: string; label?: string; unitPrice?: number; quantity: number }>;
+    totalQuantity?: number;
+    totalAmount?: number;
+    status?: 'ACTIVE' | 'PENDING_SYNC';
   }) => {
-    const seat = item.seat || generateSeat(item.slotId, item.bookingId);
-    const effectiveStatus =
-      item.status ||
-      (item.bookingId.startsWith("temp_") ? "PENDING_SYNC" : "ACTIVE");
+    const seat = item.seat || generateSeat(item.slotId, item.bookingId, item.totalQuantity || 1);
+    const effectiveStatus = item.status || (item.bookingId.startsWith('temp_') ? 'PENDING_SYNC' : 'ACTIVE');
     const newBooking: UserBooking = {
       ...item,
       seat,
@@ -204,6 +215,19 @@ export function useReservations() {
     persistBookings();
   };
 
+  const markAllCancelledLocally = () => {
+    let changed = false;
+    bookings.value.forEach((b) => {
+      if (b.status === 'ACTIVE' || b.status === 'PENDING_SYNC') {
+        b.status = 'CANCELLED';
+        changed = true;
+      }
+    });
+    if (changed) {
+      persistBookings();
+    }
+  };
+
   const downloadCalendarFile = (booking: UserBooking) => {
     const { startDate, endDate } = getSessionDates(booking);
 
@@ -245,13 +269,51 @@ export function useReservations() {
     window.open(buildGoogleCalendarUrl(booking), "_blank", "noopener");
   };
 
+  const markBookingCancelled = (bookingId: string) => {
+    const target = bookings.value.find((b) => b.bookingId === bookingId);
+    if (target && target.status !== 'CANCELLED') {
+      target.status = 'CANCELLED';
+      persistBookings();
+    }
+  };
+
+  const syncBookingsWithServer = async () => {
+    try {
+      const { data } = await apiClient.get<{ bookings: Array<{ bookingId: string; slotId: string }> }>(
+        '/api/bookings/mine',
+        { withCredentials: true }
+      );
+      const activeIds = new Set((data?.bookings ?? []).map((b) => b.bookingId));
+      let changed = false;
+      bookings.value.forEach((b) => {
+        if (b.status === 'ACTIVE' && !activeIds.has(b.bookingId)) {
+          b.status = 'CANCELLED';
+          changed = true;
+        }
+      });
+      if (changed) {
+        persistBookings();
+      }
+    } catch {
+      // Offline or unauthenticated: keep local state intact
+    }
+  };
+
+  const hasActiveBookingForSlot = (slotId: string) =>
+    bookings.value.some(
+      (b) => b.slotId === slotId && (b.status === 'ACTIVE' || b.status === 'PENDING_SYNC')
+    );
   return {
     bookings,
     activeBookings,
     activeBookingsCount,
+    hasActiveBookingForSlot,
     saveBooking,
     cancelBooking,
     deleteFromHistory,
+    markAllCancelledLocally,
+    markBookingCancelled,
+    syncBookingsWithServer,
     downloadCalendarFile,
     openGoogleCalendar,
   };

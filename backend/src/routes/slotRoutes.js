@@ -40,8 +40,9 @@ slotRouter.post('/:id/reservations', async (req, res, next) => {
     }
     const visitorId = req.cookies?.[COOKIE_NAME];
     const isMeasured = req.headers['x-ab-measure'] === 'true';
+    const rawTickets = Array.isArray(req.body?.tickets) ? req.body.tickets : null;
 
-    const booking = await reserveSlot(id, rawCustomerId, visitorId, isMeasured, req.sessionUser);
+    const booking = await reserveSlot(id, rawCustomerId, visitorId, isMeasured, req.sessionUser, rawTickets);
     return res.status(201).json(booking);
   } catch (err) {
     if (err.status) {
@@ -51,7 +52,7 @@ slotRouter.post('/:id/reservations', async (req, res, next) => {
   }
 });
 
-slotRouter.delete('/:id/reservations', async (req, res, next) => {
+slotRouter.delete('/:id/reservations', requireSession, async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!isValidEntityId(id)) {

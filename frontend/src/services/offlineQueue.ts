@@ -166,9 +166,10 @@ class OfflineQueueManager {
   private async executeMutation(item: PendingMutation): Promise<void> {
     switch (item.type) {
       case 'RESERVE_SLOT': {
-        const { slotId, customerId, tempBookingId } = item.payload;
+        const { slotId, customerId, tempBookingId, tickets } = item.payload;
         const res = await apiClient.post(`/api/slots/${slotId}/reservations`, {
           customerId: customerId || 'Anonyme',
+          ...(Array.isArray(tickets) && tickets.length > 0 ? { tickets } : {}),
         }, {
           skipOfflineTrigger: true,
         });
