@@ -137,6 +137,59 @@
           </div>
         </div>
 
+        <!-- Billets déjà réservés pour ce film -->
+        <section
+          v-if="activeMovieBookings.length > 0"
+          class="mb-10 p-6 rounded-2xl bg-cinema-card/80 border border-emerald-500/30 space-y-4"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="font-display text-xl font-bold text-white">Vos billets pour ce film</h2>
+              <p class="text-xs text-cinema-textMuted mt-0.5">
+                Vous avez déjà réservé {{ activeMovieBookings.length }} séance{{ activeMovieBookings.length > 1 ? 's' : '' }} pour {{ movie.title }}.
+              </p>
+            </div>
+            <router-link
+              to="/reservations"
+              class="text-xs font-bold text-accent-gold hover:underline"
+            >
+              Gérer mes réservations →
+            </router-link>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              v-for="booking in activeMovieBookings"
+              :key="booking.bookingId"
+              class="p-4 rounded-xl bg-cinema-darker/70 border border-cinema-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            >
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                    {{ booking.status === 'PENDING_SYNC' ? 'Synchro en attente' : 'Confirmé' }}
+                  </span>
+                  <span class="text-xs font-mono text-cinema-textMuted">{{ booking.bookingId }}</span>
+                </div>
+                <p class="text-sm font-semibold text-white">
+                  {{ booking.hall }} • {{ booking.totalQuantity || 1 }} place{{ (booking.totalQuantity || 1) > 1 ? 's' : '' }}
+                  <span v-if="booking.seat" class="text-accent-gold font-mono ml-1">({{ booking.seat }})</span>
+                </p>
+                <p class="text-xs text-cinema-textMuted">
+                  {{ new Date(booking.startsAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) }}
+                </p>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <TicketPdfButton
+                  v-if="booking.status === 'ACTIVE'"
+                  :booking-id="booking.bookingId"
+                  :movie-title="booking.movieTitle"
+                  @unavailable="markBookingCancelled(booking.bookingId)"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Séances disponibles pour ce film -->
         <div class="space-y-6">
           <div class="flex items-center justify-between">
@@ -162,6 +215,7 @@
               :key="slot.id"
               :slot="slot"
               :sse-connected="sseConnected"
+              :already-booked="bookedSlotIds.has(slot.id)"
               @reserve="handleReserve"
             />
           </div>
@@ -187,26 +241,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, inject, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMovies } from '../composables/useMovies';
 import { useSlots } from '../composables/useSlots';
 import { useReservations } from '../composables/useReservations';
 import SlotCard from '../components/SlotCard.vue';
+import TicketPdfButton from '../components/TicketPdfButton.vue';
 import type { Movie } from '../composables/useMovies';
 import { cacheManager, CacheKeys } from '../services/cacheManager';
 
 const route = useRoute();
 const router = useRouter();
 const { fetchMovieById } = useMovies();
-const { fetchSlots, connectSse, reserveSlot, sseConnected, slots: allSlots } = useSlots();
-const { saveBooking } = useReservations();
-
-const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
+const { fetchSlots, connectSse, sseConnected, slots: allSlots } = useSlots();
+const { bookings, markBookingCancelled, syncBookingsWithServer } = useReservations();
 
 const movie = ref<Movie | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+
+const activeMovieBookings = computed(() => {
+  if (!movie.value) return [];
+  const target = movie.value.title.trim().toLowerCase();
+  return (bookings?.value ?? []).filter(
+    (b) =>
+      (b.status === 'ACTIVE' || b.status === 'PENDING_SYNC') &&
+      b.movieTitle.trim().toLowerCase() === target
+  );
+});
+
+const bookedSlotIds = computed(() => new Set(activeMovieBookings.value.map((b) => b.slotId)));
 
 // Récupérer les séances pour ce film (insensible à la casse)
 const slotsForMovie = computed(() => {
@@ -251,34 +316,8 @@ const loadMovie = async () => {
   }
 };
 
-const handleReserve = async (slotId: string, customerId = '') => {
-  try {
-    const result = await reserveSlot(slotId, customerId);
-    const slot = allSlots.value.find(s => s.id === slotId);
-
-    if (slot && movie.value) {
-      saveBooking({
-        bookingId: result.bookingId,
-        slotId: slot.id,
-        movieTitle: movie.value.title,
-        startsAt: slot.startsAt,
-        hall: slot.hall,
-        seat: result.seat,
-        poster: movie.value.poster
-      });
-
-      if (openReservationModal) {
-        openReservationModal(
-          result.bookingId,
-          movie.value.title,
-          slot.startsAt,
-          slot.hall
-        );
-      }
-    }
-  } catch (err) {
-    console.error('Erreur lors de la réservation:', err);
-  }
+const handleReserve = (slotId: string) => {
+  router.push(`/slots/${slotId}/book`);
 };
 
 const goBack = () => {
@@ -297,7 +336,10 @@ watch(() => route.params.id, (newId) => {
 
 onMounted(async () => {
   connectSse();
-  await loadMovie();
-  await fetchSlots();
+  await Promise.all([
+    loadMovie(),
+    syncBookingsWithServer(),
+    fetchSlots()
+  ]);
 });
 </script>

@@ -86,6 +86,7 @@
             :key="slot.id"
             :slot="slot"
             :sse-connected="sseConnected"
+            :already-booked="bookedSlotIds.has(slot.id)"
             @reserve="handleReserve"
           />
         </div>
@@ -220,10 +221,17 @@ const router = useRouter();
 const moviesStore = useMoviesStore();
 const slotsStore = useSlotsStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse, reserveSlot, sseConnected, loading: loadingSlots } = useSlots();
-const { saveBooking } = useReservations();
+const { fetchSlots, connectSse, sseConnected, loading: loadingSlots } = useSlots();
+const { bookings } = useReservations();
 const { exposeIfAvailable } = useAbTest();
-const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
+
+const bookedSlotIds = computed(() =>
+  new Set(
+    (bookings?.value ?? [])
+      .filter((b) => b.status === 'ACTIVE' || b.status === 'PENDING_SYNC')
+      .map((b) => b.slotId)
+  )
+);
 
 const loadingPopular = ref(false);
 const selectedMovie = ref<Movie | null>(null);
@@ -280,35 +288,13 @@ const goToMovieDetail = (movieId: string) => {
   router.push(`/movies/${movieId}`);
 };
 
-const handleReserveFromModal = async (slotId: string) => {
+const handleReserveFromModal = (slotId: string) => {
   selectedMovie.value = null;
-  const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
-  await handleReserve(slotId, customerId);
+  router.push(`/slots/${slotId}/book`);
 };
 
-const handleReserve = async (slotId: string, customerId = '') => {
-  try {
-    const result = await reserveSlot(slotId, customerId);
-    const slot = availableSlots.value.find(s => s.id === slotId);
-    if (slot) {
-      const movie = moviesStore.movies.find(m => m.title.toLowerCase() === slot.movieTitle.toLowerCase());
-      saveBooking({
-        bookingId: result.bookingId,
-        slotId: slot.id,
-        movieTitle: slot.movieTitle,
-        startsAt: slot.startsAt,
-        hall: slot.hall,
-        seat: result.seat,
-        poster: movie?.poster
-      });
-
-      if (openReservationModal) {
-        openReservationModal(result.bookingId, slot.movieTitle, slot.startsAt, slot.hall);
-      }
-    }
-  } catch (err) {
-    console.error('Reservation error:', err);
-  }
+const handleReserve = (slotId: string) => {
+  router.push(`/slots/${slotId}/book`);
 };
 
 onMounted(async () => {

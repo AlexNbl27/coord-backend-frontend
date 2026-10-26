@@ -350,30 +350,9 @@ const resetAllFilters = () => {
   onSearch();
 };
 
-const handleReserveFromModal = async (slotId: string) => {
+const handleReserveFromModal = (slotId: string) => {
   selectedMovie.value = null;
-  const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
-  try {
-    const result = await reserveSlot(slotId, customerId);
-    const slot = slotsStore.availableSlots.find(s => s.id === slotId);
-    if (slot) {
-      const movie = moviesStore.movies.find(m => m.title.toLowerCase() === slot.movieTitle.toLowerCase());
-      saveBooking({
-        bookingId: result.bookingId,
-        slotId: slot.id,
-        movieTitle: slot.movieTitle,
-        startsAt: slot.startsAt,
-        hall: slot.hall,
-        poster: movie?.poster
-      });
-
-      if (openReservationModal) {
-        openReservationModal(result.bookingId, slot.movieTitle, slot.startsAt, slot.hall);
-      }
-    }
-  } catch (err) {
-    console.error('Reservation error:', err);
-  }
+  router.push(`/slots/${slotId}/book`);
 };
 
 // Gérer la recherche à partir de la SearchBar

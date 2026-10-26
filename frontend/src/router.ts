@@ -39,6 +39,16 @@ const routes = [
     },
   },
   {
+    path: '/slots/:id/book',
+    name: 'slot-booking',
+    component: () => import('./views/BookingView.vue'),
+    meta: {
+      title: 'CinéSlot - Réserver des places',
+      description: 'Choisissez vos tarifs et quantités de billets',
+    },
+    props: true,
+  },
+  {
     path: '/reservations',
     name: 'reservations',
     component: () => import('./views/ReservationsView.vue'),
