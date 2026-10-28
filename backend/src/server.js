@@ -11,6 +11,7 @@ import { movieRouter } from './routes/movieRoutes.js';
 import { abRouter } from './routes/abRoutes.js';
 import { slotRouter } from './routes/slotRoutes.js';
 import { sessionRouter } from './routes/sessionRoutes.js';
+import { googleAuthRouter } from './routes/googleAuthRoutes.js';
 import { ticketRouter } from './routes/ticketRoutes.js';
 import { attachSession } from './services/sessionService.js';
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
@@ -89,6 +90,7 @@ function createServer() {
   app.use('/api/movies', movieRouter);
   app.use('/api/slots', slotRouter);
   app.use('/api/ab', abRouter);
+  app.use('/api/session/google', googleAuthRouter);
   app.use('/api/session', sessionRouter);
   app.use('/api/bookings', ticketRouter);
 

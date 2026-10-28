@@ -13,6 +13,7 @@ import {
   verifyPassword
 } from '../services/sessionService.js';
 import { createRateLimiter, isPlainString } from '../utils/securityMiddleware.js';
+import { isGoogleAuthEnabled } from './googleAuthRoutes.js';
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -58,7 +59,8 @@ export function createSessionRouter(deps = {}) {
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       authenticated: Boolean(req.sessionUser),
-      user: req.sessionUser ?? null
+      user: req.sessionUser ?? null,
+      googleEnabled: isGoogleAuthEnabled()
     });
   });
 
