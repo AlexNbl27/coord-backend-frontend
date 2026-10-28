@@ -33,9 +33,10 @@ export const options = {
 const GENRES = ['Sci-Fi', 'Action', 'Drama', 'Adventure', 'Crime'];
 
 export function setup() {
+  // Un compte jetable par run, cookie partagé entre les VUs (rate limit sur l'auth)
   const loginRes = http.post(
-    `${BASE_URL}/api/session/login`,
-    JSON.stringify({ userId: 'spectator-1' }),
+    `${BASE_URL}/api/session/register`,
+    JSON.stringify({ email: `k6-${Date.now()}@cineslot.test`, name: 'k6 Tester', password: `k6-${Date.now()}-pwd` }),
     { headers: { 'Content-Type': 'application/json' } }
   );
   const cookies = loginRes.cookies?.cineslot_session;

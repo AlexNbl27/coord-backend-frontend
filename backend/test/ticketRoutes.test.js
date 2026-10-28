@@ -32,7 +32,7 @@ async function request(app, path, headers = {}) {
   }
 }
 
-const VALID_COOKIE = `${SESSION_COOKIE_NAME}=${signSessionToken('spectator-1')}`;
+const VALID_COOKIE = `${SESSION_COOKIE_NAME}=${signSessionToken({ id: 'spectator-1', name: 'Hélène Durand', email: 'helene@cineslot.test' })}`;
 
 test('ticketRoutes: returns 200 with inline PDF and security headers', async () => {
   const samplePdf = Buffer.from('%PDF-1.4\n%sample');

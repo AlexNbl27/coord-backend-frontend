@@ -1,4 +1,7 @@
 import crypto from 'node:crypto';
+import { promisify } from 'node:util';
+
+const scrypt = promisify(crypto.scrypt);
 
 export const SESSION_COOKIE_NAME = 'cineslot_session';
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -8,31 +11,39 @@ const SESSION_SECRET = process.env.SESSION_SECRET || (
     : 'dev-only-ephemeral-hmac-secret-key-32bytes'
 );
 
-export const DEMO_SPECTATORS = Object.freeze([
-  {
-    id: 'spectator-1',
-    name: 'Hélène Durand',
-    email: 'helene.durand@cineslot.test'
-  },
-  {
-    id: 'spectator-2',
-    name: 'Lucas Martin',
-    email: 'lucas.martin@cineslot.test'
-  }
-]);
+const SCRYPT_KEYLEN = 64;
 
-const SPECTATOR_MAP = new Map(DEMO_SPECTATORS.map((u) => [u.id, u]));
-
-export function findSpectatorById(userId) {
-  if (!userId || typeof userId !== 'string') {
-    return null;
-  }
-  return SPECTATOR_MAP.get(userId) ?? null;
+export async function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = await scrypt(password, salt, SCRYPT_KEYLEN);
+  return `${salt.toString('base64url')}:${hash.toString('base64url')}`;
 }
 
-export function signSessionToken(userId, ttlMs = SESSION_MAX_AGE_MS) {
+export async function verifyPassword(password, stored) {
+  if (typeof password !== 'string' || typeof stored !== 'string') {
+    return false;
+  }
+  const [saltB64, hashB64] = stored.split(':');
+  if (!saltB64 || !hashB64) {
+    return false;
+  }
+  const expected = Buffer.from(hashB64, 'base64url');
+  const actual = await scrypt(password, Buffer.from(saltB64, 'base64url'), expected.length);
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+}
+
+export function hashResetToken(token) {
+  return crypto.createHash('sha256').update(token).digest('base64url');
+}
+
+export function toPublicUser(user) {
+  return { id: user._id ?? user.id, name: user.name, email: user.email };
+}
+
+// name/email are copied into the cookie: re-read the user from DB if profile editing is ever added.
+export function signSessionToken(user, ttlMs = SESSION_MAX_AGE_MS) {
   const exp = Date.now() + ttlMs;
-  const payload = Buffer.from(JSON.stringify({ sub: userId, exp }), 'utf8').toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ sub: user.id, name: user.name, email: user.email, exp }), 'utf8').toString('base64url');
   const signature = crypto
     .createHmac('sha256', SESSION_SECRET)
     .update(payload)
@@ -74,9 +85,9 @@ export function verifySessionToken(token) {
     if (Date.now() > parsed.exp) {
       return null;
     }
-    return findSpectatorById(parsed.sub);
+    return { id: parsed.sub, name: parsed.name, email: parsed.email };
   } catch {
-    return findSpectatorById(decoded);
+    return null;
   }
 }
 
