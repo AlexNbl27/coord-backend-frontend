@@ -136,7 +136,7 @@
       </div>
 
       <!-- Résultats : Grille des séances -->
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-if="loading && displayedSlots.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div v-for="n in 6" :key="n" class="bg-gray-800 h-44 rounded-xl animate-pulse"></div>
       </div>
 
@@ -287,7 +287,9 @@ watch(availableSlotsCount, (count) => {
 }, { immediate: true });
 
 onMounted(async () => {
-  loading.value = true;
+  if (displayedSlots.value.length === 0) {
+    loading.value = true;
+  }
   connectSse();
   try {
     await fetchMovies();

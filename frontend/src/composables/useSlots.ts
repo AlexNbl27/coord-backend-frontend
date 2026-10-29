@@ -66,12 +66,35 @@ export function useSlots() {
   const slots = computed(() => slotsStore.slots);
   const sseConnected = computed(() => slotsStore.sseConnected);
 
-  // Récupérer toutes les séances avec fallback cache et résilience
+  // Récupérer toutes les séances avec Stale-While-Revalidate (0ms de chargement si données en cache)
   const fetchSlots = async () => {
+    // 1. Si on a des données en cache local, les injecter immédiatement
+    const cached = cacheManager.get<Slot[]>(CacheKeys.SLOTS);
+    if (cached?.data && cached.data.length > 0 && slotsStore.slots.length === 0) {
+      slotsStore.setSlots(cached.data);
+    }
+
+    // 2. Si l'application est déjà marquée hors-ligne, ne pas lancer de requête réseau qui traînerait
     try {
+      if (useConnectionStore().isOffline) {
+        if (cached?.data && cached.data.length > 0) {
+          slotsStore.setSlots(cached.data);
+        }
+        loading.value = false;
+        slotsStore.setLoading(false);
+        return;
+      }
+    } catch {}
+
+    // 3. N'afficher le skeleton de chargement QUE si on n'a strictement aucune séance à afficher
+    const hasExistingSlots = slotsStore.slots.length > 0 || (cached?.data && cached.data.length > 0);
+    if (!hasExistingSlots) {
       loading.value = true;
-      error.value = null;
       slotsStore.setLoading(true);
+    }
+
+    try {
+      error.value = null;
       
       const response = await apiClient.get<SlotView[]>(API_SLOTS_URL, {
         withCredentials: true,
@@ -91,10 +114,8 @@ export function useSlots() {
       slotsStore.setSlots(mappedSlots);
       
     } catch (err: any) {
-      // Repli fluide sur le cache local
-      const cached = cacheManager.get<Slot[]>(CacheKeys.SLOTS);
+      // Repli fluide immédiat sur le cache local
       if (cached && cached.data.length > 0) {
-        console.warn('[useSlots] Backend indisponible. Utilisation fluide des séances en cache.');
         slotsStore.setSlots(cached.data);
         error.value = null;
       } else {

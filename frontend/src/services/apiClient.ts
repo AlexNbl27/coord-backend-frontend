@@ -16,7 +16,7 @@ declare module 'axios' {
  * - Notification automatique de l'état de connexion (Online / Offline)
  */
 export const apiClient = axios.create({
-  timeout: 8000,
+  timeout: 2000,
   withCredentials: true,
   headers: {
     'Accept': 'application/json',
@@ -55,17 +55,16 @@ apiClient.interceptors.response.use(
     const isNetworkError = !error.response || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED';
     const isServerError = !!error.response && error.response.status >= 500;
 
-    // 1. Stratégie de retry automatique avec Exponential Backoff + Jitter pour les requêtes GET
-    // Doit être exécutée AVANT de signaler une quelconque déconnexion pour éviter les fausses alertes
+    // 1. Stratégie de retry automatique rapide UNIQUEMENT sur erreur serveur temporaire (502/503/504)
+    // Ne JAMAIS rejouer sur timeout de connexion ou réseau mort (isNetworkError) pour éviter d'allonger le temps d'attente
     if (config && !config.skipRetry && (config.method?.toUpperCase() === 'GET')) {
       const currentRetry = config._retryCount || 0;
-      const maxRetries = 2; // 2 retries (total 3 tentatives)
+      const maxRetries = 1; // 1 retry rapide
 
-      if (currentRetry < maxRetries && (isNetworkError || isServerError)) {
+      if (currentRetry < maxRetries && isServerError && !isNetworkError) {
         config._retryCount = currentRetry + 1;
-        // Exponential backoff: ~500ms, ~1000ms + random jitter de 0-200ms
-        const delay = Math.pow(2, config._retryCount) * 250 + Math.floor(Math.random() * 200);
-        console.warn(`[apiClient] Tentative de rejeu ${config._retryCount}/${maxRetries} pour ${config.url} dans ${delay}ms`);
+        const delay = 250;
+        console.warn(`[apiClient] Tentative de rejeu rapide ${config._retryCount}/${maxRetries} pour ${config.url} dans ${delay}ms`);
 
         await new Promise((resolve) => setTimeout(resolve, delay));
         return apiClient(config);

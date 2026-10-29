@@ -313,8 +313,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useReservations, type UserBooking } from '../composables/useReservations';
+import { useConnectionStore } from '../stores/connection';
 
 const { bookings, activeBookingsCount, cancelBooking, deleteFromHistory, downloadCalendarFile } = useReservations();
+const connectionStore = useConnectionStore();
 
 const filter = ref<'ALL' | 'ACTIVE' | 'CANCELLED'>('ALL');
 const cancellingSlotId = ref<string | null>(null);
@@ -352,7 +354,11 @@ const executeCancel = async () => {
   try {
     await cancelBooking(booking.slotId);
     toastType.value = 'success';
-    toastMessage.value = `Votre réservation pour "${booking.movieTitle}" a bien été annulée.`;
+    if (connectionStore.isOffline || booking.status === 'CANCELLED_PENDING_SYNC') {
+      toastMessage.value = `Annulation enregistrée pour "${booking.movieTitle}". Elle sera synchronisée avec le serveur dès le retour de la connexion.`;
+    } else {
+      toastMessage.value = `Votre réservation pour "${booking.movieTitle}" a bien été annulée.`;
+    }
   } catch (err: any) {
     toastType.value = 'error';
     toastMessage.value = 'Une erreur est survenue lors de l\'annulation. Veuillez réessayer.';
