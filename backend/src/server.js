@@ -14,9 +14,12 @@ dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb:27017/cours_db?directConnection=true';
+const defaultCPUs = typeof os.availableParallelism === 'function'
+  ? os.availableParallelism()
+  : os.cpus().length;
 const numCPUs = process.env.WEB_CONCURRENCY
   ? parseInt(process.env.WEB_CONCURRENCY, 10)
-  : (os.availableParallelism ? os.availableParallelism() : os.cpus().length);
+  : defaultCPUs;
 
 function createServer() {
   const app = express();
