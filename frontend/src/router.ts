@@ -40,6 +40,16 @@ const routes = [
     },
   },
   {
+    path: '/slots/:id/book',
+    name: 'slot-booking',
+    component: () => import('./views/BookingView.vue'),
+    meta: {
+      title: 'CinéSlot - Réserver des places',
+      description: 'Choisissez vos tarifs et quantités de billets',
+    },
+    props: true,
+  },
+  {
     path: '/reservations',
     name: 'reservations',
     component: () => import('./views/ReservationsView.vue'),
@@ -90,8 +100,10 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(to: RouteLocationNormalized, from: RouteLocationNormalized, savedPosition) {
-    // Toujours faire défiler vers le haut lors de la navigation
+  scrollBehavior(to: RouteLocationNormalized, _from: RouteLocationNormalized, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    }
     if (to.hash) {
       return {
         el: to.hash,
@@ -111,14 +123,11 @@ router.beforeEach(async (to) => {
       return { name: 'login', query: { redirect: to.fullPath } };
     }
   }
-
   const title = (to.meta.title as string) || 'CinéSlot - Réservation de films en temps réel';
   const description = (to.meta.description as string) || 'Découvrez et réservez vos films préférés en temps réel avec synchronisation SSE';
-  
-  // Mettre à jour le titre de la page
+
   document.title = title;
-  
-  // Mettre à jour la meta description (si possible)
+
   const metaDescription = document.querySelector('meta[name="description"]');
   if (metaDescription) {
     metaDescription.setAttribute('content', description);

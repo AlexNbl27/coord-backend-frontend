@@ -30,8 +30,19 @@ function setCache(key, data) {
   cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-export function clearMovieCache() {
+export function clearMovieCache(broadcast = true) {
   cache.clear();
+  if (broadcast && process.send) {
+    process.send({ type: 'CLEAR_MOVIE_CACHE', originPid: process.pid });
+  }
+}
+
+if (process.on) {
+  process.on('message', (msg) => {
+    if (msg && msg.type === 'CLEAR_MOVIE_CACHE' && msg.originPid !== process.pid) {
+      cache.clear();
+    }
+  });
 }
 
 movieRouter.get('/', async (req, res) => {

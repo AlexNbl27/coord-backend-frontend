@@ -36,8 +36,9 @@ slotRouter.post('/:id/reservations', requireSession, async (req, res, next) => {
     }
     const visitorId = req.cookies?.[COOKIE_NAME];
     const isMeasured = req.headers['x-ab-measure'] === 'true';
+    const rawTickets = Array.isArray(req.body?.tickets) ? req.body.tickets : null;
 
-    const booking = await reserveSlot(id, req.sessionUser, visitorId, isMeasured);
+    const booking = await reserveSlot(id, req.body?.customerId ?? null, visitorId, isMeasured, req.sessionUser, rawTickets);
     return res.status(201).json(booking);
   } catch (err) {
     if (err.status) {

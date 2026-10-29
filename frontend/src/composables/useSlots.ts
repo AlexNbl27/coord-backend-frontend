@@ -6,8 +6,8 @@ import { useSlotsStore } from '../stores/slots';
 import { useConnectionStore } from '../stores/connection';
 import { useConnection } from './useConnection';
 import { useAbTest } from './useAbTest';
+import { useReservations } from './useReservations';
 
-// Interface pour une séance (slot)
 export interface Slot {
   id: string;
   startsAt: string;
@@ -15,11 +15,12 @@ export interface Slot {
   version: number;
   movieTitle: string;
   hall: string;
+  capacity?: number;
+  availableSeats?: number;
   bookingId?: string;
   bookedBy?: string;
 }
 
-// Interface pour la vue d'une séance (API)
 export interface SlotView {
   id: string;
   startsAt: string;
@@ -27,20 +28,35 @@ export interface SlotView {
   version: number;
   movieTitle: string;
   hall: string;
+  capacity?: number;
+  availableSeats?: number;
 }
 
-// Interface pour la réservation
+export interface TicketLine {
+  category: string;
+  label?: string;
+  unitPrice?: number;
+  quantity: number;
+}
+
 export interface BookingView {
   bookingId: string;
   slotId: string;
   status: string;
+  seat?: string;
+  tickets?: TicketLine[];
+  totalQuantity?: number;
+  totalAmount?: number;
+  availableSeats?: number;
+  capacity?: number;
 }
 
-// Interface pour l'événement SSE
 export interface SseEvent {
   slotId: string;
   status: string;
   version: number;
+  capacity?: number;
+  availableSeats?: number;
 }
 
 // URL de base pour l'API des séances
@@ -103,6 +119,8 @@ export function useSlots() {
         version: slot.version,
         movieTitle: slot.movieTitle,
         hall: slot.hall,
+        capacity: slot.capacity,
+        availableSeats: slot.availableSeats,
       }));
 
       // Persistance dans le cache local (10 min)
@@ -163,10 +181,13 @@ export function useSlots() {
         try {
           const data: SseEvent = JSON.parse(event.data);
           slotsStore.updateSlotStatus(data.slotId, data.status as 'AVAILABLE' | 'BOOKED');
-          slotsStore.updateSlot(data.slotId, { version: data.version });
-          console.log(`[SSE] Séance ${data.slotId} mise à jour: ${data.status}`);
+          slotsStore.updateSlot(data.slotId, {
+            version: data.version,
+            ...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
+            ...(data.availableSeats !== undefined ? { availableSeats: data.availableSeats } : {}),
+          });
         } catch (e) {
-          console.error('[SSE] Erreur parsing SSE slot-updated event:', e);
+          console.error('[SSE] Error parsing slot-updated event:', e);
         }
       });
 
@@ -200,24 +221,33 @@ export function useSlots() {
     // Si hors contexte Vue
   }
 
-  // Réserver une séance avec résilience, UI optimiste et file d'attente hors-ligne
-  const reserveSlot = async (slotId: string, customerId: string): Promise<BookingView> => {
+  const reserveSlot = async (
+    slotId: string,
+    customerId: string = '',
+    tickets?: TicketLine[]
+  ): Promise<BookingView> => {
     const { measured } = useAbTest();
 
     try {
       const response = await apiClient.post<BookingView>(
         `${API_SLOTS_URL}/${slotId}/reservations`,
-        { customerId },
+        { customerId, ...(tickets ? { tickets } : {}) },
         {
           headers: {
             'X-AB-Measure': String(measured.value),
           },
-          withCredentials: true,
         }
       );
-      
-      // Mise à jour optimiste locale immédiate (complétée par le SSE)
-      slotsStore.updateSlotStatus(slotId, 'BOOKED');
+
+      slotsStore.updateSlot(slotId, {
+        status: response.data.status as 'AVAILABLE' | 'BOOKED',
+        ...(response.data.availableSeats !== undefined
+          ? { availableSeats: response.data.availableSeats }
+          : {}),
+        ...(response.data.capacity !== undefined
+          ? { capacity: response.data.capacity }
+          : {}),
+      });
       return response.data;
     } catch (err: any) {
       const isNetworkOrServer = !err.response || err.response.status >= 500;
@@ -225,21 +255,30 @@ export function useSlots() {
       // Si le backend est déconnecté ou en panne : Outbox Pattern & Résilience
       if (isNetworkOrServer) {
         console.warn(`[useSlots] Backend hors-ligne : mise en file d'attente de la réservation pour le créneau ${slotId}.`);
-        
+
         const tempBookingId = `temp_bk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        
-        slotsStore.updateSlotStatus(slotId, 'BOOKED');
+        const currentSlot = slotsStore.slots.find((s) => s.id === slotId);
+        const qty = tickets?.reduce((sum, t) => sum + t.quantity, 0) || 1;
+        const newAvailable = Math.max(0, (currentSlot?.availableSeats ?? currentSlot?.capacity ?? 40) - qty);
+
+        slotsStore.updateSlot(slotId, {
+          availableSeats: newAvailable,
+          status: newAvailable <= 0 ? 'BOOKED' : 'AVAILABLE',
+        });
 
         offlineQueue.enqueue('RESERVE_SLOT', {
           slotId,
           customerId,
           tempBookingId,
+          tickets,
         });
 
         return {
           bookingId: tempBookingId,
           slotId,
-          status: 'BOOKED',
+          status: newAvailable <= 0 ? 'BOOKED' : 'AVAILABLE',
+          totalQuantity: qty,
+          availableSeats: newAvailable,
         };
       }
 
@@ -249,50 +288,25 @@ export function useSlots() {
     }
   };
 
-  // Générer une nouvelle séance de démonstration
-  const generateDemoSlot = async (): Promise<SlotView> => {
-    try {
-      const response = await apiClient.post<SlotView>(`${API_SLOTS_URL}/lab`);
-      return response.data;
-    } catch (err) {
-      console.error('Erreur lors de la génération d\'une séance:', err);
-      throw err;
-    }
-  };
-
-  // Filtrer les séances par film
-  const getSlotsByMovie = (movieTitle: string) => {
-    return slots.value.filter(slot => 
-      slot.movieTitle.toLowerCase().includes(movieTitle.toLowerCase())
-    );
-  };
-
-  // Filtrer les séances par statut
-  const getSlotsByStatus = (status: 'AVAILABLE' | 'BOOKED' | 'ALL' = 'ALL') => {
-    if (status === 'ALL') return slots.value;
-    return slots.value.filter(slot => slot.status === status);
-  };
-
-  // Filtrer les séances disponibles et réservées depuis le store
   const availableSlots = computed(() => slotsStore.availableSlots);
   const bookedSlots = computed(() => slotsStore.bookedSlots);
 
-  // Mettre à jour les listes de séances (compatibilité)
-  const updateSlotLists = () => {};
-
-  // Rafraîchir manuellement les séances
   const refreshSlots = () => {
     fetchSlots();
   };
 
-  // Réinitialiser toutes les séances au statut disponible
   const resetSlots = async () => {
     try {
       loading.value = true;
-      await apiClient.post(`${API_SLOTS_URL}/reset`, {}, { withCredentials: true });
+      await apiClient.post(`${API_SLOTS_URL}/reset`, {});
+      try {
+        useReservations().markAllCancelledLocally();
+      } catch {
+        // Ignore in isolated unit-test environments
+      }
       await fetchSlots();
     } catch (err) {
-      console.error('Erreur réinitialisation créneaux:', err);
+      console.error('Failed to reset slots:', err);
     } finally {
       loading.value = false;
     }
@@ -310,11 +324,7 @@ export function useSlots() {
     connectSse,
     disconnectSse,
     reserveSlot,
-    generateDemoSlot,
     resetSlots,
-    getSlotsByMovie,
-    getSlotsByStatus,
     refreshSlots,
-    updateSlotLists,
   };
 }
