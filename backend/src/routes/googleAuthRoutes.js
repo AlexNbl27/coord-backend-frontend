@@ -4,8 +4,7 @@ import { User } from '../models/User.js';
 import {
   SESSION_COOKIE_NAME,
   getSessionCookieOptions,
-  signSessionToken,
-  toPublicUser
+  signSessionToken
 } from '../services/sessionService.js';
 import { createRateLimiter } from '../utils/securityMiddleware.js';
 
@@ -135,7 +134,7 @@ export function createGoogleAuthRouter(deps = {}) {
       }
 
       res.clearCookie(STATE_COOKIE, { path: stateCookieOptions.path });
-      res.cookie(SESSION_COOKIE_NAME, signSessionToken(toPublicUser(user)), getSessionCookieOptions());
+      res.cookie(SESSION_COOKIE_NAME, signSessionToken(user), getSessionCookieOptions());
       return res.redirect(302, `${appUrl}${safeRedirectPath(saved.redirect)}`);
     } catch (err) {
       console.warn('[OAuth Google] Callback failed:', err.message);

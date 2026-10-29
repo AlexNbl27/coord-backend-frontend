@@ -24,13 +24,13 @@
             v-model="password"
             type="password"
             :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
-            minlength="8"
+            :minlength="mode === 'register' ? 12 : undefined"
             maxlength="128"
             required
             aria-describedby="auth-password-hint"
             class="input"
           />
-          <p v-if="mode === 'register'" id="auth-password-hint" class="text-xs text-cinema-textMuted mt-1">8 caractères minimum.</p>
+          <p v-if="mode === 'register'" id="auth-password-hint" class="text-xs text-cinema-textMuted mt-1">12 caractères minimum.</p>
         </div>
 
         <button type="submit" class="btn btn-primary w-full" :disabled="pending">
