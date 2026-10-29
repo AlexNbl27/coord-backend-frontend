@@ -1,6 +1,9 @@
 import { ref, computed } from 'vue';
 import axios from 'axios';
+import { apiClient } from '../services/apiClient';
+import { cacheManager, CacheKeys } from '../services/cacheManager';
 import { useMoviesStore } from '../stores/movies';
+import { useConnection } from './useConnection';
 
 // Interface pour un film
 export interface Movie {
@@ -51,29 +54,52 @@ export interface MovieFilters {
 // URL de base de l'API (utilise le proxy Vite en développement)
 const API_BASE_URL = '/api/movies';
 
-// Cache local LRU (max 25 entrées) pour éviter toute fuite mémoire
+// Cache mémoire LRU (max 25 entrées)
 const MAX_CACHE_ENTRIES = 25;
 const moviesCache = ref<Map<string, MoviesResponse & { timestamp: number }>>(new Map());
-const CACHE_TTL_MS = 10000; // 10 secondes
+const CACHE_TTL_MS = 15000; // 15 secondes en mémoire
 
-// Cache pour les détails d'un film
+// Cache mémoire pour les détails d'un film
 const movieDetailsCache = ref<Map<string, Movie>>(new Map());
+
+// Chargement initial depuis le cache persistant si existant
+const initialCachedMovies = cacheManager.get<MoviesResponse>(CacheKeys.MOVIES);
 
 export function useMovies() {
   const moviesStore = useMoviesStore();
-  const movies = ref<Movie[]>([]);
+  const movies = ref<Movie[]>(initialCachedMovies?.data.data || []);
   const loading = ref(false);
   const error = ref<string | null>(null);
-  const totalCount = ref(0);
-  const currentPage = ref(1);
-  const currentLimit = ref(20);
+  const totalCount = ref(initialCachedMovies?.data.total || initialCachedMovies?.data.count || 0);
+  const currentPage = ref(initialCachedMovies?.data.page || 1);
+  const currentLimit = ref(initialCachedMovies?.data.limit || 20);
   const hasMore = ref(false);
+  const isFromCache = ref(false);
+
+  // Initialise le store avec le cache persistant s'il est vide
+  if (initialCachedMovies?.data && moviesStore.movies.length === 0) {
+    moviesStore.setMovies(initialCachedMovies.data);
+  }
   
-  // Gestion standard de l'annulation des requêtes réseau (remplace CancelToken déprécié)
+  // Gestion standard de l'annulation des requêtes réseau
   let activeAbortController: AbortController | null = null;
   
   // Identifiant de recherche pour éviter les réponses obsolètes
   const searchId = ref(0);
+
+  // Filtres courants (réactifs)
+  const currentFilters = ref<MovieFilters>({});
+
+  // Enregistrement de la resynchronisation automatique au retour du backend
+  try {
+    const { onReconnectSync } = useConnection();
+    onReconnectSync(async () => {
+      console.log('[useMovies] Reconnexion détectée, rafraîchissement des films en tâche de fond...');
+      await fetchMovies(currentFilters.value, true);
+    });
+  } catch {
+    // Si hors contexte Vue
+  }
 
   // Récupérer tous les films avec filtres et pagination
   const fetchMovies = async (filters: MovieFilters = {}, resetCache: boolean = false) => {
@@ -89,10 +115,10 @@ export function useMovies() {
       loading.value = true;
       error.value = null;
 
-      // Générer la clé de cache
+      // Générer la clé de cache mémoire
       const cacheKey = JSON.stringify(filters);
       
-      // Vérifier le cache local
+      // Vérifier le cache mémoire
       if (!resetCache && moviesCache.value.has(cacheKey)) {
         const cached = moviesCache.value.get(cacheKey)!;
         if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
@@ -102,6 +128,7 @@ export function useMovies() {
           currentLimit.value = cached.limit;
           hasMore.value = cached.page * cached.limit < totalCount.value;
           loading.value = false;
+          isFromCache.value = true;
           moviesStore.setMovies(cached);
           return;
         }
@@ -109,27 +136,17 @@ export function useMovies() {
 
       // Construire la query string
       const params = new URLSearchParams();
+      if (filters.search) params.set('search', filters.search);
+      if (filters.genre) params.set('genre', filters.genre);
+      if (filters.minRating !== undefined) params.set('minRating', filters.minRating.toString());
+      if (filters.director) params.set('director', filters.director);
       
-      if (filters.search) {
-        params.set('search', filters.search);
-      }
-      if (filters.genre) {
-        params.set('genre', filters.genre);
-      }
-      if (filters.minRating !== undefined) {
-        params.set('minRating', filters.minRating.toString());
-      }
-      if (filters.director) {
-        params.set('director', filters.director);
-      }
-      
-      // Pagination
       const page = filters.page || 1;
       const limit = filters.limit || 20;
       params.set('page', page.toString());
       params.set('limit', limit.toString());
 
-      const response = await axios.get<MoviesResponse>(`${API_BASE_URL}?${params.toString()}`, {
+      const response = await apiClient.get<MoviesResponse>(`${API_BASE_URL}?${params.toString()}`, {
         signal: activeAbortController.signal,
       });
       
@@ -138,18 +155,21 @@ export function useMovies() {
         return;
       }
       
-      // Éviction LRU : purge de la plus ancienne entrée si le cache dépasse la limite
+      // Éviction LRU en mémoire
       if (moviesCache.value.size >= MAX_CACHE_ENTRIES) {
         const oldestKey = moviesCache.value.keys().next().value;
         if (oldestKey) moviesCache.value.delete(oldestKey);
       }
 
-      // Mettre en cache avec timestamp
+      // Mettre en cache mémoire avec timestamp
       const responseWithTimestamp = {
         ...response.data,
         timestamp: Date.now(),
       };
       moviesCache.value.set(cacheKey, responseWithTimestamp);
+
+      // Persistance dans le cache local (valide 10 minutes)
+      cacheManager.set(CacheKeys.MOVIES, response.data, 10 * 60 * 1000);
 
       const effectiveTotal = response.data.total ?? response.data.count;
       movies.value = response.data.data;
@@ -157,10 +177,10 @@ export function useMovies() {
       currentPage.value = response.data.page;
       currentLimit.value = response.data.limit;
       hasMore.value = response.data.page * response.data.limit < effectiveTotal;
+      isFromCache.value = false;
       moviesStore.setMovies(response.data);
       
     } catch (err: any) {
-      // Ignorer silencieusement si la requête a été volontairement annulée par AbortController
       if (axios.isCancel(err) || err.name === 'CanceledError' || err.name === 'AbortError') {
         return;
       }
@@ -168,8 +188,25 @@ export function useMovies() {
       if (currentSearchId !== searchId.value) {
         return;
       }
+
+      // Repli fluide sur le cache persistant
+      const persistentCache = cacheManager.get<MoviesResponse>(CacheKeys.MOVIES);
+      if (persistentCache && persistentCache.data.data?.length > 0) {
+        console.warn('[useMovies] Backend indisponible. Utilisation fluide du cache persistant local.');
+        const cachedData = persistentCache.data;
+        movies.value = cachedData.data;
+        totalCount.value = cachedData.total ?? cachedData.count;
+        currentPage.value = cachedData.page;
+        currentLimit.value = cachedData.limit;
+        hasMore.value = false;
+        isFromCache.value = true;
+        moviesStore.setMovies(cachedData);
+        // On n'affiche pas d'erreur rouge bloquante, le mode dégradé prend le relais
+        error.value = null;
+        return;
+      }
       
-      error.value = 'Impossible de récupérer les films. Veuillez réessayer.';
+      error.value = 'Impossible de récupérer les films. Mode hors-ligne sans cache.';
       console.error('Erreur lors de la récupération des films:', err);
     } finally {
       if (currentSearchId === searchId.value) {
@@ -192,21 +229,43 @@ export function useMovies() {
     });
   };
 
-  // Récupérer un film par ID
+  // Récupérer un film par ID avec résilience
   const fetchMovieById = async (id: string) => {
     try {
-      // Vérifier le cache
+      // 1. Vérifier le cache mémoire
       if (movieDetailsCache.value.has(id)) {
         return movieDetailsCache.value.get(id)!;
       }
 
-      const response = await axios.get<Movie>(`${API_BASE_URL}/${id}`);
+      // 2. Vérifier le cache persistant
+      const cachedDetail = cacheManager.get<Movie>(`${CacheKeys.MOVIE_DETAIL_PREFIX}${id}`);
+      if (cachedDetail && !cachedDetail.isStale) {
+        movieDetailsCache.value.set(id, cachedDetail.data);
+        return cachedDetail.data;
+      }
+
+      // 3. Appel API
+      const response = await apiClient.get<Movie>(`${API_BASE_URL}/${id}`);
       
-      // Mettre en cache
       movieDetailsCache.value.set(id, response.data);
+      cacheManager.set(`${CacheKeys.MOVIE_DETAIL_PREFIX}${id}`, response.data, 15 * 60 * 1000);
       
       return response.data;
     } catch (err) {
+      // Repli 1 : Cache persistant même si stale
+      const staleDetail = cacheManager.get<Movie>(`${CacheKeys.MOVIE_DETAIL_PREFIX}${id}`);
+      if (staleDetail) {
+        console.warn(`[useMovies] Utilisation du cache hors-ligne pour le film ${id}`);
+        return staleDetail.data;
+      }
+
+      // Repli 2 : Recherche dans le catalogue de films déjà en mémoire
+      const inStore = moviesStore.movies.find(m => m._id === id);
+      if (inStore) {
+        console.warn(`[useMovies] Détail retrouvé dans le store pour le film ${id}`);
+        return inStore;
+      }
+
       error.value = 'Impossible de récupérer les détails du film.';
       console.error('Erreur lors de la récupération du film:', err);
       throw err;
@@ -216,11 +275,12 @@ export function useMovies() {
   // Créer un nouveau film
   const createMovie = async (movieData: Omit<Movie, '_id'>) => {
     try {
-      const response = await axios.post<Movie>(API_BASE_URL, movieData);
+      const response = await apiClient.post<Movie>(API_BASE_URL, movieData);
       
       // Invalider le cache
       moviesCache.value.clear();
       movieDetailsCache.value.clear();
+      cacheManager.remove(CacheKeys.MOVIES);
       
       return response.data;
     } catch (err) {
@@ -229,9 +289,6 @@ export function useMovies() {
       throw err;
     }
   };
-
-  // Filtres courants (réactifs)
-  const currentFilters = ref<MovieFilters>({});
 
   // Filtrer les films par genre
   const filterByGenre = (genre: string | undefined) => {
@@ -307,6 +364,7 @@ export function useMovies() {
     currentPage,
     currentLimit,
     hasMore,
+    isFromCache,
     currentFilters,
     getAvailableGenres,
     fetchMovies,

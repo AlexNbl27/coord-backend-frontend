@@ -58,7 +58,7 @@ function createServer() {
   });
 
   // Santé
-  app.get('/health', (req, res) => {
+  const healthHandler = (req, res) => {
     const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
     res.json({
       status: 'OK',
@@ -66,7 +66,9 @@ function createServer() {
       workerPid: process.pid,
       timestamp: new Date().toISOString()
     });
-  });
+  };
+  app.get('/health', healthHandler);
+  app.get('/api/health', healthHandler);
 
   // Routes API
   app.use('/api/movies', movieRouter);

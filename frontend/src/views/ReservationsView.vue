@@ -114,6 +114,19 @@
                 Billet Valide
               </span>
               <span
+                v-else-if="booking.status === 'PENDING_SYNC'"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/90 text-cinema-dark backdrop-blur-md shadow-md"
+              >
+                <span class="w-2 h-2 rounded-full bg-cinema-dark animate-ping"></span>
+                En attente de synchronisation
+              </span>
+              <span
+                v-else-if="booking.status === 'CANCELLED_PENDING_SYNC'"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-600/90 text-white backdrop-blur-md shadow-md"
+              >
+                Annulation différée
+              </span>
+              <span
                 v-else
                 class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-500/80 text-white backdrop-blur-md shadow-md"
               >
@@ -180,7 +193,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3 mt-6 pt-4 border-t border-cinema-border/30">
               <div class="flex items-center gap-2">
                 <button
-                  v-if="booking.status === 'ACTIVE'"
+                  v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="downloadCalendarFile(booking)"
                   class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
                   title="Ajouter cet événement à mon calendrier"
@@ -189,7 +202,7 @@
                   <span>Agenda (.ics)</span>
                 </button>
                 <button
-                  v-if="booking.status === 'ACTIVE'"
+                  v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="printTicket"
                   class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
                   title="Imprimer ce billet"
@@ -201,7 +214,7 @@
 
               <div class="flex items-center gap-3 ml-auto">
                 <button
-                  v-if="booking.status === 'ACTIVE'"
+                  v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="confirmCancel(booking)"
                   :disabled="cancellingSlotId === booking.slotId"
                   class="px-4 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 hover:border-red-600 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
@@ -312,15 +325,15 @@ const toastMessage = ref('');
 const toastType = ref<'success' | 'error'>('success');
 
 const cancelledCount = computed(() => {
-  return bookings.value.filter(b => b.status === 'CANCELLED').length;
+  return bookings.value.filter(b => b.status === 'CANCELLED' || b.status === 'CANCELLED_PENDING_SYNC').length;
 });
 
 const displayedBookings = computed(() => {
   if (filter.value === 'ACTIVE') {
-    return bookings.value.filter(b => b.status === 'ACTIVE');
+    return bookings.value.filter(b => b.status === 'ACTIVE' || b.status === 'PENDING_SYNC');
   }
   if (filter.value === 'CANCELLED') {
-    return bookings.value.filter(b => b.status === 'CANCELLED');
+    return bookings.value.filter(b => b.status === 'CANCELLED' || b.status === 'CANCELLED_PENDING_SYNC');
   }
   return bookings.value;
 });

@@ -40,8 +40,12 @@ import Footer from './components/Footer.vue';
 import ReservationModal from './components/ReservationModal.vue';
 import AbMetricsModal from './components/AbMetricsModal.vue';
 import { useAbTest } from './composables/useAbTest';
+import { useSlots } from './composables/useSlots';
+import { useConnection } from './composables/useConnection';
 
 const { initAssignment } = useAbTest();
+const { connectSse } = useSlots();
+const { initConnectionWatcher } = useConnection();
 
 // Modal state
 const showReservationModal = ref(false);
@@ -81,7 +85,9 @@ provide('closeReservationModal', closeReservationModal);
 provide('openAbMetricsModal', openAbMetricsModal);
 
 onMounted(() => {
+  initConnectionWatcher();
   initAssignment();
+  connectSse();
 });
 </script>
 

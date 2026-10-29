@@ -20,6 +20,9 @@ const MOVIES_CATALOG = [
  */
 function sendSseEvent(res, eventName, data) {
   res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
+  if (typeof res.flush === 'function') {
+    res.flush();
+  }
 }
 
 /**

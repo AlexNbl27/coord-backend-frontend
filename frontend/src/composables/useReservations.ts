@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue';
-import axios from 'axios';
+import { apiClient } from '../services/apiClient';
+import { offlineQueue } from '../services/offlineQueue';
+import { useConnectionStore } from '../stores/connection';
 
 export interface UserBooking {
   bookingId: string;
@@ -10,7 +12,7 @@ export interface UserBooking {
   poster?: string;
   bookedAt: string;
   seat: string;
-  status: 'ACTIVE' | 'CANCELLED';
+  status: 'ACTIVE' | 'CANCELLED' | 'PENDING_SYNC' | 'CANCELLED_PENDING_SYNC';
 }
 
 const STORAGE_KEY = 'cineslot_my_bookings';
@@ -38,7 +40,7 @@ function loadInitialBookings(): UserBooking[] {
     const list: UserBooking[] = JSON.parse(raw);
     return list.map(b => ({
       ...b,
-      seat: b.seat || generateSeat(b.slotId, b.bookingId)
+      seat: b.seat || generateSeat(b.slotId, b.bookingId),
     }));
   } catch (e) {
     console.error('Erreur chargement réservations:', e);
@@ -54,9 +56,33 @@ function persistBookings() {
   }
 }
 
+// Initialisation des callbacks de réconciliation hors-ligne
+offlineQueue.registerCallbacks(
+  (tempBookingId: string, serverBookingId: string, slotId: string) => {
+    const target = bookings.value.find(b => b.bookingId === tempBookingId || b.slotId === slotId);
+    if (target) {
+      target.bookingId = serverBookingId;
+      target.status = 'ACTIVE';
+      persistBookings();
+      console.log(`[useReservations] Réservation ${slotId} confirmée par le serveur avec l'ID ${serverBookingId}`);
+    }
+  },
+  (slotId: string, movieTitle: string) => {
+    const target = bookings.value.find(b => b.slotId === slotId);
+    if (target) {
+      target.status = 'CANCELLED';
+      persistBookings();
+    }
+    try {
+      const store = useConnectionStore();
+      store.showToast(`Séance "${movieTitle}" déjà réservée par un tiers pendant la coupure`, 'error', 6000);
+    } catch {}
+  }
+);
+
 export function useReservations() {
   const activeBookings = computed(() => {
-    return bookings.value.filter(b => b.status === 'ACTIVE');
+    return bookings.value.filter(b => b.status === 'ACTIVE' || b.status === 'PENDING_SYNC');
   });
 
   const activeBookingsCount = computed(() => activeBookings.value.length);
@@ -69,13 +95,14 @@ export function useReservations() {
     hall: string;
     poster?: string;
     seat?: string;
+    status?: 'ACTIVE' | 'PENDING_SYNC';
   }) => {
     const seat = item.seat || generateSeat(item.slotId, item.bookingId);
     const newBooking: UserBooking = {
       ...item,
       seat,
       bookedAt: new Date().toISOString(),
-      status: 'ACTIVE'
+      status: item.status || 'ACTIVE',
     };
 
     // Évite les doublons
@@ -91,8 +118,8 @@ export function useReservations() {
 
   const cancelBooking = async (slotId: string): Promise<boolean> => {
     try {
-      await axios.delete(`/api/slots/${slotId}/reservations`, {
-        withCredentials: true
+      await apiClient.delete(`/api/slots/${slotId}/reservations`, {
+        withCredentials: true,
       });
       const target = bookings.value.find(b => b.slotId === slotId);
       if (target) {
@@ -110,6 +137,23 @@ export function useReservations() {
         }
         return true;
       }
+
+      // Si erreur réseau / backend inaccessible : mise en file d'attente hors-ligne & mise à jour optimiste
+      const isNetworkOrServer = !err.response || err.response.status >= 500;
+      if (isNetworkOrServer) {
+        console.warn(`[useReservations] Backend indisponible. Mise en file d'attente de l'annulation pour ${slotId}.`);
+        offlineQueue.enqueue('CANCEL_SLOT', { slotId });
+        const target = bookings.value.find(b => b.slotId === slotId);
+        if (target) {
+          target.status = 'CANCELLED_PENDING_SYNC';
+          persistBookings();
+        }
+        try {
+          useConnectionStore().showToast('Annulation enregistrée (synchronisation dès le retour du serveur)', 'info');
+        } catch {}
+        return true;
+      }
+
       console.error('Erreur annulation réservation:', err);
       throw err;
     }
@@ -143,7 +187,7 @@ export function useReservations() {
       `LOCATION:CinéSlot - ${booking.hall}`,
       'STATUS:CONFIRMED',
       'END:VEVENT',
-      'END:VCALENDAR'
+      'END:VCALENDAR',
     ].join('\r\n');
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
@@ -164,6 +208,6 @@ export function useReservations() {
     saveBooking,
     cancelBooking,
     deleteFromHistory,
-    downloadCalendarFile
+    downloadCalendarFile,
   };
 }
