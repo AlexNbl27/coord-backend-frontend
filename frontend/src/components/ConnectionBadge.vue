@@ -1,22 +1,20 @@
 <template>
   <!-- Badge de statut réseau intégré dans la barre de navigation -->
   <div
+    role="status"
+    :aria-label="`Statut de connexion réseau : ${statusLabel}`"
     class="inline-flex flex-row items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 whitespace-nowrap shrink-0"
     :class="statusBadgeClasses"
     :title="statusTooltip"
     style="display: inline-flex !important; flex-direction: row !important; align-items: center !important; white-space: nowrap !important;"
   >
-    <!-- Pastille lumineuse d'état -->
-    <span class="relative flex h-2 w-2 shrink-0">
-      <span
-        v-if="isOffline || isReconnecting"
-        class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-        :class="pingColorClass"
-      ></span>
-      <span
-        class="relative inline-flex rounded-full h-2 w-2 shrink-0"
-        :class="dotColorClass"
-      ></span>
+    <!-- Pastille lumineuse d'état avec icône pour double encodage -->
+    <span
+      class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
+      :class="isOffline ? 'bg-amber-400 text-cinema-dark' : isReconnecting ? 'bg-blue-400 text-cinema-dark animate-spin' : 'bg-emerald-400 text-cinema-dark'"
+      aria-hidden="true"
+    >
+      {{ isOffline ? '!' : isReconnecting ? '⟳' : '✓' }}
     </span>
 
     <!-- Libellé du statut -->
@@ -28,19 +26,21 @@
     <span
       v-if="pendingCount > 0"
       class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 leading-none"
+      :aria-label="`${pendingCount} opérations en attente de synchronisation`"
     >
       {{ pendingCount }} en attente
     </span>
 
     <!-- Séparateur & Bouton de reconnexion manuelle si hors-ligne -->
     <template v-if="isOffline">
-      <span class="w-px h-3 bg-amber-500/30 mx-0.5 shrink-0"></span>
+      <span class="w-px h-3 bg-amber-500/30 mx-0.5 shrink-0" aria-hidden="true"></span>
       <button
         @click="triggerManualReconnect"
         class="text-[11px] text-accent-gold hover:text-white transition-colors cursor-pointer font-semibold flex items-center gap-1 shrink-0 leading-none"
+        aria-label="Tenter une reconnexion immédiate"
         title="Tenter une reconnexion immédiate"
       >
-        <span>🔄</span>
+        <span aria-hidden="true">🔄</span>
         <span>Réessayer</span>
       </button>
     </template>
@@ -80,16 +80,5 @@ const statusBadgeClasses = computed(() => {
     return 'bg-amber-950/70 text-amber-300 border-amber-500/50 shadow-sm';
   }
   return 'bg-cinema-card/80 text-emerald-400 border-emerald-500/30';
-});
-
-const dotColorClass = computed(() => {
-  if (isReconnecting.value) return 'bg-blue-400';
-  if (isOffline.value) return 'bg-amber-400';
-  return 'bg-emerald-400';
-});
-
-const pingColorClass = computed(() => {
-  if (isReconnecting.value) return 'bg-blue-400';
-  return 'bg-amber-400';
 });
 </script>

@@ -5,7 +5,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <div class="flex items-center gap-3">
-            <span class="text-3xl">🎬</span>
+            <span class="text-3xl" aria-hidden="true">🎬</span>
             <h1 class="text-3xl font-extrabold text-white tracking-tight">Catalogue des films</h1>
           </div>
           <p class="text-cinema-textMuted text-sm mt-1">
@@ -43,33 +43,37 @@
           <button
             v-if="searchQuery"
             @click="searchQuery = ''"
+            :aria-label="`Supprimer le filtre de recherche : ${searchQuery}`"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-accent-gold/15 text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/25 transition-colors cursor-pointer"
           >
             <span>"{{ searchQuery }}"</span>
-            <span class="font-bold">✕</span>
+            <span class="font-bold" aria-hidden="true">✕</span>
           </button>
 
           <button
             v-if="selectedGenre"
             @click="selectedGenre = ''"
+            :aria-label="`Supprimer le filtre de genre : ${selectedGenre}`"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-accent-gold/15 text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/25 transition-colors cursor-pointer"
           >
             <span>Genre: {{ selectedGenre }}</span>
-            <span class="font-bold">✕</span>
+            <span class="font-bold" aria-hidden="true">✕</span>
           </button>
 
           <button
             v-if="selectedMinRating"
             @click="selectedMinRating = undefined"
+            :aria-label="`Supprimer le filtre de note minimale : ${selectedMinRating} étoiles`"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-accent-gold/15 text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/25 transition-colors cursor-pointer"
           >
             <span>Note ≥ {{ selectedMinRating }}★</span>
-            <span class="font-bold">✕</span>
+            <span class="font-bold" aria-hidden="true">✕</span>
           </button>
 
           <button
             v-if="hasActiveFilters"
             @click="resetAllFilters"
+            aria-label="Supprimer tous les filtres actifs"
             class="text-xs text-cinema-textMuted hover:text-white underline ml-2 cursor-pointer"
           >
             Tout effacer
@@ -78,9 +82,11 @@
 
         <!-- Sélecteur de tri -->
         <div class="flex items-center gap-2.5 self-start sm:self-auto">
-          <label class="text-xs text-cinema-textMuted font-medium whitespace-nowrap">Trier par :</label>
+          <label for="movies-sort-select" class="text-xs text-cinema-textMuted font-medium whitespace-nowrap">Trier par :</label>
           <select
+            id="movies-sort-select"
             v-model="currentSort"
+            aria-label="Trier les films"
             class="h-9 px-3 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs focus:ring-1 focus:ring-accent-gold focus:outline-none transition-colors"
           >
             <option value="rating_desc">Note IMDB (décroissante)</option>
@@ -96,8 +102,8 @@
         <div v-for="n in 8" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
       </div>
       <div v-else-if="sortedMovies.length === 0" class="text-center py-16 bg-cinema-card/30 rounded-2xl border border-cinema-border/40">
-        <span class="text-4xl block mb-2">🎬</span>
-        <h3 class="text-lg font-bold text-white mb-1">Aucun film ne correspond à votre recherche</h3>
+        <span class="text-4xl block mb-2" aria-hidden="true">🎬</span>
+        <h2 class="text-lg font-bold text-white mb-1">Aucun film ne correspond à votre recherche</h2>
         <p class="text-xs text-cinema-textMuted max-w-sm mx-auto mb-4">
           Essayez d'ajuster vos critères de recherche ou réinitialisez les filtres.
         </p>
@@ -120,14 +126,22 @@
 
     <!-- Modal de détails enrichie -->
     <transition name="modal">
-      <div v-if="selectedMovie" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="selectedMovie = null">
-        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl">
+      <div
+        v-if="selectedMovie"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="movies-preview-title"
+        @keydown.esc="selectedMovie = null"
+        @click.self="selectedMovie = null"
+      >
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl focus:outline-none" tabindex="-1">
           <button
             @click="selectedMovie = null"
             class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-cinema-textMuted hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xl"
-            aria-label="Fermer"
+            aria-label="Fermer la prévisualisation du film"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
           
           <div class="flex flex-col md:flex-row gap-6">
@@ -137,10 +151,10 @@
                 <img
                   v-if="selectedMovie.poster"
                   :src="selectedMovie.poster"
-                  :alt="selectedMovie.title"
+                  :alt="`Affiche de ${selectedMovie.title}`"
                   class="w-full h-full object-cover"
                 />
-                <div v-else class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-500 text-sm">
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-500 text-sm" aria-hidden="true">
                   Pas d'affiche
                 </div>
               </div>
@@ -150,7 +164,7 @@
             <div class="flex-1">
               <div class="flex items-start justify-between">
                 <div>
-                  <h2 class="text-2xl font-bold text-white">{{ selectedMovie.title }}</h2>
+                  <h2 id="movies-preview-title" class="text-2xl font-bold text-white">{{ selectedMovie.title }}</h2>
                   <p class="text-gray-400 text-xs mt-0.5">{{ selectedMovie.year }} • {{ selectedMovie.duration }} min • Dir. {{ selectedMovie.director }}</p>
                 </div>
                 <div class="flex items-center gap-1 bg-accent-gold/15 px-2.5 py-1 rounded-full border border-accent-gold/30">
@@ -178,7 +192,7 @@
               <div class="mb-5 p-3.5 bg-cinema-darker/70 rounded-xl border border-cinema-border/50">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-xs font-bold uppercase tracking-wider text-accent-gold flex items-center gap-1.5">
-                    <span>🎟️</span>
+                    <span aria-hidden="true">🎟️</span>
                     <span>Séances programmées ({{ movieSlots.length }})</span>
                   </span>
                   <span v-if="movieSlots.length > 0" class="text-[10px] text-emerald-400 font-medium">Temps réel</span>
@@ -189,9 +203,13 @@
                     v-for="slot in movieSlots"
                     :key="slot.id"
                     @click="handleReserveFromModal(slot.id)"
+                    :aria-label="`Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}`"
                     class="group px-3 py-2 rounded-lg bg-cinema-card hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
                   >
-                    <span>🕒 {{ formatSlotTime(slot.startsAt) }}</span>
+                    <span class="flex items-center gap-1">
+                      <span aria-hidden="true">🕒</span>
+                      <span>{{ formatSlotTime(slot.startsAt) }}</span>
+                    </span>
                     <span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 group-hover:bg-black/20 text-cinema-textMuted group-hover:text-cinema-dark">
                       {{ slot.hall }}
                     </span>

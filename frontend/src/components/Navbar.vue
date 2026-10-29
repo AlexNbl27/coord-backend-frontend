@@ -1,10 +1,10 @@
 <template>
-  <nav class="navbar">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <header class="navbar">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" aria-label="Navigation principale">
       <div class="flex items-center justify-between h-16">
         <!-- Logo -->
-        <router-link to="/" class="flex items-center gap-3">
-          <div class="relative">
+        <router-link to="/" class="flex items-center gap-3" aria-label="CinéSlot - Accueil">
+          <div class="relative" aria-hidden="true">
             <div class="w-10 h-10 bg-gradient-to-br from-accent-gold to-accent-red rounded-xl flex items-center justify-center shadow-md">
               <span class="text-xl font-black text-cinema-dark">C</span>
             </div>
@@ -59,9 +59,10 @@
           <router-link
             to="/reservations"
             class="relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cinema-card hover:bg-cinema-border/80 border border-cinema-border text-cinema-text text-xs font-semibold transition-all hover:border-accent-gold/50 shadow-sm"
+            aria-label="Mes Billets de cinéma"
             title="Consulter mes billets"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
             <span class="hidden sm:inline">Mes Billets</span>
@@ -77,9 +78,10 @@
           <button
             @click="handleOpenAbModal"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/40 text-accent-gold text-xs font-bold transition-all shadow-sm cursor-pointer"
+            aria-label="Consulter les métriques du Test A/B"
             title="Consulter les métriques du Test A/B"
           >
-            <span>🧪</span>
+            <span aria-hidden="true">🧪</span>
             <span class="hidden sm:inline">Test A/B :</span>
             <span>{{ variant }}</span>
           </button>
@@ -87,9 +89,12 @@
           <!-- Mobile menu button -->
           <button
             @click="toggleMobileMenu"
-            class="md:hidden p-2 rounded-full hover:bg-cinema-card transition-colors duration-200"
+            :aria-expanded="mobileMenuOpen ? 'true' : 'false'"
+            aria-controls="mobile-nav-panel"
+            aria-label="Menu principal de navigation"
+            class="md:hidden p-2 rounded-full hover:bg-cinema-card transition-colors duration-200 cursor-pointer"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cinema-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cinema-text" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
             </svg>
           </button>
@@ -103,7 +108,13 @@
         enter-from-class="opacity-0 scale-95 -translate-y-2"
         leave-to-class="opacity-0 scale-95 -translate-y-2"
       >
-        <div v-if="mobileMenuOpen" class="md:hidden pb-4">
+        <div
+          v-if="mobileMenuOpen"
+          id="mobile-nav-panel"
+          class="md:hidden pb-4"
+          role="region"
+          aria-label="Menu mobile"
+        >
           <div class="flex flex-col gap-3 pt-4 border-t border-cinema-border/50">
             <router-link
               to="/"
@@ -144,7 +155,7 @@
               @click="mobileMenuOpen = false"
             >
               <span class="flex items-center gap-2">
-                <span>🎫</span>
+                <span aria-hidden="true">🎫</span>
                 <span>Mes Billets</span>
               </span>
               <span
@@ -157,8 +168,8 @@
           </div>
         </div>
       </transition>
-    </div>
-  </nav>
+    </nav>
+  </header>
 </template>
 
 <script setup lang="ts">

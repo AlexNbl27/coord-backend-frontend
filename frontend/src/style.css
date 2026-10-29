@@ -95,7 +95,7 @@
   }
 
   .badge-genre {
-    @apply bg-accent-purple/20 text-accent-purple border border-accent-purple/30 mr-1;
+    @apply bg-accent-purple/20 text-purple-300 border border-accent-purple/30 mr-1;
   }
 
   .badge-rating {

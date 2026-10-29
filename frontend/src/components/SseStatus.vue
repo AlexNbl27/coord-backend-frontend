@@ -1,50 +1,26 @@
 <template>
   <div class="fixed bottom-4 right-4 z-50">
     <div
-      class="flex items-center gap-3 px-4 py-2 rounded-full backdrop-blur-md bg-white/10 border border-white/20 shadow-lg"
-      :class="{
-        'opacity-100': showStatus,
-        'opacity-0 pointer-events-none': !showStatus
-      }"
-      @mouseenter="showStatus = true"
-      @mouseleave="showStatus = false"
+      role="status"
+      :aria-label="sseConnected ? 'Synchronisation SSE en direct active' : 'Flux SSE en direct déconnecté'"
+      class="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full backdrop-blur-md bg-cinema-card/95 border border-cinema-border shadow-lg transition-all"
     >
-      <!-- Indicateur de connexion -->
-      <div
-        class="w-3 h-3 rounded-full transition-all duration-300"
-        :class="{
-          'bg-green-500 shadow-gold': sseConnected,
-          'bg-red-500 animate-pulse': !sseConnected
-        }"
-      ></div>
-      
-      <!-- Texte de statut -->
-      <transition name="fade" mode="out-in">
-        <span
-          v-if="sseConnected"
-          key="connected"
-          class="text-sm font-medium text-green-400"
-        >
-          Connexion SSE active
-        </span>
-        <span
-          v-else
-          key="disconnected"
-          class="text-sm font-medium text-red-400"
-        >
-          {{ reconnecting ? 'Reconnexion...' : 'SSE déconnecté' }}
-        </span>
-      </transition>
-      
-      <!-- Icône de synchronization -->
-      <div
-        v-if="sseConnected"
-        class="text-accent-gold"
+      <!-- Indicateur double encodé (couleur + icône) -->
+      <span
+        class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
+        :class="sseConnected ? 'bg-emerald-500 text-cinema-dark shadow-sm' : 'bg-red-500 text-white animate-pulse'"
+        aria-hidden="true"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
-        </svg>
-      </div>
+        {{ sseConnected ? '✓' : '!' }}
+      </span>
+
+      <!-- Texte de statut -->
+      <span
+        class="text-xs font-semibold"
+        :class="sseConnected ? 'text-emerald-400' : 'text-red-400'"
+      >
+        {{ sseConnected ? 'En direct' : (reconnecting ? 'Reconnexion...' : 'Déconnecté') }}
+      </span>
     </div>
   </div>
 </template>
@@ -55,10 +31,8 @@ import { useSlots } from '../composables/useSlots';
 
 const { sseConnected, connectSse, disconnectSse } = useSlots();
 
-const showStatus = ref(false);
 const reconnecting = ref(false);
 
-// Fonction de reconnexion automatique
 const reconnect = () => {
   reconnecting.value = true;
   disconnectSse();
@@ -69,27 +43,9 @@ const reconnect = () => {
   }, 3000);
 };
 
-// Surveiller la perte de connexion pour reconnecter si nécessaire
 watch(sseConnected, (connected) => {
   if (!connected && !reconnecting.value) {
     reconnect();
   }
 });
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.fade-enter-to,
-.fade-leave-from {
-  opacity: 1;
-}
-</style>

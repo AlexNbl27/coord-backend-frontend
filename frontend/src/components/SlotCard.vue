@@ -20,21 +20,22 @@
           </p>
         </div>
         
-        <!-- Badge de statut -->
+        <!-- Badge de statut (double encodage icône + texte pour daltonisme) -->
         <span
-          class="badge whitespace-nowrap shrink-0"
+          class="badge whitespace-nowrap shrink-0 inline-flex items-center gap-1.5"
           :class="{
             'badge-available': slot.status === 'AVAILABLE',
             'badge-booked': slot.status === 'BOOKED'
           }"
         >
+          <span aria-hidden="true" class="font-black text-[11px]">{{ slot.status === 'AVAILABLE' ? '✓' : '⊘' }}</span>
           {{ slot.status === 'AVAILABLE' ? 'Disponible' : 'Complet' }}
         </span>
       </div>
 
       <!-- Horaires -->
       <div class="flex items-center gap-2 mb-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cinema-textMuted shrink-0" viewBox="0 0 20 20" fill="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cinema-textMuted shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
         </svg>
         <span class="text-cinema-text text-xs font-semibold">
@@ -43,7 +44,7 @@
       </div>
 
       <!-- Hall / Technology Tags -->
-      <div class="flex items-center gap-1.5 flex-wrap mb-4">
+      <div class="flex items-center gap-1.5 flex-wrap mb-4" aria-label="Caractéristiques de la séance">
         <span
           v-if="slot.hall && slot.hall.includes('IMAX')"
           class="px-2 py-0.5 rounded text-xs font-black tracking-wider bg-blue-500/15 text-blue-400 border border-blue-500/30"
@@ -77,23 +78,25 @@
         v-if="slot.status === 'AVAILABLE'"
         @click.stop="handleReserve"
         class="w-full btn btn-primary text-xs py-2.5 cursor-pointer"
+        :aria-label="`Réserver une place pour ${slot.movieTitle} à ${formattedStartsAt}`"
         :disabled="isReserving"
+        :aria-busy="isReserving ? 'true' : 'false'"
       >
         <span v-if="!isReserving" class="flex items-center justify-center gap-2">
-          <span>🎟️</span>
+          <span aria-hidden="true">🎟️</span>
           <span>{{ bookingButtonLabel }}</span>
           <span v-if="!sseConnected" class="text-[10px] text-amber-200 opacity-80">(différé)</span>
         </span>
         <span v-else class="flex items-center justify-center gap-2">
-          <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          <span>Réservation...</span>
+          <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
+          <span>Réservation en cours...</span>
         </span>
       </button>
 
       <!-- Message si séance complète ou en attente de synchro -->
       <div v-else class="text-center py-2">
         <span v-if="isPendingSync" class="inline-flex items-center gap-1.5 text-xs text-amber-300 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/30">
-          <span>⏳</span>
+          <span aria-hidden="true">⏳</span>
           <span>En attente de synchronisation</span>
         </span>
         <p v-else class="text-xs text-cinema-textMuted/70 font-medium">
@@ -141,51 +144,30 @@ const formattedStartsAt = computed(() => {
 // Gérer la réservation
 const handleReserve = async () => {
   isReserving.value = true;
-  
+  emit('reserve', props.slot);
+
   try {
-    // Générer un ID client aléatoire
-    const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
-    
-    // Émettre l'événement de réservation
-    emit('reserve', props.slot.id, customerId);
-    
-  } catch (err) {
-    console.error('Erreur lors de la réservation:', err);
-  } finally {
+    // Si la fonction modal est disponible, l'appeler
+    if (openReservationModal) {
+      setTimeout(() => {
+        openReservationModal(
+          `BK-${props.slot.id}-${Date.now().toString().slice(-4)}`,
+          props.slot.movieTitle,
+          props.slot.startsAt,
+          props.slot.hall
+        );
+        isReserving.value = false;
+      }, 400);
+    } else {
+      isReserving.value = false;
+    }
+  } catch (error) {
+    console.error('Erreur réservation:', error);
     isReserving.value = false;
   }
 };
 
-// Gérer le clic sur la carte
 const handleSlotClick = () => {
-  if (props.slot.status === 'AVAILABLE') {
-    // Ne pas déclencher si on clique sur le bouton de réservation
-  } else {
-    emit('click', props.slot);
-  }
+  emit('click', props.slot);
 };
 </script>
-
-<style scoped>
-/* Animation pour le bouton */
-.slot-card:hover:not(.slot-card-booked) {
-  border-color: theme('colors.accent.gold');
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
-}
-
-/* Style pour les séances disponibles */
-.slot-card-available {
-  border-color: theme('colors.cinema.border');
-}
-
-.slot-card-available:hover {
-  border-color: theme('colors.accent.gold');
-  transform: translateY(-2px);
-}
-
-/* Style pour les séances réservées */
-.slot-card-booked {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-</style>
