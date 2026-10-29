@@ -54,17 +54,9 @@ export const useConnectionStore = defineStore('connection', () => {
     }
 
     if (status.value !== 'ONLINE') {
-      const wasTrulyOffline = (status.value === 'OFFLINE' || status.value === 'RECONNECTING') &&
-        offlineStartTime && (Date.now() - offlineStartTime > 2500);
-
       status.value = 'ONLINE';
       lastSyncTime.value = Date.now();
       offlineStartTime = null;
-
-      // Uniquement si on était réellement en coupure avérée, notification discrète de succès
-      if (wasTrulyOffline) {
-        showToast('Connexion rétablie · Données synchronisées', 'success', 3000);
-      }
     }
   };
 

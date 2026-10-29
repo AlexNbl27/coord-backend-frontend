@@ -148,9 +148,6 @@ export function useReservations() {
           target.status = 'CANCELLED_PENDING_SYNC';
           persistBookings();
         }
-        try {
-          useConnectionStore().showToast('Annulation enregistrée (synchronisation dès le retour du serveur)', 'info');
-        } catch {}
         return true;
       }
 
