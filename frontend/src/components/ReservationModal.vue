@@ -2,11 +2,11 @@
   <transition name="modal">
     <div
       v-if="show"
+      ref="dialogOverlayRef"
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="reservation-modal-title"
-      @keydown="handleKeyDown"
       @click.self="close"
     >
       <div
@@ -131,9 +131,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, toRef } from 'vue';
 import { useRouter } from 'vue-router';
 import { useReservations } from '../composables/useReservations';
+import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 
 const props = defineProps<{
   show: boolean;
@@ -147,8 +148,20 @@ const emit = defineEmits(['close']);
 const router = useRouter();
 const { bookings, downloadCalendarFile } = useReservations();
 
+const dialogOverlayRef = ref<HTMLElement | null>(null);
 const modalContentRef = ref<HTMLElement | null>(null);
 const closeButtonRef = ref<HTMLButtonElement | null>(null);
+
+const close = () => {
+  emit('close');
+};
+
+useAccessibleDialog({
+  isOpen: toRef(props, 'show'),
+  dialogRef: dialogOverlayRef,
+  initialFocusRef: closeButtonRef,
+  onClose: close,
+});
 
 const currentBooking = computed(() => {
   return bookings.value.find(b => b.bookingId === props.bookingId || b.slotId === props.bookingId);
@@ -170,10 +183,6 @@ const assignedSeat = computed(() => {
   }
   return 'Rangée E · Fauteuil 14';
 });
-
-const close = () => {
-  emit('close');
-};
 
 const goToReservations = () => {
   close();
@@ -197,49 +206,5 @@ const formattedStartsAt = computed(() => {
     hour: '2-digit',
     minute: '2-digit',
   });
-});
-
-// Gestion du piège de focus et de la touche Échap
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    close();
-    return;
-  }
-
-  if (event.key === 'Tab' && modalContentRef.value) {
-    const focusable = Array.from(modalContentRef.value.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    ));
-    if (!focusable.length) return;
-
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-
-    if (event.shiftKey) {
-      if (document.activeElement === first || document.activeElement === modalContentRef.value) {
-        event.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-  }
-};
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown, true);
-  nextTick(() => {
-    if (closeButtonRef.value) {
-      closeButtonRef.value.focus();
-    }
-  });
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown, true);
 });
 </script>

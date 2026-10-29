@@ -107,15 +107,16 @@
     <transition name="modal">
       <div
         v-if="selectedMovie"
+        ref="movieModalRef"
         class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
         role="dialog"
         aria-modal="true"
         aria-labelledby="home-preview-title"
-        @keydown.esc="selectedMovie = null"
         @click.self="selectedMovie = null"
       >
         <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl focus:outline-none" tabindex="-1">
           <button
+            ref="movieModalCloseBtnRef"
             @click="selectedMovie = null"
             class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-cinema-textMuted hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xl"
             aria-label="Fermer la prévisualisation du film"
@@ -220,6 +221,7 @@ import { useMovies } from '../composables/useMovies';
 import { useSlots } from '../composables/useSlots';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
+import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 import MovieCard from '../components/MovieCard.vue';
 import SlotCard from '../components/SlotCard.vue';
 import type { Movie } from '../composables/useMovies';
@@ -237,6 +239,19 @@ const openReservationModal = inject<(bookingId: string, movieTitle: string, star
 const loadingPopular = ref(false);
 const loadingRecent = ref(false);
 const selectedMovie = ref<Movie | null>(null);
+
+const movieModalRef = ref<HTMLElement | null>(null);
+const movieModalCloseBtnRef = ref<HTMLButtonElement | null>(null);
+const isMovieModalOpen = computed(() => selectedMovie.value !== null);
+
+useAccessibleDialog({
+  isOpen: isMovieModalOpen,
+  dialogRef: movieModalRef,
+  initialFocusRef: movieModalCloseBtnRef,
+  onClose: () => {
+    selectedMovie.value = null;
+  },
+});
 
 const popularMovies = computed(() => moviesStore.popularMovies);
 const availableSlots = computed(() => slotsStore.availableSlots);
