@@ -50,22 +50,24 @@
           <!-- Indicateur de Connexion & Résilience -->
           <ConnectionBadge class="hidden sm:inline-flex" />
 
-          <!-- Sélecteur de session spectateur (démo) -->
-          <select
-            :value="currentUser ? currentUser.id : 'anonymous'"
-            @change="handleSessionChange"
-            aria-label="Compte spectateur de démonstration"
-            class="hidden lg:inline-block px-2.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium cursor-pointer focus:outline-none focus:border-accent-gold"
-          >
-            <option
-              v-for="user in demoUsers"
-              :key="user.id"
-              :value="user.id"
+          <!-- Session spectateur -->
+          <div v-if="currentUser" class="hidden lg:flex items-center gap-2">
+            <span class="text-cinema-text text-xs font-medium">{{ currentUser.name }}</span>
+            <button
+              type="button"
+              class="px-2.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border text-cinema-textMuted hover:text-cinema-text text-xs font-medium cursor-pointer"
+              @click="handleLogout"
             >
-              {{ user.name }}
-            </option>
-            <option value="anonymous">Déconnecté (401)</option>
-          </select>
+              Se déconnecter
+            </button>
+          </div>
+          <router-link
+            v-else
+            to="/login"
+            class="hidden lg:inline-block px-2.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium hover:border-accent-gold/50"
+          >
+            Se connecter
+          </router-link>
 
           <!-- User / Mes Billets Quick Action Button -->
           <router-link
@@ -160,22 +162,25 @@
             >
               À propos
             </router-link>
-            <div class="pt-3 border-t border-cinema-border/30">
-              <select
-                :value="currentUser ? currentUser.id : 'anonymous'"
-                @change="handleSessionChange"
-                aria-label="Compte spectateur mobile"
-                class="w-full px-3 py-2 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium"
-              >
-                <option
-                  v-for="user in demoUsers"
-                  :key="user.id"
-                  :value="user.id"
+            <div class="pt-3 border-t border-cinema-border/30 flex items-center justify-between gap-2">
+              <template v-if="currentUser">
+                <span class="text-xs text-cinema-text truncate">{{ currentUser.name }}</span>
+                <button
+                  type="button"
+                  @click="() => { handleLogout(); mobileMenuOpen = false; }"
+                  class="px-3 py-1.5 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium hover:border-accent-gold/50 cursor-pointer shrink-0"
                 >
-                  {{ user.name }}
-                </option>
-                <option value="anonymous">Déconnecté (401)</option>
-              </select>
+                  Se déconnecter
+                </button>
+              </template>
+              <router-link
+                v-else
+                to="/login"
+                @click="mobileMenuOpen = false"
+                class="w-full text-center px-3 py-2 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium hover:border-accent-gold/50"
+              >
+                Se connecter
+              </router-link>
             </div>
             <router-link
               to="/reservations"
@@ -193,6 +198,22 @@
                 {{ activeBookingsCount }}
               </span>
             </router-link>
+            <button
+              v-if="currentUser"
+              type="button"
+              class="text-left text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2 cursor-pointer"
+              @click="mobileMenuOpen = false; handleLogout()"
+            >
+              Se déconnecter ({{ currentUser.name }})
+            </button>
+            <router-link
+              v-else
+              to="/login"
+              class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2"
+              @click="mobileMenuOpen = false"
+            >
+              Se connecter
+            </router-link>
           </div>
         </div>
       </transition>
@@ -207,17 +228,21 @@ import ConnectionBadge from './ConnectionBadge.vue';
 import { useSlotsStore } from '../stores/slots';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
+import { useRouter } from 'vue-router';
 import { useSession } from '../composables/useSession';
 
 const slotsStore = useSlotsStore();
 const { sseConnected } = storeToRefs(slotsStore);
 const { activeBookingsCount } = useReservations();
 const { variant } = useAbTest();
-const { currentUser, demoUsers, initSession, switchUser } = useSession();
+const { currentUser, initSession, logout } = useSession();
+const router = useRouter();
 
-const handleSessionChange = (event: Event) => {
-  const select = event.target as HTMLSelectElement;
-  void switchUser(select.value);
+const handleLogout = async () => {
+  await logout();
+  if (router.currentRoute.value.meta.requiresAuth) {
+    await router.push('/');
+  }
 };
 
 const openAbMetricsModal = inject<() => void>('openAbMetricsModal');

@@ -11,10 +11,14 @@ export function securityHeaders(_req, res, next) {
     'Content-Security-Policy',
     "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
   );
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 }
 
-export function createRateLimiter({ windowMs = 60_000, max = 300 } = {}) {
+// shortcut: in-memory per worker (cluster multiplies the real limit, reset on restart), move to Redis if scaled out.
+export function createRateLimiter({ windowMs = 60_000, max = 300, keyFn = (req) => req.ip || req.socket?.remoteAddress || 'unknown' } = {}) {
   const hits = new Map();
 
   const cleanup = setInterval(() => {
@@ -33,12 +37,12 @@ export function createRateLimiter({ windowMs = 60_000, max = 300 } = {}) {
     }
     const effectiveMax = Number(process.env.RATE_LIMIT_MAX) || max;
     const now = Date.now();
-    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-    let entry = hits.get(ip);
+    const key = keyFn(req);
+    let entry = hits.get(key);
 
     if (!entry || now > entry.resetAt) {
       entry = { count: 0, resetAt: now + windowMs };
-      hits.set(ip, entry);
+      hits.set(key, entry);
     }
 
     entry.count += 1;

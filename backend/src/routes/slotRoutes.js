@@ -9,7 +9,7 @@ import {
   resetAllSlots
 } from '../services/slotService.js';
 import { requireSession } from '../services/sessionService.js';
-import { isPlainString, isValidEntityId } from '../utils/securityMiddleware.js';
+import { isValidEntityId } from '../utils/securityMiddleware.js';
 
 export const slotRouter = Router();
 
@@ -28,21 +28,17 @@ slotRouter.get('/', async (_req, res, next) => {
   }
 });
 
-slotRouter.post('/:id/reservations', async (req, res, next) => {
+slotRouter.post('/:id/reservations', requireSession, async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!isValidEntityId(id)) {
       return res.status(400).json({ message: 'Identifiant de créneau invalide' });
     }
-    const rawCustomerId = req.body?.customerId;
-    if (rawCustomerId !== undefined && !isPlainString(rawCustomerId, 100)) {
-      return res.status(400).json({ message: 'Identifiant client invalide' });
-    }
     const visitorId = req.cookies?.[COOKIE_NAME];
     const isMeasured = req.headers['x-ab-measure'] === 'true';
     const rawTickets = Array.isArray(req.body?.tickets) ? req.body.tickets : null;
 
-    const booking = await reserveSlot(id, rawCustomerId, visitorId, isMeasured, req.sessionUser, rawTickets);
+    const booking = await reserveSlot(id, req.body?.customerId ?? null, visitorId, isMeasured, req.sessionUser, rawTickets);
     return res.status(201).json(booking);
   } catch (err) {
     if (err.status) {

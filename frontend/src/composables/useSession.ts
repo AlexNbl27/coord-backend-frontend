@@ -7,69 +7,75 @@ export interface SpectatorUser {
   email: string;
 }
 
-const DEFAULT_DEMO_USERS: SpectatorUser[] = [
-  { id: 'spectator-1', name: 'Hélène Durand', email: 'helene.durand@cineslot.test' },
-  { id: 'spectator-2', name: 'Lucas Martin', email: 'lucas.martin@cineslot.test' }
-];
+const currentUser = ref<SpectatorUser | null>(null);
+const googleEnabled = ref(false);
+let initPromise: Promise<void> | null = null;
 
-const currentUser = ref<SpectatorUser | null>(DEFAULT_DEMO_USERS[0]);
-const demoUsers = ref<SpectatorUser[]>(DEFAULT_DEMO_USERS);
-const initialized = ref(false);
+const REQUEST_OPTIONS = { withCredentials: true, skipOfflineTrigger: true };
+
+function apiErrorMessage(err: any): string {
+  const data = err?.response?.data;
+  if (err?.response?.status === 429) return 'Trop de tentatives. Réessayez dans quelques minutes.';
+  return data?.detail || data?.message || 'Le service est momentanément indisponible.';
+}
 
 export function useSession() {
-  const initSession = async () => {
-    if (initialized.value) return;
-    initialized.value = true;
-    try {
-      const response = await apiClient.get<{
-        authenticated: boolean;
-        user: SpectatorUser | null;
-        demoUsers?: SpectatorUser[];
-      }>('/api/session', {
-        withCredentials: true,
-        skipOfflineTrigger: true
+  const initSession = () => {
+    initPromise ??= apiClient
+      .get<{ authenticated: boolean; user: SpectatorUser | null; googleEnabled?: boolean }>('/api/session', REQUEST_OPTIONS)
+      .then((response) => {
+        currentUser.value = response.data.authenticated ? response.data.user : null;
+        googleEnabled.value = Boolean(response.data.googleEnabled);
+      })
+      .catch(() => {
+        // Hors-ligne ou tests unitaires : on reste anonyme
       });
+    return initPromise;
+  };
 
-      if (response.data.demoUsers?.length) {
-        demoUsers.value = response.data.demoUsers;
-      }
-
-      if (response.data.authenticated && response.data.user) {
-        currentUser.value = response.data.user;
-      } else if (sessionStorage.getItem('cineslot_logged_out') === '1') {
-        currentUser.value = null;
-      } else {
-        await switchUser('spectator-1');
-      }
-    } catch {
-      // Keep default demo user state in offline or unit-test environments
+  // Chaque action renvoie null si OK, sinon le message d'erreur à afficher
+  const login = async (email: string, password: string): Promise<string | null> => {
+    try {
+      const response = await apiClient.post<{ user: SpectatorUser }>('/api/session/login', { email, password }, REQUEST_OPTIONS);
+      currentUser.value = response.data.user;
+      return null;
+    } catch (err) {
+      return apiErrorMessage(err);
     }
   };
 
-  const switchUser = async (userId: string) => {
-    if (userId === 'anonymous') {
-      await logout();
-      return;
-    }
-
-    sessionStorage.removeItem('cineslot_logged_out');
+  const register = async (email: string, name: string, password: string): Promise<string | null> => {
     try {
-      const response = await apiClient.post<{ authenticated: boolean; user: SpectatorUser }>(
-        '/api/session/login',
-        { userId },
-        { withCredentials: true, skipOfflineTrigger: true }
-      );
+      const response = await apiClient.post<{ user: SpectatorUser }>('/api/session/register', { email, name, password }, REQUEST_OPTIONS);
       currentUser.value = response.data.user;
-    } catch {
-      const localMatch = demoUsers.value.find((u) => u.id === userId) ?? null;
-      currentUser.value = localMatch;
+      return null;
+    } catch (err) {
+      return apiErrorMessage(err);
+    }
+  };
+
+  const forgotPassword = async (email: string): Promise<string | null> => {
+    try {
+      await apiClient.post('/api/session/forgot-password', { email }, REQUEST_OPTIONS);
+      return null;
+    } catch (err) {
+      return apiErrorMessage(err);
+    }
+  };
+
+  const resetPassword = async (token: string, password: string): Promise<string | null> => {
+    try {
+      await apiClient.post('/api/session/reset-password', { token, password }, REQUEST_OPTIONS);
+      return null;
+    } catch (err) {
+      return apiErrorMessage(err);
     }
   };
 
   const logout = async () => {
     sessionStorage.setItem('cineslot_logged_out', '1');
     try {
-      await apiClient.post('/api/session/logout', {}, { withCredentials: true, skipOfflineTrigger: true });
+      await apiClient.post('/api/session/logout', {}, REQUEST_OPTIONS);
     } finally {
       currentUser.value = null;
     }
@@ -77,9 +83,12 @@ export function useSession() {
 
   return {
     currentUser,
-    demoUsers,
+    googleEnabled,
     initSession,
-    switchUser,
+    login,
+    register,
+    forgotPassword,
+    resetPassword,
     logout
   };
 }
