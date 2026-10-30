@@ -162,22 +162,25 @@
             >
               À propos
             </router-link>
-            <div class="pt-3 border-t border-cinema-border/30">
-              <select
-                :value="currentUser ? currentUser.id : 'anonymous'"
-                @change="handleSessionChange"
-                aria-label="Compte spectateur mobile"
-                class="w-full px-3 py-2 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium"
-              >
-                <option
-                  v-for="user in demoUsers"
-                  :key="user.id"
-                  :value="user.id"
+            <div class="pt-3 border-t border-cinema-border/30 flex items-center justify-between gap-2">
+              <template v-if="currentUser">
+                <span class="text-xs text-cinema-text truncate">{{ currentUser.name }}</span>
+                <button
+                  type="button"
+                  @click="() => { handleLogout(); mobileMenuOpen = false; }"
+                  class="px-3 py-1.5 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium hover:border-accent-gold/50 cursor-pointer shrink-0"
                 >
-                  {{ user.name }}
-                </option>
-                <option value="anonymous">Déconnecté (401)</option>
-              </select>
+                  Se déconnecter
+                </button>
+              </template>
+              <router-link
+                v-else
+                to="/login"
+                @click="mobileMenuOpen = false"
+                class="w-full text-center px-3 py-2 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium hover:border-accent-gold/50"
+              >
+                Se connecter
+              </router-link>
             </div>
             <router-link
               to="/reservations"

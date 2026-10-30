@@ -46,6 +46,7 @@ const routes = [
     meta: {
       title: 'CinéSlot - Réserver des places',
       description: 'Choisissez vos tarifs et quantités de billets',
+      requiresAuth: true,
     },
     props: true,
   },
