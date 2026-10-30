@@ -37,6 +37,13 @@
             Séances
           </router-link>
           <router-link
+            to="/cinemas"
+            class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium"
+            active-class="text-accent-gold font-semibold"
+          >
+            Cinémas
+          </router-link>
+          <router-link
             to="/about"
             class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium"
             active-class="text-accent-gold font-semibold"
@@ -151,6 +158,14 @@
               @click="mobileMenuOpen = false"
             >
               Séances
+            </router-link>
+            <router-link
+              to="/cinemas"
+              class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2"
+              active-class="text-accent-gold font-semibold"
+              @click="mobileMenuOpen = false"
+            >
+              Cinémas
             </router-link>
             <router-link
               to="/about"
