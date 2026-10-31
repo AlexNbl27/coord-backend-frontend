@@ -51,6 +51,10 @@ const props = defineProps<{
   browser?: BrowserAdapter;
 }>();
 
+const emit = defineEmits<{
+  (e: 'unavailable', status: number): void;
+}>();
+
 const loading = ref(false);
 const error = ref('');
 
@@ -63,7 +67,14 @@ async function run(save: boolean) {
     const action = save ? saveTicketPdf : openTicketPdf;
     await action(props.bookingId, adapter);
   } catch (err) {
-    error.value = err instanceof TicketPdfError ? err.message : FALLBACK;
+    if (err instanceof TicketPdfError) {
+      error.value = err.message;
+      if (err.status === 404 || err.status === 409) {
+        emit('unavailable', err.status);
+      }
+    } else {
+      error.value = FALLBACK;
+    }
   } finally {
     loading.value = false;
   }

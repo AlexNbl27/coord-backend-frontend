@@ -85,9 +85,9 @@
                 </span>
               </div>
               
-              <div class="flex justify-between items-center py-2.5">
+              <div class="flex justify-between items-center py-2.5 gap-3">
                 <span class="text-cinema-textMuted font-medium">Film</span>
-                <span class="text-white font-bold truncate max-w-[200px]">{{ movieTitle }}</span>
+                <span class="text-white font-bold text-right truncate max-w-[220px] sm:max-w-[260px]">{{ movieTitle }}</span>
               </div>
               
               <div class="flex justify-between items-center py-2.5">
@@ -100,9 +100,19 @@
                 <span class="text-white font-medium">{{ hall }}</span>
               </div>
 
-              <div class="flex justify-between items-center pt-2.5">
-                <span class="text-cinema-textMuted font-medium">Fauteuil attribué</span>
-                <span class="text-emerald-400 font-bold">
+              <div v-if="currentBooking?.totalQuantity" class="flex justify-between items-center py-2.5">
+                <span class="text-cinema-textMuted font-medium">Places</span>
+                <span class="text-white font-semibold">
+                  {{ currentBooking.totalQuantity }} billet{{ currentBooking.totalQuantity > 1 ? 's' : '' }}
+                  <span v-if="typeof currentBooking.totalAmount === 'number'" class="text-accent-gold font-mono ml-1">
+                    ({{ currentBooking.totalAmount.toFixed(2).replace('.', ',') }} €)
+                  </span>
+                </span>
+              </div>
+
+              <div class="flex justify-between items-center pt-2.5 gap-3">
+                <span class="text-cinema-textMuted font-medium shrink-0">Fauteuils</span>
+                <span class="text-emerald-400 font-bold text-right">
                   <span>{{ assignedSeat }}</span>
                 </span>
               </div>

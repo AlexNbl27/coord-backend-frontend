@@ -12,7 +12,7 @@
       <!-- En-tête avec titre du film et statut -->
       <div class="flex justify-between items-start gap-2 mb-3">
         <div class="flex-1">
-          <h4 class="font-display text-white font-bold text-base sm:text-lg line-clamp-1 leading-snug">
+          <h4 class="font-display text-white font-bold text-base sm:text-lg line-clamp-2 leading-snug">
             {{ slot.movieTitle }}
           </h4>
           <p class="text-cinema-textMuted text-xs mt-1">
@@ -29,7 +29,7 @@
           }"
         >
           <span aria-hidden="true" class="font-black text-[11px]">{{ slot.status === 'AVAILABLE' ? '✓' : '⊘' }}</span>
-          {{ slot.status === 'AVAILABLE' ? 'Disponible' : 'Complet' }}
+          {{ slot.status === 'AVAILABLE' ? (slot.availableSeats !== undefined ? `${slot.availableSeats} places` : 'Disponible') : 'Complet' }}
         </span>
       </div>
 
@@ -73,9 +73,13 @@
 
     <!-- Contenu bas (ancré) -->
     <div class="mt-auto pt-2 border-t border-cinema-border/30">
-      <!-- Bouton de réservation -->
+      <!-- Annonce vocale dynamique pour VoiceOver lors de la réservation -->
+      <span v-if="isReserving" class="sr-only" aria-live="polite">
+        Réservation en cours pour {{ slot.movieTitle }}...
+      </span>
+
       <button
-        v-if="slot.status === 'AVAILABLE'"
+        v-if="slot.status === 'AVAILABLE' && !alreadyBooked"
         @click.stop="handleReserve"
         class="w-full btn btn-primary text-xs py-2.5 cursor-pointer"
         :aria-label="`Réserver une place pour ${slot.movieTitle} à ${formattedStartsAt} en salle ${slot.hall}${!sseConnected ? ' (réservation hors-ligne, synchronisation différée)' : ''}`"
@@ -92,14 +96,19 @@
         </span>
       </button>
 
-      <!-- Annonce vocale dynamique pour VoiceOver lors de la réservation -->
-      <span v-if="isReserving" class="sr-only" aria-live="polite">
-        Réservation en cours pour {{ slot.movieTitle }}...
-      </span>
-
-      <!-- Message si séance complète ou en attente de synchro -->
+      <!-- Message si déjà réservé, séance complète ou en attente de synchro -->
       <div v-else class="text-center py-2">
-        <span v-if="isPendingSync" class="inline-flex items-center gap-1.5 text-xs text-amber-300 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/30">
+        <div v-if="alreadyBooked" class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+          <span class="text-xs font-semibold text-emerald-400">Déjà réservé</span>
+          <router-link
+            to="/reservations"
+            @click.stop
+            class="text-xs font-bold text-accent-gold hover:underline"
+          >
+            Voir mon billet
+          </router-link>
+        </div>
+        <span v-else-if="isPendingSync" class="inline-flex items-center gap-1.5 text-xs text-amber-300 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/30">
           <span>En attente de synchronisation</span>
         </span>
         <p v-else class="text-xs text-cinema-textMuted/70 font-medium">
@@ -122,6 +131,7 @@ const props = defineProps<{
   slot: Slot;
   sseConnected: boolean;
   index?: number;
+  alreadyBooked?: boolean;
 }>();
 
 const emit = defineEmits(['reserve', 'click']);
@@ -142,7 +152,7 @@ const formattedStartsAt = computed(() => {
 });
 
 const handleReserve = () => {
-  if (isReserving.value) return;
+  if (isReserving.value || props.alreadyBooked) return;
   isReserving.value = true;
   emit('reserve', props.slot.id, '');
   isReserving.value = false;
