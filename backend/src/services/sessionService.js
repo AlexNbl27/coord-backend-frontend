@@ -13,16 +13,58 @@ const SESSION_SECRET = process.env.SESSION_SECRET || (
 );
 
 const SCRYPT_KEYLEN = 64;
+const SCRYPT_N = 2 ** 17;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_MAXMEM = 256 * 1024 * 1024;
 
 export async function hashPassword(password) {
   const salt = crypto.randomBytes(16);
-  const hash = await scrypt(password, salt, SCRYPT_KEYLEN);
-  return `${salt.toString('base64url')}:${hash.toString('base64url')}`;
+  const hash = await scrypt(password, salt, SCRYPT_KEYLEN, {
+    N: SCRYPT_N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+    maxmem: SCRYPT_MAXMEM
+  });
+  return `scrypt$N=${SCRYPT_N},r=${SCRYPT_R},p=${SCRYPT_P}$${salt.toString('base64url')}$${hash.toString('base64url')}`;
 }
 
 export async function verifyPassword(password, stored) {
   if (typeof password !== 'string' || typeof stored !== 'string') {
     return false;
+  }
+  if (stored.startsWith('scrypt$')) {
+    const parts = stored.split('$');
+    if (parts.length !== 4) {
+      return false;
+    }
+    const [, paramStr, saltB64, hashB64] = parts;
+    if (!paramStr || !saltB64 || !hashB64) {
+      return false;
+    }
+    const params = Object.fromEntries(paramStr.split(',').map((kv) => kv.split('=')));
+    const N = Number(params.N);
+    const r = Number(params.r);
+    const p = Number(params.p);
+    if (!Number.isInteger(N) || N < 1024 || !Number.isInteger(r) || r < 1 || !Number.isInteger(p) || p < 1) {
+      return false;
+    }
+    try {
+      const salt = Buffer.from(saltB64, 'base64url');
+      const expected = Buffer.from(hashB64, 'base64url');
+      if (salt.length === 0 || expected.length !== SCRYPT_KEYLEN) {
+        return false;
+      }
+      const actual = await scrypt(password, salt, SCRYPT_KEYLEN, {
+        N,
+        r,
+        p,
+        maxmem: Math.max(32 * 1024 * 1024, 256 * N * r)
+      });
+      return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+    } catch {
+      return false;
+    }
   }
   const [saltB64, hashB64] = stored.split(':');
   if (!saltB64 || !hashB64) {
@@ -46,7 +88,12 @@ export function hashResetToken(token) {
 }
 
 export function toPublicUser(user) {
-  return { id: user._id ?? user.id, name: user.name, email: user.email };
+  return {
+    id: user._id ?? user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role ?? 'SPECTATOR'
+  };
 }
 
 // name/email are copied into the cookie: re-read the user from DB if profile editing is ever added.
@@ -125,9 +172,14 @@ export function createAttachSession(users = User) {
     }
     try {
       const { ver, ...user } = claims;
-      // null also matches a missing field, i.e. version 0.
-      if (await users.exists({ _id: user.id, sessionVersion: ver || null })) {
-        req.sessionUser = user;
+      const query = users.findOne({ _id: user.id, sessionVersion: ver || null }, 'role cinemaSlugs');
+      const dbUser = typeof query?.lean === 'function' ? await query.lean() : await query;
+      if (dbUser) {
+        req.sessionUser = {
+          ...user,
+          role: dbUser.role ?? 'SPECTATOR',
+          cinemaSlugs: Array.isArray(dbUser.cinemaSlugs) ? dbUser.cinemaSlugs : []
+        };
       }
       return next();
     } catch (err) {
@@ -146,6 +198,48 @@ export function requireSession(req, res, next) {
       .json(buildProblemDetail(401, 'Unauthorized', 'Votre session a expiré. Reconnectez-vous.'));
   }
   return next();
+}
+
+export function requireRole(...roles) {
+  return function roleMiddleware(req, res, next) {
+    if (!req.sessionUser) {
+      return res
+        .status(401)
+        .type('application/problem+json')
+        .json(buildProblemDetail(401, 'Unauthorized', 'Votre session a expiré. Reconnectez-vous.'));
+    }
+    if (!roles.includes(req.sessionUser.role)) {
+      return res
+        .status(403)
+        .type('application/problem+json')
+        .json(buildProblemDetail(403, 'Forbidden', 'Accès refusé.'));
+    }
+    return next();
+  };
+}
+
+export function requireTenantAccess(req, res, next) {
+  if (!req.sessionUser) {
+    return res
+      .status(401)
+      .type('application/problem+json')
+      .json(buildProblemDetail(401, 'Unauthorized', 'Votre session a expiré. Reconnectez-vous.'));
+  }
+  if (req.sessionUser.role === 'SUPER_ADMIN') {
+    return next();
+  }
+  if (
+    req.sessionUser.role === 'CINEMA_ADMIN'
+    && req.tenant?.slug
+    && Array.isArray(req.sessionUser.cinemaSlugs)
+    && req.sessionUser.cinemaSlugs.includes(req.tenant.slug)
+  ) {
+    return next();
+  }
+  return res
+    .status(403)
+    .type('application/problem+json')
+    .json(buildProblemDetail(403, 'Forbidden', 'Accès refusé pour ce cinéma.'));
 }
 
 export function getSessionCookieOptions() {
