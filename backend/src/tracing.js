@@ -16,6 +16,7 @@ const sdk = new NodeSDK({
   instrumentations: [
     getNodeAutoInstrumentations({
       '@opentelemetry/instrumentation-fs': { enabled: false },
+      '@opentelemetry/instrumentation-http': { redactedQueryParamsServer: ['lat', 'lon'] },
     }),
   ],
 });

@@ -1,10 +1,11 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import vueDevTools from 'vite-plugin-vue-devtools';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), ...(process.env.VITEST ? [] : [vueDevTools()])],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -26,7 +27,6 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      // Proxy vers l'API Express Node.js (Films, Séances/SSE, Test A/B)
       '/api': {
         target: 'http://127.0.0.1:3000',
         changeOrigin: true,
