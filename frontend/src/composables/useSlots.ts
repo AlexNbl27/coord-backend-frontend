@@ -64,6 +64,7 @@ const API_SLOTS_URL = '/api/slots';
 const API_SSE_EVENTS_URL = '/api/slots/events';
 
 let sharedEventSource: EventSource | null = null;
+const cinemaDisabled = ref(false);
 
 // Initialisation du cache persistant
 const initialCachedSlots = cacheManager.get<Slot[]>(CacheKeys.SLOTS);
@@ -188,6 +189,17 @@ export function useSlots() {
           });
         } catch (e) {
           console.error('[SSE] Error parsing slot-updated event:', e);
+        }
+      });
+
+      sharedEventSource.addEventListener('cinema-status', (event: any) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (typeof data?.status === 'string') {
+            cinemaDisabled.value = data.status !== 'ACTIVE';
+          }
+        } catch (e) {
+          console.error('[SSE] Error parsing cinema-status event:', e);
         }
       });
 
@@ -320,6 +332,7 @@ export function useSlots() {
     error,
     sseConnected,
     sseError,
+    cinemaDisabled,
     fetchSlots,
     connectSse,
     disconnectSse,

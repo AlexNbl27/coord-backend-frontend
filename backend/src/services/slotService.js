@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { Slot } from '../models/Slot.js';
 import { Booking } from '../models/Booking.js';
+import { getTenantModels } from '../tenancy/index.js';
+import { getCinemaStatus } from './cinemaStatusService.js';
 import { EXP, attribution } from './abService.js';
 import { DEFAULT_CINEMA_ADDRESS, generateSeatLabel } from '../utils/ticketFormatters.js';
 
@@ -146,6 +148,19 @@ export function broadcastSlotChange(slot) {
   }
 }
 
+export function broadcastCinemaStatus(slug, status) {
+  const payload = { slug, status };
+  sendToLocalClients('cinema-status', payload);
+  if (process.send) {
+    process.send({
+      type: 'BROADCAST_SSE',
+      eventName: 'cinema-status',
+      payload,
+      originPid: process.pid
+    });
+  }
+}
+
 if (process.on) {
   process.on('message', (msg) => {
     if (msg && msg.type === 'BROADCAST_SSE' && msg.originPid !== process.pid) {
@@ -219,17 +234,22 @@ function dispatchSmsConfirmation(bookingId, slotId) {
   });
 }
 
-export async function reserveSlot(slotId, customerId, visitorId, isMeasured, sessionUser = null, rawTickets = null) {
+export async function reserveSlot(slotId, customerId, visitorId, isMeasured, sessionUser = null, rawTickets = null, tenant = null, deps = {}) {
   return tracer.startActiveSpan('cineslot.reservation', async (span) => {
     span.setAttribute('cineslot.slot.id', String(slotId));
     try {
+      const tenantModels = tenant?.db ? getTenantModels(tenant.db) : { Slot, Booking };
+      const SlotModel = deps.Slot || tenantModels.Slot;
+      const BookingModel = deps.Booking || tenantModels.Booking;
+      const checkStatus = deps.getCinemaStatus || getCinemaStatus;
+
       const { lines, totalQuantity, totalAmount } = normalizeTickets(rawTickets);
 
       const ownerId = sessionUser?.id || 'spectator-1';
       const safeCustomer = typeof customerId === 'string' ? customerId.trim().slice(0, 80) : '';
       const ownerName = sessionUser?.name || safeCustomer || 'Hélène Durand';
 
-      const existingBooking = await Booking.findOne({
+      const existingBooking = await BookingModel.findOne({
         slotId: String(slotId),
         ownerId,
         status: 'CONFIRMED'
@@ -253,7 +273,16 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       const bookingId = crypto.randomUUID();
       const bookedAt = new Date();
 
-      const winner = await Slot.findOneAndUpdate(
+      if (tenant?.slug) {
+        const currentStatus = await checkStatus(tenant.slug);
+        if (currentStatus !== 'ACTIVE') {
+          const error = new Error('Ce cinéma est temporairement désactivé.');
+          error.status = 423;
+          throw error;
+        }
+      }
+
+      const winner = await SlotModel.findOneAndUpdate(
         {
           _id: String(slotId),
           status: 'AVAILABLE',
@@ -302,7 +331,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       );
 
       if (!winner) {
-        const current = await Slot.findById(String(slotId)).lean();
+        const current = await SlotModel.findById(String(slotId)).lean();
         if (!current) {
           const error = new Error('Créneau inconnu');
           error.status = 404;
@@ -319,7 +348,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       }
 
       const seat = generateSeatLabel(winner._id, bookingId, totalQuantity);
-      await Booking.create({
+      await BookingModel.create({
         _id: bookingId,
         slotId: winner._id,
         ownerId,

@@ -11,7 +11,10 @@ const cinemaSchema = new mongoose.Schema({
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], required: true }
   },
-  features: { type: [String], default: [] }
+  features: { type: [String], default: [] },
+  status: { type: String, enum: ['ACTIVE', 'DISABLED', 'DELETED'], default: 'ACTIVE' },
+  deletedAt: { type: Date, default: null },
+  purgeState: { type: String, enum: ['PENDING', 'DONE'], default: null }
 }, {
   collection: 'cinemas',
   versionKey: false
@@ -19,5 +22,6 @@ const cinemaSchema = new mongoose.Schema({
 
 cinemaSchema.index({ latitude: 1, longitude: 1 });
 cinemaSchema.index({ location: '2dsphere' });
+cinemaSchema.index({ status: 1, deletedAt: 1 });
 
 export const Cinema = mongoose.model('Cinema', cinemaSchema);
