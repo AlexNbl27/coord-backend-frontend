@@ -138,7 +138,10 @@ export function createSessionRouter(deps = {}) {
           { $inc: { sessionVersion: 1 } }
         );
       }
-      res.clearCookie(SESSION_COOKIE_NAME, { path: '/api' });
+      res.clearCookie(SESSION_COOKIE_NAME, {
+        path: '/api',
+        domain: process.env.SESSION_COOKIE_DOMAIN || '.cineslot.localhost'
+      });
       return res.status(204).end();
     } catch (err) {
       return next(err);

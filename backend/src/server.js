@@ -14,8 +14,10 @@ import { sessionRouter } from './routes/sessionRoutes.js';
 import { googleAuthRouter } from './routes/googleAuthRoutes.js';
 import { ticketRouter } from './routes/ticketRoutes.js';
 import { cinemaRouter } from './routes/cinemaRoutes.js';
+import { adminSessionRouter } from './routes/adminSessionRoutes.js';
+import { adminCinemaRouter } from './routes/adminCinemaRoutes.js';
 import { seedCinemas } from './geo/cinemas.js';
-import { attachSession } from './services/sessionService.js';
+import { attachSession, rejectDuplicateSessionCookies } from './services/sessionService.js';
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
 
 dotenv.config();
@@ -59,6 +61,7 @@ function createServer() {
   app.use(createRateLimiter({ windowMs: 60_000, max: 600 }));
   app.use(express.json({ limit: '32kb' }));
   app.use(cookieParser());
+  app.use(rejectDuplicateSessionCookies);
   app.use(attachSession);
 
   app.use((_req, res, next) => {
@@ -96,6 +99,8 @@ function createServer() {
   app.use('/api/session', sessionRouter);
   app.use('/api/bookings', ticketRouter);
   app.use('/api/cinemas', cinemaRouter);
+  app.use('/api/admin/session', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminSessionRouter);
+  app.use('/api/admin/cinemas', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminCinemaRouter);
 
   app.use((err, _req, res, _next) => {
     const span = trace.getActiveSpan();
@@ -140,7 +145,7 @@ if (cluster.isPrimary && numCPUs > 1) {
 
   const setupWorker = (w) => {
     w.on('message', (msg) => {
-      if (msg && (msg.type === 'BROADCAST_SSE' || msg.type === 'CLEAR_MOVIE_CACHE')) {
+      if (msg && (msg.type === 'BROADCAST_SSE' || msg.type === 'CLEAR_MOVIE_CACHE' || msg.type === 'CLEAR_CINEMA_CACHE')) {
         for (const id in cluster.workers) {
           cluster.workers[id]?.send(msg);
         }

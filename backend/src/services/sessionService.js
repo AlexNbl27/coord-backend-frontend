@@ -5,7 +5,11 @@ import { User } from '../models/User.js';
 const scrypt = promisify(crypto.scrypt);
 
 export const SESSION_COOKIE_NAME = 'cineslot_session';
+export const ADMIN_COOKIE_NAME = '__Host-cineslot_admin';
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+export const ADMIN_SLIDING_TTL_MS = 30 * 60 * 1000;
+export const ADMIN_ABSOLUTE_TTL_MS = 8 * 60 * 60 * 1000;
+export const MFA_STEP_UP_TTL_MS = 5 * 60 * 1000;
 const SESSION_SECRET = process.env.SESSION_SECRET || (
   process.env.NODE_ENV === 'production'
     ? (() => { throw new Error('SESSION_SECRET environment variable is required in production'); })()
@@ -149,6 +153,98 @@ export function verifySessionToken(token) {
   }
 }
 
+export function signAdminSessionToken(user, { iat = Date.now(), now = Date.now(), mfaVerifiedAt = null } = {}) {
+  const absExp = iat + ADMIN_ABSOLUTE_TTL_MS;
+  const exp = Math.min(now + ADMIN_SLIDING_TTL_MS, absExp);
+  const claims = {
+    sub: String(user._id ?? user.id),
+    name: user.name,
+    email: user.email,
+    ver: user.sessionVersion ?? 0,
+    aud: 'admin',
+    iat,
+    absExp,
+    exp,
+    mfaVerifiedAt
+  };
+  const payload = Buffer.from(JSON.stringify(claims), 'utf8').toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', SESSION_SECRET)
+    .update(payload)
+    .digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+export function verifyAdminSessionToken(token, now = Date.now()) {
+  if (!token || typeof token !== 'string') {
+    return null;
+  }
+  const dotIndex = token.indexOf('.');
+  if (dotIndex <= 0) {
+    return null;
+  }
+  const payload = token.slice(0, dotIndex);
+  const providedSig = token.slice(dotIndex + 1);
+  const expectedSig = crypto
+    .createHmac('sha256', SESSION_SECRET)
+    .update(payload)
+    .digest('base64url');
+  const providedBuf = Buffer.from(providedSig, 'utf8');
+  const expectedBuf = Buffer.from(expectedSig, 'utf8');
+  if (providedBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(providedBuf, expectedBuf)) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (
+      !parsed
+      || typeof parsed.sub !== 'string'
+      || parsed.aud !== 'admin'
+      || typeof parsed.exp !== 'number'
+      || typeof parsed.absExp !== 'number'
+    ) {
+      return null;
+    }
+    if (now > parsed.exp || now > parsed.absExp) {
+      return null;
+    }
+    return {
+      id: parsed.sub,
+      name: parsed.name,
+      email: parsed.email,
+      ver: Number.isInteger(parsed.ver) ? parsed.ver : 0,
+      iat: parsed.iat,
+      absExp: parsed.absExp,
+      mfaVerifiedAt: typeof parsed.mfaVerifiedAt === 'number' ? parsed.mfaVerifiedAt : null
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function rejectDuplicateSessionCookies(req, res, next) {
+  const raw = req.headers?.cookie;
+  if (typeof raw === 'string' && raw.length > 0) {
+    let spectatorCount = 0;
+    let adminCount = 0;
+    for (const part of raw.split(';')) {
+      const trimmed = part.trim();
+      if (trimmed.startsWith(`${SESSION_COOKIE_NAME}=`)) {
+        spectatorCount += 1;
+      } else if (trimmed.startsWith(`${ADMIN_COOKIE_NAME}=`)) {
+        adminCount += 1;
+      }
+      if (spectatorCount > 1 || adminCount > 1) {
+        return res
+          .status(400)
+          .type('application/problem+json')
+          .json(buildProblemDetail(400, 'Bad Request', 'En-tête Cookie invalide : cookie de session dupliqué.'));
+      }
+    }
+  }
+  return next();
+}
+
 export function buildProblemDetail(status, title, detail) {
   return {
     type: 'about:blank',
@@ -164,17 +260,50 @@ export function buildProblemDetail(status, title, detail) {
  * and that its sessions were not revoked (password reset).
  */
 export function createAttachSession(users = User) {
-  return async function attachSession(req, _res, next) {
+  return async function attachSession(req, res, next) {
     req.sessionUser = null;
+    req.adminSession = null;
+
+    if (req.plane === 'admin') {
+      const adminClaims = verifyAdminSessionToken(req.cookies?.[ADMIN_COOKIE_NAME]);
+      if (!adminClaims) {
+        return next();
+      }
+      try {
+        const { ver, iat, absExp, mfaVerifiedAt, ...user } = adminClaims;
+        const query = users.findOne({ _id: user.id }, 'role cinemaSlugs sessionVersion');
+        const dbUser = typeof query?.lean === 'function' ? await query.lean() : await query;
+        if (dbUser && (dbUser.sessionVersion ?? 0) === ver) {
+          req.sessionUser = {
+            ...user,
+            role: dbUser.role ?? 'SPECTATOR',
+            cinemaSlugs: Array.isArray(dbUser.cinemaSlugs) ? dbUser.cinemaSlugs : []
+          };
+          req.adminSession = { iat, absExp, mfaVerifiedAt };
+          const now = Date.now();
+          if (now < absExp && typeof res.cookie === 'function') {
+            const refreshed = signAdminSessionToken(
+              { _id: user.id, name: user.name, email: user.email, sessionVersion: ver },
+              { iat, now, mfaVerifiedAt }
+            );
+            res.cookie(ADMIN_COOKIE_NAME, refreshed, getAdminCookieOptions(Math.min(ADMIN_SLIDING_TTL_MS, absExp - now)));
+          }
+        }
+        return next();
+      } catch (err) {
+        return next(err);
+      }
+    }
+
     const claims = verifySessionToken(req.cookies?.[SESSION_COOKIE_NAME]);
     if (!claims) {
       return next();
     }
     try {
       const { ver, ...user } = claims;
-      const query = users.findOne({ _id: user.id, sessionVersion: ver || null }, 'role cinemaSlugs');
+      const query = users.findOne({ _id: user.id }, 'role cinemaSlugs sessionVersion');
       const dbUser = typeof query?.lean === 'function' ? await query.lean() : await query;
-      if (dbUser) {
+      if (dbUser && (dbUser.sessionVersion ?? 0) === ver) {
         req.sessionUser = {
           ...user,
           role: dbUser.role ?? 'SPECTATOR',
@@ -242,12 +371,42 @@ export function requireTenantAccess(req, res, next) {
     .json(buildProblemDetail(403, 'Forbidden', 'Accès refusé pour ce cinéma.'));
 }
 
+export function requireRecentMfa(maxAgeMs = MFA_STEP_UP_TTL_MS) {
+  return function mfaMiddleware(req, res, next) {
+    if (!req.sessionUser) {
+      return res
+        .status(401)
+        .type('application/problem+json')
+        .json(buildProblemDetail(401, 'Unauthorized', 'Votre session a expiré. Reconnectez-vous.'));
+    }
+    const verifiedAt = req.adminSession?.mfaVerifiedAt;
+    if (typeof verifiedAt !== 'number' || Date.now() - verifiedAt > maxAgeMs) {
+      return res
+        .status(403)
+        .type('application/problem+json')
+        .json(buildProblemDetail(403, 'Forbidden', 'Vérification MFA récente requise.'));
+    }
+    return next();
+  };
+}
+
 export function getSessionCookieOptions() {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
+    domain: process.env.SESSION_COOKIE_DOMAIN || '.cineslot.localhost',
     path: '/api',
     maxAge: SESSION_MAX_AGE_MS
+  };
+}
+
+export function getAdminCookieOptions(maxAge = ADMIN_SLIDING_TTL_MS) {
+  return {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge
   };
 }
