@@ -20,7 +20,7 @@ docker compose up -d mongodb backend
 echo -e "\n[2/4] Attente de la disponibilité de l'API..."
 max_retries=30
 count=0
-until curl -s http://localhost:3000/health | grep -q '"database":"connected"'; do
+until docker compose exec -T backend node -e "fetch('http://127.0.0.1:3000/health').then(r=>r.text()).then(t=>process.stdout.write(t))" 2>/dev/null | grep -q '"database":"connected"'; do
   sleep 2
   count=$((count+1))
   echo "  ... tentative $count/$max_retries"
