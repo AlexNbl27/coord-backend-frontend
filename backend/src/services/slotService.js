@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
-import { Slot } from '../models/Slot.js';
-import { Booking } from '../models/Booking.js';
+import { Cinema } from '../models/Cinema.js';
+import { Movie } from '../models/Movie.js';
 import { getTenantModels } from '../tenancy/index.js';
 import { getCinemaStatus } from './cinemaStatusService.js';
 import { EXP, attribution } from './abService.js';
-import { DEFAULT_CINEMA_ADDRESS, generateSeatLabel } from '../utils/ticketFormatters.js';
+import { generateSeatLabel } from '../utils/ticketFormatters.js';
 
 const tracer = trace.getTracer('cineslot-api');
 const SMS_GATEWAY_URL = process.env.SMS_GATEWAY_URL || '';
@@ -30,6 +30,26 @@ const MOVIES_CATALOG = [
   { movieTitle: 'Blade Runner 2049', hall: 'Salle 4 · 4DX Immersion', capacity: 24 },
   { movieTitle: 'The Matrix', hall: 'Salle 5 · Rétro Culte', capacity: 28 }
 ];
+
+function tenantModels(tenant) {
+  return getTenantModels(tenant?.db);
+}
+
+export async function getCinemaAddress(slug) {
+  if (!slug) {
+    return '';
+  }
+  const cinema = await Cinema.findOne({ slug }, 'address city').lean();
+  if (!cinema) {
+    return '';
+  }
+  return [cinema.address, cinema.city].filter(Boolean).join(', ');
+}
+
+async function findCatalogMovieIds(titles) {
+  const movies = await Movie.find({ title: { $in: titles } }, '_id title').lean();
+  return new Map(movies.map((m) => [m.title, m._id]));
+}
 
 function normalizeTickets(rawTickets) {
   if (!rawTickets || rawTickets.length === 0) {
@@ -189,21 +209,25 @@ export function toSlotView(slot) {
     version: slot.version,
     movieTitle: slot.movieTitle || 'Séance Cinéma',
     hall: slot.hall || 'Salle Principale',
+    movieId: slot.movieId ? String(slot.movieId) : null,
     capacity,
     availableSeats
   };
 }
 
-export async function seedInitialSlotsIfEmpty() {
+export async function seedInitialSlotsIfEmpty(tenant) {
+  const { Slot } = tenantModels(tenant);
   const count = await Slot.countDocuments();
   if (count === 0) {
     const now = new Date();
+    const movieIds = await findCatalogMovieIds(MOVIES_CATALOG.map((m) => m.movieTitle));
     const demoSlots = MOVIES_CATALOG.map((m, idx) => {
       const slotDate = new Date(now.getTime() + (idx + 1) * 2 * 3600 * 1000);
       return {
         _id: crypto.randomUUID(),
         startsAt: slotDate.toISOString(),
         status: 'AVAILABLE',
+        movieId: movieIds.get(m.movieTitle) ?? null,
         movieTitle: m.movieTitle,
         hall: m.hall,
         capacity: m.capacity,
@@ -213,12 +237,13 @@ export async function seedInitialSlotsIfEmpty() {
       };
     });
     await Slot.insertMany(demoSlots);
-    console.log(`[Slots] Seeded ${demoSlots.length} initial slots.`);
+    console.log(`[Slots] Seeded ${demoSlots.length} initial slots for ${tenant.slug}.`);
   }
 }
 
-export async function allSlots() {
-  await seedInitialSlotsIfEmpty();
+export async function allSlots(tenant) {
+  await seedInitialSlotsIfEmpty(tenant);
+  const { Slot } = tenantModels(tenant);
   const slots = await Slot.find().sort({ startsAt: 1 }).lean();
   return slots.map(toSlotView);
 }
@@ -238,10 +263,19 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
   return tracer.startActiveSpan('cineslot.reservation', async (span) => {
     span.setAttribute('cineslot.slot.id', String(slotId));
     try {
-      const tenantModels = tenant?.db ? getTenantModels(tenant.db) : { Slot, Booking };
-      const SlotModel = deps.Slot || tenantModels.Slot;
-      const BookingModel = deps.Booking || tenantModels.Booking;
       const checkStatus = deps.getCinemaStatus || getCinemaStatus;
+      const resolveAddress = deps.getCinemaAddress || getCinemaAddress;
+
+      const currentStatus = await checkStatus(tenant?.slug);
+      if (currentStatus !== 'ACTIVE') {
+        const error = new Error('Ce cinéma est temporairement désactivé.');
+        error.status = 423;
+        throw error;
+      }
+
+      const models = deps.Slot && deps.Booking ? deps : tenantModels(tenant);
+      const SlotModel = models.Slot;
+      const BookingModel = models.Booking;
 
       const { lines, totalQuantity, totalAmount } = normalizeTickets(rawTickets);
 
@@ -272,15 +306,6 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
 
       const bookingId = crypto.randomUUID();
       const bookedAt = new Date();
-
-      if (tenant?.slug) {
-        const currentStatus = await checkStatus(tenant.slug);
-        if (currentStatus !== 'ACTIVE') {
-          const error = new Error('Ce cinéma est temporairement désactivé.');
-          error.status = 423;
-          throw error;
-        }
-      }
 
       const winner = await SlotModel.findOneAndUpdate(
         {
@@ -348,14 +373,16 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       }
 
       const seat = generateSeatLabel(winner._id, bookingId, totalQuantity);
+      const address = await resolveAddress(tenant.slug);
       await BookingModel.create({
         _id: bookingId,
         slotId: winner._id,
         ownerId,
         ownerName,
+        movieId: winner.movieId ?? null,
         movieTitle: winner.movieTitle || 'Séance Cinéma',
         hall: winner.hall || 'Salle Principale',
-        address: DEFAULT_CINEMA_ADDRESS,
+        address,
         startsAt: winner.startsAt,
         seat,
         tickets: lines,
@@ -374,6 +401,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       return {
         bookingId,
         slotId: winner._id,
+        movieId: winner.movieId ?? null,
         status: winner.status,
         seat,
         tickets: lines,
@@ -391,7 +419,8 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
   });
 }
 
-export async function cancelSlot(slotId, sessionUser) {
+export async function cancelSlot(slotId, sessionUser, tenant) {
+  const { Slot, Booking } = tenantModels(tenant);
   const safeSlotId = String(slotId);
   const bookingFilter = sessionUser
     ? { slotId: safeSlotId, ownerId: sessionUser.id, status: 'CONFIRMED' }
@@ -452,13 +481,16 @@ export async function cancelSlot(slotId, sessionUser) {
   return toSlotView(updated);
 }
 
-export async function createDemoSlot() {
+export async function createDemoSlot(tenant) {
+  const { Slot } = tenantModels(tenant);
   const randomMovie = MOVIES_CATALOG[Math.floor(Math.random() * MOVIES_CATALOG.length)];
   const slotDate = new Date(Date.now() + 86400 * 1000);
+  const movieIds = await findCatalogMovieIds([randomMovie.movieTitle]);
   const slot = new Slot({
     _id: crypto.randomUUID(),
     startsAt: slotDate.toISOString(),
     status: 'AVAILABLE',
+    movieId: movieIds.get(randomMovie.movieTitle) ?? null,
     movieTitle: randomMovie.movieTitle,
     hall: randomMovie.hall,
     capacity: randomMovie.capacity,
@@ -472,7 +504,8 @@ export async function createDemoSlot() {
   return toSlotView(saved);
 }
 
-export async function getSlotProof(slotId) {
+export async function getSlotProof(slotId, tenant) {
+  const { Slot } = tenantModels(tenant);
   const slot = await Slot.findById(String(slotId)).lean();
   if (!slot) {
     const error = new Error('Créneau inconnu');
@@ -492,7 +525,8 @@ export async function getSlotProof(slotId) {
   };
 }
 
-export async function resetAllSlots() {
+export async function resetAllSlots(tenant) {
+  const { Slot, Booking } = tenantModels(tenant);
   await Slot.updateMany({}, [
     {
       $set: {

@@ -18,6 +18,10 @@ import {
   requireTenantAccess,
   signSessionToken
 } from '../src/services/sessionService.js';
+import { Cinema } from '../src/models/Cinema.js';
+import { allSlots, cancelSlot, reserveSlot } from '../src/services/slotService.js';
+import { buildTicket } from '../src/services/ticketService.js';
+import { createTicketView } from '../src/utils/ticketFormatters.js';
 
 const REGISTRY = new Map([
   ['cine-a', 'ACTIVE'],
@@ -263,4 +267,105 @@ test('X-Forwarded-Host falsifié est ignoré', async (t) => {
     headers: { 'x-forwarded-host': 'cine-a.cineslot.localhost' }
   });
   assert.equal(fromForeign.status, 421);
+});
+
+function cinemaDoc(slug) {
+  return new Cinema({
+    slug,
+    name: 'Ciné Test',
+    address: '1 place Test',
+    city: 'Lyon',
+    latitude: 45.75,
+    longitude: 4.83,
+    location: { type: 'Point', coordinates: [4.83, 45.75] }
+  });
+}
+
+test('Cinema : slug validé par le registre et dbName dérivé', async () => {
+  const ok = cinemaDoc('cine-bellecour');
+  await ok.validate();
+  assert.equal(ok.dbName, 'cinema_cine-bellecour');
+  assert.equal(ok.status, 'ACTIVE');
+
+  for (const slug of ['admin', 'config', 'a--b', 'Cine', 'ab', 'cine_bellecour']) {
+    await assert.rejects(() => cinemaDoc(slug).validate(), /slug|Slug/, `${slug} devrait être refusé`);
+  }
+});
+
+test('services slots et billets refusent de travailler sans tenant', async () => {
+  await assert.rejects(() => allSlots(null), TypeError);
+  await assert.rejects(() => allSlots({ slug: 'cine-a' }), TypeError);
+  await assert.rejects(() => cancelSlot('slot-1', null, null), TypeError);
+  await assert.rejects(() => buildTicket('u1', 'b1', {}), TypeError);
+});
+
+test('reserveSlot : adresse issue du registre et movieId recopié sur la réservation', async () => {
+  const movieId = '64b000000000000000000001';
+  const created = [];
+  const winner = {
+    _id: 'slot-1',
+    movieId,
+    movieTitle: 'Interstellar',
+    hall: 'Salle 1',
+    startsAt: '2030-01-01T20:00:00.000Z',
+    status: 'AVAILABLE',
+    version: 1,
+    capacity: 40,
+    availableSeats: 39
+  };
+  const statusCalls = [];
+  const result = await reserveSlot(
+    'slot-1',
+    null,
+    null,
+    false,
+    { id: 'u1', name: 'Ada' },
+    null,
+    { slug: 'cine-a', status: 'ACTIVE' },
+    {
+      getCinemaStatus: async (slug) => { statusCalls.push(slug); return 'ACTIVE'; },
+      getCinemaAddress: async (slug) => (slug === 'cine-a' ? '1 place Test, Lyon' : ''),
+      Slot: { findOneAndUpdate: async () => winner },
+      Booking: {
+        findOne: () => ({ lean: async () => null }),
+        create: async (doc) => { created.push(doc); return doc; }
+      }
+    }
+  );
+  assert.deepEqual(statusCalls, ['cine-a']);
+  assert.equal(created.length, 1);
+  assert.equal(created[0].address, '1 place Test, Lyon');
+  assert.equal(created[0].movieId, movieId);
+  assert.equal(result.movieId, movieId);
+});
+
+test('reserveSlot : 423 sur un cinéma désactivé avant tout accès aux données', async () => {
+  await assert.rejects(
+    () => reserveSlot('slot-1', null, null, false, { id: 'u1', name: 'Ada' }, null, { slug: 'cine-off' }, {
+      getCinemaStatus: async () => 'DISABLED'
+    }),
+    (err) => err.status === 423
+  );
+});
+
+test('createTicketView ne retombe plus sur une adresse codée en dur', () => {
+  const view = createTicketView({ _id: 'b1', slotId: 's1', startsAt: '2030-01-01T20:00:00.000Z' });
+  assert.equal(view.address, '');
+});
+
+test('migration legacy : refuse une base tenant ou source incohérente', async () => {
+  const { migrateLegacyDatabase } = await import('../src/tenancy/legacyMigration.js');
+  const db = (databaseName) => ({ databaseName, collection: () => { throw new Error('ne doit pas être lu'); } });
+  await assert.rejects(
+    () => migrateLegacyDatabase({ sourceDb: db('cours_db'), masterDb: db('cineslot_master'), tenantDb: db('cineslot_master'), slug: 'cine-bellecour' }),
+    /Base tenant inattendue/
+  );
+  await assert.rejects(
+    () => migrateLegacyDatabase({ sourceDb: db('cineslot_master'), masterDb: db('cineslot_master'), tenantDb: db('cinema_cine-bellecour'), slug: 'cine-bellecour' }),
+    /distincte/
+  );
+  await assert.rejects(
+    () => migrateLegacyDatabase({ sourceDb: db('cours_db'), masterDb: db('cineslot_master'), tenantDb: db('cinema_admin'), slug: 'admin' }),
+    TypeError
+  );
 });

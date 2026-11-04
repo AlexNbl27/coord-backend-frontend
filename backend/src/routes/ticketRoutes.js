@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { buildProblemDetail, requireSession } from '../services/sessionService.js';
 import { buildTicket } from '../services/ticketService.js';
-import { Booking } from '../models/Booking.js';
+import { getTenantModels } from '../tenancy/index.js';
 
 const STATUS_TITLES = {
   401: 'Unauthorized',
@@ -19,6 +19,7 @@ export function createTicketRouter(deps = {}) {
 
   router.get('/mine', requireSession, async (req, res, next) => {
     try {
+      const { Booking } = getTenantModels(req.tenant?.db);
       const active = await Booking.find({
         ownerId: req.sessionUser.id,
         status: 'CONFIRMED'
@@ -38,7 +39,7 @@ export function createTicketRouter(deps = {}) {
   router.get('/:id/ticket.pdf', requireSession, async (req, res) => {
     try {
       const download = req.query.download === 'true';
-      const result = await build(req.sessionUser.id, req.params.id);
+      const result = await build(req.sessionUser.id, req.params.id, { tenant: req.tenant });
       const dispositionType = download ? 'attachment' : 'inline';
 
       res.status(200);

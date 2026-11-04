@@ -79,3 +79,10 @@ export function createResolveTenant({
 }
 
 export const resolveTenant = createResolveTenant();
+
+export function requireTenant(req, res, next) {
+  if (!req.tenant?.db) {
+    return problem(res, 404, 'Not Found', 'Aucun cinéma ne correspond à cette adresse.');
+  }
+  return next();
+}

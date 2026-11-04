@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { EXP, isEnabled, assign, expose, getMetrics, simulateData } from '../services/abService.js';
 import { requireSession } from '../services/sessionService.js';
+import { requireTenant } from '../tenancy/index.js';
 
 export const abRouter = Router();
 
@@ -53,17 +54,17 @@ abRouter.post('/exposure', async (req, res, next) => {
   }
 });
 
-abRouter.get('/metrics', async (_req, res, next) => {
+abRouter.get('/metrics', requireTenant, async (req, res, next) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
-    const metrics = await getMetrics();
+    const metrics = await getMetrics(req.tenant);
     res.json(metrics);
   } catch (err) {
     next(err);
   }
 });
 
-abRouter.post('/simulate', requireSession, async (req, res, next) => {
+abRouter.post('/simulate', requireSession, requireTenant, async (req, res, next) => {
   try {
     const clamp = (val, def) => {
       const n = Number.parseInt(String(val ?? def), 10);
@@ -74,7 +75,7 @@ abRouter.post('/simulate', requireSession, async (req, res, next) => {
     const countB = clamp(req.body?.countB, 80);
     const convB = Math.min(clamp(req.body?.convB, 30), countB);
 
-    const result = await simulateData({ countA, convA, countB, convB });
+    const result = await simulateData({ countA, convA, countB, convB }, req.tenant);
     res.json({
       message: 'Données de test A/B simulées avec succès',
       metrics: result
