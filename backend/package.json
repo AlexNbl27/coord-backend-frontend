@@ -8,7 +8,8 @@
     "start": "node --import ./src/tracing.js src/server.js",
     "dev": "node --watch --import ./src/tracing.js src/server.js",
     "test": "node --test test/**/*.test.js",
-    "test:coverage": "node -e \"fs.mkdirSync('coverage', {recursive: true})\" && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-reporter=spec --test-reporter-destination=stdout test/**/*.test.js"
+    "test:coverage": "node -e \"fs.mkdirSync('coverage', {recursive: true})\" && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-reporter=spec --test-reporter-destination=stdout test/**/*.test.js",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@opentelemetry/api": "^1.10.0",
@@ -27,6 +28,7 @@
     "pdfkit": "^0.20.2"
   },
   "devDependencies": {
+    "eslint": "^9.39.5",
     "pdfjs-dist": "^6.5.438"
   },
   "overrides": {
