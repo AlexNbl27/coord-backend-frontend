@@ -4,9 +4,7 @@ import { tenantDbName } from './slug.js';
 import { tenantConn } from './connections.js';
 
 export function getTenantModels(db) {
-  if (!db || typeof db.model !== 'function') {
-    throw new TypeError('Connexion tenant requise.');
-  }
+  if (!db || typeof db.model !== 'function') throw new TypeError('Connexion tenant requise.');
   return {
     Slot: db.models.Slot || db.model('Slot', slotSchema),
     Booking: db.models.Booking || db.model('Booking', bookingSchema)

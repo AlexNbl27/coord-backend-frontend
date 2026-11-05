@@ -9,15 +9,11 @@ function isPlainObject(value) {
 }
 
 export function isValidSseBroadcast(msg) {
-  if (!isPlainObject(msg) || msg.type !== SSE_BROADCAST_TYPE) {
-    return false;
-  }
+  if (!isPlainObject(msg) || msg.type !== SSE_BROADCAST_TYPE) return false;
   if (!isValidSlug(msg.slug) || !SSE_EVENTS.has(msg.eventName) || !isPlainObject(msg.payload)) {
     return false;
   }
-  if (!Number.isInteger(msg.originPid)) {
-    return false;
-  }
+  if (!Number.isInteger(msg.originPid)) return false;
   try {
     return JSON.stringify(msg.payload).length <= MAX_PAYLOAD_BYTES;
   } catch {
@@ -33,12 +29,8 @@ export function isValidCinemaCacheMessage(msg) {
 }
 
 export function isForwardableIpcMessage(msg) {
-  if (!isPlainObject(msg)) {
-    return false;
-  }
-  if (msg.type === SSE_BROADCAST_TYPE) {
-    return isValidSseBroadcast(msg);
-  }
+  if (!isPlainObject(msg)) return false;
+  if (msg.type === SSE_BROADCAST_TYPE) return isValidSseBroadcast(msg);
   if (msg.type === 'CLEAR_CINEMA_CACHE') {
     return isValidCinemaCacheMessage(msg);
   }

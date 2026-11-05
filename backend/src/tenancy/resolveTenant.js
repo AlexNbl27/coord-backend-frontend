@@ -1,4 +1,4 @@
-import { buildProblemDetail } from '../services/sessionService.js';
+import { sendProblem } from '../services/sessionService.js';
 import { getCinemaStatus } from '../services/cinemaStatusService.js';
 import { isValidSlug } from './slug.js';
 import { useTenantDb } from './models.js';
@@ -10,23 +10,12 @@ function escapeForRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function problem(res, status, title, detail) {
-  return res
-    .status(status)
-    .type('application/problem+json')
-    .json(buildProblemDetail(status, title, detail));
-}
-
 export function parseHost(rawHost, baseDomain = DEFAULT_BASE_DOMAIN) {
-  if (typeof rawHost !== 'string') {
-    return null;
-  }
+  if (typeof rawHost !== 'string') return null;
   const host = rawHost.trim().toLowerCase();
   const base = escapeForRegex(baseDomain.toLowerCase());
   const match = new RegExp(`^(?:([a-z0-9-]{1,63})\\.)?${base}(?::\\d{1,5})?$`).exec(host);
-  if (!match) {
-    return null;
-  }
+  if (!match) return null;
   return { label: match[1] ?? null };
 }
 
@@ -41,7 +30,7 @@ export function createResolveTenant({
 
     const parsed = parseHost(req.headers.host, baseDomain);
     if (!parsed) {
-      return problem(res, 421, 'Misdirected Request', 'Hôte non servi par cette application.');
+      return sendProblem(res, 421, 'Misdirected Request', 'Hôte non servi par cette application.');
     }
 
     if (parsed.label === null) {
@@ -55,7 +44,7 @@ export function createResolveTenant({
     }
 
     if (!isValidSlug(parsed.label)) {
-      return problem(res, 404, 'Not Found', 'Cinéma introuvable.');
+      return sendProblem(res, 404, 'Not Found', 'Cinéma introuvable.');
     }
 
     let status;
@@ -65,12 +54,8 @@ export function createResolveTenant({
       return next(err);
     }
 
-    if (!status) {
-      return problem(res, 404, 'Not Found', 'Cinéma introuvable.');
-    }
-    if (status === 'DELETED') {
-      return problem(res, 410, 'Gone', 'Ce cinéma a été supprimé.');
-    }
+    if (!status) return sendProblem(res, 404, 'Not Found', 'Cinéma introuvable.');
+    if (status === 'DELETED') return sendProblem(res, 410, 'Gone', 'Ce cinéma a été supprimé.');
 
     req.plane = 'tenant';
     req.tenant = { slug: parsed.label, status, db: getDb(parsed.label) };
@@ -82,7 +67,7 @@ export const resolveTenant = createResolveTenant();
 
 export function requireTenant(req, res, next) {
   if (!req.tenant?.db) {
-    return problem(res, 404, 'Not Found', 'Aucun cinéma ne correspond à cette adresse.');
+    return sendProblem(res, 404, 'Not Found', 'Aucun cinéma ne correspond à cette adresse.');
   }
   return next();
 }

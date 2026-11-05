@@ -49,7 +49,7 @@ function connect(slug, ip = '10.0.0.1', opts = {}) {
   return { req, res, close: () => req.emit('close') };
 }
 
-test('SSE : à la connexion, ready puis cinema-status du tenant', (t) => {
+test('envoie ready puis status a la connexion', (t) => {
   const a = connect('cine-a');
   t.after(a.close);
   assert.equal(a.res.headers['content-type'], 'text/event-stream');
@@ -59,13 +59,13 @@ test('SSE : à la connexion, ready puis cinema-status du tenant', (t) => {
   ]);
 });
 
-test('SSE : sans tenant, 404 problem+json', () => {
+test('404 sans tenant', () => {
   const none = connect(null);
   assert.equal(none.res.statusCode, 404);
   assert.match(none.res.headers['content-type'], /problem\+json/);
 });
 
-test('SSE : un slot-updated du tenant A ne parvient pas au tenant B', (t) => {
+test('pas de fuite entre cinémas', (t) => {
   const a = connect('cine-a', '10.0.0.2');
   const b = connect('cine-b', '10.0.0.3');
   t.after(() => { a.close(); b.close(); });
@@ -79,7 +79,7 @@ test('SSE : un slot-updated du tenant A ne parvient pas au tenant B', (t) => {
   assert.deepEqual(bEvents, [{ event: 'cinema-status', data: { slug: 'cine-b', status: 'DISABLED' } }]);
 });
 
-test('SSE : diffusion ignorée pour un slug invalide', (t) => {
+test('ignore la diffusion sur slug invalide', (t) => {
   const a = connect('cine-a', '10.0.0.4');
   t.after(a.close);
   broadcastSlotChange({ _id: 'slot-1', status: 'AVAILABLE', version: 1 }, undefined);
@@ -87,7 +87,7 @@ test('SSE : diffusion ignorée pour un slug invalide', (t) => {
   assert.equal(events(a.res).length, 2);
 });
 
-test('SSE : plafond de connexions par IP, libéré à la fermeture', (t) => {
+test('trop de connexions par IP', (t) => {
   const ip = '10.0.0.50';
   const opened = [];
   t.after(() => opened.forEach((c) => c.close()));
@@ -111,7 +111,7 @@ test('SSE : plafond de connexions par IP, libéré à la fermeture', (t) => {
   assert.equal(getSseStats().byIp[ip], 10);
 });
 
-test('SSE : un client dont l’écriture initiale échoue n’est pas compté', () => {
+test('client pas compte si premiere ecriture echoue', () => {
   const before = getSseStats().total;
   const broken = connect('cine-y', '10.0.0.61', { failWrites: 1 });
   assert.equal(getSseStats().total, before);
@@ -120,7 +120,7 @@ test('SSE : un client dont l’écriture initiale échoue n’est pas compté', 
   assert.equal(getSseStats().total, before);
 });
 
-test('SSE : un client dont l’écriture échoue est retiré des compteurs', () => {
+test('client retire des compteurs si ecriture echoue', () => {
   const before = getSseStats().total;
   const broken = connect('cine-z', '10.0.0.60', { failWrites: 2 });
   assert.equal(getSseStats().total, before + 1);
@@ -131,7 +131,7 @@ test('SSE : un client dont l’écriture échoue est retiré des compteurs', () 
   assert.equal(getSseStats().total, before);
 });
 
-test('SSE : message IPC d’un autre worker relayé uniquement au bon tenant', (t) => {
+test('message IPC relaye uniquement au bon tenant', (t) => {
   const a = connect('cine-a', '10.0.0.70');
   const b = connect('cine-b', '10.0.0.71');
   t.after(() => { a.close(); b.close(); });
@@ -147,7 +147,7 @@ test('SSE : message IPC d’un autre worker relayé uniquement au bon tenant', (
   assert.deepEqual(events(b.res).slice(2), []);
 });
 
-test('IPC : le primaire ne relaie que des messages valides', () => {
+test('relais uniquement des messages valides', () => {
   const ok = { type: 'BROADCAST_SSE', slug: 'cine-a', eventName: 'slot-updated', payload: { slotId: 's' }, originPid: 1 };
   assert.equal(isValidSseBroadcast(ok), true);
   assert.equal(isForwardableIpcMessage(ok), true);

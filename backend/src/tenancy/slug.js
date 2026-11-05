@@ -12,8 +12,6 @@ export function isValidSlug(s) {
 }
 
 export function tenantDbName(slug) {
-  if (!isValidSlug(slug)) {
-    throw new TypeError('Slug de cinéma invalide ou réservé.');
-  }
+  if (!isValidSlug(slug)) throw new TypeError('Slug de cinéma invalide ou réservé.');
   return `${TENANT_DB_PREFIX}${slug}`;
 }
