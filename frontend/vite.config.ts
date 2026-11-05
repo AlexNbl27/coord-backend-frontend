@@ -26,10 +26,11 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    allowedHosts: ['.cineslot.localhost'],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3000',
-        changeOrigin: true,
+        changeOrigin: false,
         configure: (proxy) => {
           proxy.on('error', (err, _req, res) => {
             if (res && !res.headersSent && typeof res.writeHead === 'function') {

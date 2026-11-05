@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router';
 import { useSession } from './composables/useSession';
+import { currentHostContext, planeRedirect } from './services/tenant';
 
 const routes = [
   {
@@ -9,6 +10,15 @@ const routes = [
     meta: {
       title: 'CinéSlot - Accueil',
       description: 'Découvrez et réservez vos films préférés en temps réel',
+    },
+  },
+  {
+    path: '/choisir-un-cinema',
+    name: 'choose-cinema',
+    component: () => import('./views/ChooseCinemaView.vue'),
+    meta: {
+      title: 'CinéSlot - Choisir un cinéma',
+      description: 'Choisissez le cinéma dans lequel réserver vos séances',
     },
   },
   {
@@ -137,6 +147,13 @@ const router = createRouter({
 
 // Navigation guard pour mettre à jour le titre de la page
 router.beforeEach(async (to) => {
+  const redirectName = planeRedirect(currentHostContext(), to.name as string | undefined);
+  if (redirectName === 'not-found') {
+    return { name: 'not-found', params: { pathMatch: to.path.slice(1).split('/') }, query: to.query, hash: to.hash, replace: true };
+  }
+  if (redirectName) {
+    return { name: redirectName, replace: true };
+  }
   const requiredRoles = to.meta.requiresRole as string[] | undefined;
   if (to.meta.requiresAuth || (requiredRoles && requiredRoles.length > 0)) {
     const { currentUser, initSession } = useSession();

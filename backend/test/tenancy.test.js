@@ -369,3 +369,40 @@ test('migration legacy : refuse une base tenant ou source incohérente', async (
     TypeError
   );
 });
+
+test('garde d’origine : écriture refusée depuis un autre sous-domaine', async (t) => {
+  const { createCrossOriginWriteGuard } = await import('../src/tenancy/index.js');
+  const app = express();
+  app.use(createCrossOriginWriteGuard(new Set(['http://localhost:5173'])));
+  app.all('/api/x', (_req, res) => res.json({ ok: true }));
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+
+  const send = (method, host, origin) => new Promise((resolve, reject) => {
+    const headers = { host };
+    if (origin !== undefined) headers.origin = origin;
+    const req = http.request({ hostname: '127.0.0.1', port, path: '/api/x', method, headers }, (res) => {
+      res.resume();
+      res.on('end', () => resolve({ status: res.statusCode, type: res.headers['content-type'] ?? '' }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+
+  const tenantA = 'cine-a.cineslot.localhost:3001';
+  assert.equal((await send('POST', tenantA, `http://${tenantA}`)).status, 200);
+  assert.equal((await send('POST', tenantA, 'http://CINE-A.cineslot.localhost:3001')).status, 200);
+  assert.equal((await send('POST', tenantA, undefined)).status, 200);
+  assert.equal((await send('POST', tenantA, 'http://localhost:5173')).status, 200);
+  assert.equal((await send('GET', tenantA, 'http://cine-b.cineslot.localhost:3001')).status, 200);
+
+  const crossTenant = await send('POST', tenantA, 'http://cine-b.cineslot.localhost:3001');
+  assert.equal(crossTenant.status, 403);
+  assert.match(crossTenant.type, /problem\+json/);
+  assert.equal((await send('DELETE', tenantA, 'http://admin.cineslot.localhost:3001')).status, 403);
+  assert.equal((await send('PATCH', 'admin.cineslot.localhost:3001', `http://${tenantA}`)).status, 403);
+  assert.equal((await send('POST', tenantA, 'null')).status, 403);
+  assert.equal((await send('POST', tenantA, 'http://cine-a.cineslot.localhost:3002')).status, 403);
+});

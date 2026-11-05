@@ -18,8 +18,10 @@ docker compose up -d --build
 ```
 
 Accès locaux (exposés sur `127.0.0.1`) :
-- Interface web : `http://localhost:3001`
-- API Backend : `http://localhost:3001/api` (via nginx uniquement, le port 3000 n'est plus publié)
+- Choix du cinéma : `http://cineslot.localhost:3001` (`http://localhost:3001` y redirige)
+- Un cinéma : `http://<slug>.cineslot.localhost:3001`, par exemple `http://cine-bellecour.cineslot.localhost:3001`
+- Administration : `http://admin.cineslot.localhost:3001` (allowlist IP dans `frontend/nginx/admin-allowlist.conf`)
+- API Backend : `/api` sur chacun de ces hôtes, via nginx uniquement (le port 3000 n'est plus publié)
 - Jaeger UI : `http://127.0.0.1:16686`
 
 ## Développement local
