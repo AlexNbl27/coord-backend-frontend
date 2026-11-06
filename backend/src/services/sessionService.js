@@ -255,6 +255,13 @@ export function buildProblemDetail(status, title, detail) {
   };
 }
 
+export function sendProblem(res, status, title, detail) {
+  return res
+    .status(status)
+    .type('application/problem+json')
+    .json(buildProblemDetail(status, title, detail));
+}
+
 /**
  * Reads the session cookie and checks in DB that the account still exists
  * and that its sessions were not revoked (password reset).

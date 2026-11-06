@@ -1,15 +1,18 @@
 import crypto from 'node:crypto';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
-import { Slot } from '../models/Slot.js';
-import { Booking } from '../models/Booking.js';
+import { Cinema } from '../models/Cinema.js';
+import { Movie } from '../models/Movie.js';
 import { getTenantModels } from '../tenancy/index.js';
 import { getCinemaStatus } from './cinemaStatusService.js';
 import { EXP, attribution } from './abService.js';
-import { DEFAULT_CINEMA_ADDRESS, generateSeatLabel } from '../utils/ticketFormatters.js';
+import { generateSeatLabel } from '../utils/ticketFormatters.js';
+import { sendProblem } from './sessionService.js';
+import { SSE_BROADCAST_TYPE, isValidSseBroadcast } from './sseMessages.js';
 
 const tracer = trace.getTracer('cineslot-api');
 const SMS_GATEWAY_URL = process.env.SMS_GATEWAY_URL || '';
-const MAX_SSE_CLIENTS = 200;
+const MAX_SSE_CLIENTS = Number(process.env.SSE_MAX_CLIENTS) || 200;
+const MAX_SSE_PER_IP = Number(process.env.SSE_MAX_PER_IP) || 10;
 const DEFAULT_CAPACITY = 40;
 const MAX_TICKETS_PER_BOOKING = 10;
 
@@ -20,7 +23,9 @@ const TICKET_TARIFFS = new Map([
   ['CHILD', { category: 'CHILD', label: 'Enfant (-14 ans)', unitPrice: 6.0 }]
 ]);
 
-const sseClients = new Set();
+const sseClientsBySlug = new Map();
+const sseConnectionsByIp = new Map();
+let sseClientCount = 0;
 
 const MOVIES_CATALOG = [
   { movieTitle: 'Interstellar', hall: 'Salle 1 · IMAX Laser', capacity: 40 },
@@ -30,6 +35,26 @@ const MOVIES_CATALOG = [
   { movieTitle: 'Blade Runner 2049', hall: 'Salle 4 · 4DX Immersion', capacity: 24 },
   { movieTitle: 'The Matrix', hall: 'Salle 5 · Rétro Culte', capacity: 28 }
 ];
+
+function tenantModels(tenant) {
+  return getTenantModels(tenant?.db);
+}
+
+export async function getCinemaAddress(slug) {
+  if (!slug) {
+    return '';
+  }
+  const cinema = await Cinema.findOne({ slug }, 'address city').lean();
+  if (!cinema) {
+    return '';
+  }
+  return [cinema.address, cinema.city].filter(Boolean).join(', ');
+}
+
+async function findCatalogMovieIds(titles) {
+  const movies = await Movie.find({ title: { $in: titles } }, '_id title').lean();
+  return new Map(movies.map((m) => [m.title, m._id]));
+}
 
 function normalizeTickets(rawTickets) {
   if (!rawTickets || rawTickets.length === 0) {
@@ -90,15 +115,36 @@ function normalizeTickets(rawTickets) {
 
 function sendSseEvent(res, eventName, data) {
   res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
-  if (typeof res.flush === 'function') {
-    res.flush();
+  if (typeof res.flush === 'function') res.flush();
+}
+
+function releaseSseClient(slug, res) {
+  const clients = sseClientsBySlug.get(slug);
+  const ip = clients?.get(res);
+  if (ip === undefined || !clients.delete(res)) return;
+  if (clients.size === 0) {
+    sseClientsBySlug.delete(slug);
+  }
+  sseClientCount -= 1;
+  const count = (sseConnectionsByIp.get(ip) ?? 1) - 1;
+  if (count <= 0) {
+    sseConnectionsByIp.delete(ip);
+  } else {
+    sseConnectionsByIp.set(ip, count);
   }
 }
 
 export function subscribeSse(req, res) {
-  if (sseClients.size >= MAX_SSE_CLIENTS) {
-    res.status(503).json({ message: 'Limite de connexions temps réel atteinte.' });
-    return;
+  const slug = req.tenant?.slug;
+  if (!slug) return sendProblem(res, 404, 'Not Found', 'Aucun cinéma ne correspond à cette adresse.');
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  if ((sseConnectionsByIp.get(ip) ?? 0) >= MAX_SSE_PER_IP) {
+    res.setHeader('Retry-After', '30');
+    return sendProblem(res, 429, 'Too Many Requests', 'Trop de connexions temps réel ouvertes depuis cette adresse.');
+  }
+  if (sseClientCount >= MAX_SSE_CLIENTS) {
+    res.setHeader('Retry-After', '30');
+    return sendProblem(res, 503, 'Service Unavailable', 'Limite de connexions temps réel atteinte.');
   }
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -107,74 +153,84 @@ export function subscribeSse(req, res) {
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
-  sseClients.add(res);
-  sendSseEvent(res, 'ready', { action: 'reload' });
+  if (!sseClientsBySlug.has(slug)) {
+    sseClientsBySlug.set(slug, new Map());
+  }
+  sseClientsBySlug.get(slug).set(res, ip);
+  sseClientCount += 1;
+  sseConnectionsByIp.set(ip, (sseConnectionsByIp.get(ip) ?? 0) + 1);
 
-  req.on('close', () => {
-    sseClients.delete(res);
-  });
+  req.on('close', () => releaseSseClient(slug, res));
+
+  try {
+    sendSseEvent(res, 'ready', { action: 'reload' });
+    sendSseEvent(res, 'cinema-status', { slug, status: req.tenant.status ?? 'ACTIVE' });
+  } catch {
+    releaseSseClient(slug, res);
+  }
 }
 
-function sendToLocalClients(eventName, data) {
-  for (const client of sseClients) {
+function sendToTenantClients(slug, eventName, data) {
+  const clients = sseClientsBySlug.get(slug);
+  if (!clients) return;
+  for (const client of [...clients.keys()]) {
     try {
       sendSseEvent(client, eventName, data);
     } catch {
-      sseClients.delete(client);
+      releaseSseClient(slug, client);
     }
   }
 }
 
-export function broadcastSlotChange(slot) {
+function broadcastToTenant(slug, eventName, payload) {
+  const msg = { type: SSE_BROADCAST_TYPE, slug, eventName, payload, originPid: process.pid };
+  if (!isValidSseBroadcast(msg)) return;
+  sendToTenantClients(slug, eventName, payload);
+  if (process.send) {
+    process.send(msg);
+  }
+}
+
+export function broadcastSlotChange(slot, slug) {
   const capacity = slot.capacity ?? DEFAULT_CAPACITY;
   const availableSeats = slot.availableSeats ?? (slot.status === 'BOOKED' ? 0 : capacity);
-  const payload = {
+  broadcastToTenant(slug, 'slot-updated', {
     slotId: slot._id,
     status: slot.status,
     version: slot.version,
     capacity,
     availableSeats
-  };
-
-  sendToLocalClients('slot-updated', payload);
-
-  if (process.send) {
-    process.send({
-      type: 'BROADCAST_SSE',
-      eventName: 'slot-updated',
-      payload,
-      originPid: process.pid
-    });
-  }
+  });
 }
 
 export function broadcastCinemaStatus(slug, status) {
-  const payload = { slug, status };
-  sendToLocalClients('cinema-status', payload);
-  if (process.send) {
-    process.send({
-      type: 'BROADCAST_SSE',
-      eventName: 'cinema-status',
-      payload,
-      originPid: process.pid
-    });
-  }
+  broadcastToTenant(slug, 'cinema-status', { slug, status });
+}
+
+export function getSseStats() {
+  return {
+    total: sseClientCount,
+    bySlug: Object.fromEntries([...sseClientsBySlug].map(([slug, set]) => [slug, set.size])),
+    byIp: Object.fromEntries(sseConnectionsByIp)
+  };
 }
 
 if (process.on) {
   process.on('message', (msg) => {
-    if (msg && msg.type === 'BROADCAST_SSE' && msg.originPid !== process.pid) {
-      sendToLocalClients(msg.eventName, msg.payload);
+    if (isValidSseBroadcast(msg) && msg.originPid !== process.pid) {
+      sendToTenantClients(msg.slug, msg.eventName, msg.payload);
     }
   });
 }
 
 setInterval(() => {
-  for (const client of sseClients) {
-    try {
-      client.write(': keepalive\n\n');
-    } catch {
-      sseClients.delete(client);
+  for (const [slug, clients] of [...sseClientsBySlug]) {
+    for (const client of [...clients.keys()]) {
+      try {
+        client.write(': keepalive\n\n');
+      } catch {
+        releaseSseClient(slug, client);
+      }
     }
   }
 }, 15000).unref?.();
@@ -189,21 +245,25 @@ export function toSlotView(slot) {
     version: slot.version,
     movieTitle: slot.movieTitle || 'Séance Cinéma',
     hall: slot.hall || 'Salle Principale',
+    movieId: slot.movieId ? String(slot.movieId) : null,
     capacity,
     availableSeats
   };
 }
 
-export async function seedInitialSlotsIfEmpty() {
+export async function seedInitialSlotsIfEmpty(tenant) {
+  const { Slot } = tenantModels(tenant);
   const count = await Slot.countDocuments();
   if (count === 0) {
     const now = new Date();
+    const movieIds = await findCatalogMovieIds(MOVIES_CATALOG.map((m) => m.movieTitle));
     const demoSlots = MOVIES_CATALOG.map((m, idx) => {
       const slotDate = new Date(now.getTime() + (idx + 1) * 2 * 3600 * 1000);
       return {
         _id: crypto.randomUUID(),
         startsAt: slotDate.toISOString(),
         status: 'AVAILABLE',
+        movieId: movieIds.get(m.movieTitle) ?? null,
         movieTitle: m.movieTitle,
         hall: m.hall,
         capacity: m.capacity,
@@ -213,12 +273,13 @@ export async function seedInitialSlotsIfEmpty() {
       };
     });
     await Slot.insertMany(demoSlots);
-    console.log(`[Slots] Seeded ${demoSlots.length} initial slots.`);
+    console.log(`[Slots] Seeded ${demoSlots.length} initial slots for ${tenant.slug}.`);
   }
 }
 
-export async function allSlots() {
-  await seedInitialSlotsIfEmpty();
+export async function allSlots(tenant) {
+  await seedInitialSlotsIfEmpty(tenant);
+  const { Slot } = tenantModels(tenant);
   const slots = await Slot.find().sort({ startsAt: 1 }).lean();
   return slots.map(toSlotView);
 }
@@ -238,10 +299,19 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
   return tracer.startActiveSpan('cineslot.reservation', async (span) => {
     span.setAttribute('cineslot.slot.id', String(slotId));
     try {
-      const tenantModels = tenant?.db ? getTenantModels(tenant.db) : { Slot, Booking };
-      const SlotModel = deps.Slot || tenantModels.Slot;
-      const BookingModel = deps.Booking || tenantModels.Booking;
       const checkStatus = deps.getCinemaStatus || getCinemaStatus;
+      const resolveAddress = deps.getCinemaAddress || getCinemaAddress;
+
+      const currentStatus = await checkStatus(tenant?.slug);
+      if (currentStatus !== 'ACTIVE') {
+        const error = new Error('Ce cinéma est temporairement désactivé.');
+        error.status = 423;
+        throw error;
+      }
+
+      const models = deps.Slot && deps.Booking ? deps : tenantModels(tenant);
+      const SlotModel = models.Slot;
+      const BookingModel = models.Booking;
 
       const { lines, totalQuantity, totalAmount } = normalizeTickets(rawTickets);
 
@@ -272,15 +342,6 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
 
       const bookingId = crypto.randomUUID();
       const bookedAt = new Date();
-
-      if (tenant?.slug) {
-        const currentStatus = await checkStatus(tenant.slug);
-        if (currentStatus !== 'ACTIVE') {
-          const error = new Error('Ce cinéma est temporairement désactivé.');
-          error.status = 423;
-          throw error;
-        }
-      }
 
       const winner = await SlotModel.findOneAndUpdate(
         {
@@ -348,14 +409,16 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       }
 
       const seat = generateSeatLabel(winner._id, bookingId, totalQuantity);
+      const address = await resolveAddress(tenant.slug);
       await BookingModel.create({
         _id: bookingId,
         slotId: winner._id,
         ownerId,
         ownerName,
+        movieId: winner.movieId ?? null,
         movieTitle: winner.movieTitle || 'Séance Cinéma',
         hall: winner.hall || 'Salle Principale',
-        address: DEFAULT_CINEMA_ADDRESS,
+        address,
         startsAt: winner.startsAt,
         seat,
         tickets: lines,
@@ -370,10 +433,11 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       span.setAttribute('cineslot.reservation.id', String(bookingId));
       span.setAttribute('cineslot.status', String(winner.status));
 
-      broadcastSlotChange(winner);
+      broadcastSlotChange(winner, tenant.slug);
       return {
         bookingId,
         slotId: winner._id,
+        movieId: winner.movieId ?? null,
         status: winner.status,
         seat,
         tickets: lines,
@@ -391,7 +455,8 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
   });
 }
 
-export async function cancelSlot(slotId, sessionUser) {
+export async function cancelSlot(slotId, sessionUser, tenant) {
+  const { Slot, Booking } = tenantModels(tenant);
   const safeSlotId = String(slotId);
   const bookingFilter = sessionUser
     ? { slotId: safeSlotId, ownerId: sessionUser.id, status: 'CONFIRMED' }
@@ -448,17 +513,20 @@ export async function cancelSlot(slotId, sessionUser) {
     { new: true }
   );
 
-  broadcastSlotChange(updated);
+  broadcastSlotChange(updated, tenant.slug);
   return toSlotView(updated);
 }
 
-export async function createDemoSlot() {
+export async function createDemoSlot(tenant) {
+  const { Slot } = tenantModels(tenant);
   const randomMovie = MOVIES_CATALOG[Math.floor(Math.random() * MOVIES_CATALOG.length)];
   const slotDate = new Date(Date.now() + 86400 * 1000);
+  const movieIds = await findCatalogMovieIds([randomMovie.movieTitle]);
   const slot = new Slot({
     _id: crypto.randomUUID(),
     startsAt: slotDate.toISOString(),
     status: 'AVAILABLE',
+    movieId: movieIds.get(randomMovie.movieTitle) ?? null,
     movieTitle: randomMovie.movieTitle,
     hall: randomMovie.hall,
     capacity: randomMovie.capacity,
@@ -468,11 +536,12 @@ export async function createDemoSlot() {
   });
 
   const saved = await slot.save();
-  broadcastSlotChange(saved);
+  broadcastSlotChange(saved, tenant.slug);
   return toSlotView(saved);
 }
 
-export async function getSlotProof(slotId) {
+export async function getSlotProof(slotId, tenant) {
+  const { Slot } = tenantModels(tenant);
   const slot = await Slot.findById(String(slotId)).lean();
   if (!slot) {
     const error = new Error('Créneau inconnu');
@@ -492,7 +561,8 @@ export async function getSlotProof(slotId) {
   };
 }
 
-export async function resetAllSlots() {
+export async function resetAllSlots(tenant) {
+  const { Slot, Booking } = tenantModels(tenant);
   await Slot.updateMany({}, [
     {
       $set: {
@@ -510,15 +580,7 @@ export async function resetAllSlots() {
     { $set: { status: 'CANCELLED', cancelledAt: new Date() } }
   );
 
-  sendToLocalClients('ready', { action: 'reload' });
-  if (process.send) {
-    process.send({
-      type: 'BROADCAST_SSE',
-      eventName: 'ready',
-      payload: { action: 'reload' },
-      originPid: process.pid
-    });
-  }
+  broadcastToTenant(tenant.slug, 'ready', { action: 'reload' });
 
   return { message: 'Tous les créneaux sont désormais disponibles.' };
 }

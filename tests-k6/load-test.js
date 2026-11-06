@@ -3,6 +3,7 @@ import { check, sleep } from 'k6';
 import { Trend, Rate } from 'k6/metrics';
 
 const BASE_URL = __ENV.TARGET_URL || 'http://backend:3000';
+const HOST_HEADER = { Host: __ENV.TARGET_HOST || 'cineslot.localhost' };
 const MAX_VUS = parseInt(__ENV.MAX_VUS || '500', 10);
 const MAX_PING_MS = parseInt(__ENV.MAX_PING_MS || '500', 10);
 
@@ -37,7 +38,7 @@ export function setup() {
   const loginRes = http.post(
     `${BASE_URL}/api/session/register`,
     JSON.stringify({ email: `k6-${Date.now()}@cineslot.test`, name: 'k6 Tester', password: `k6-${Date.now()}-pwd` }),
-    { headers: { 'Content-Type': 'application/json' } }
+    { headers: { 'Content-Type': 'application/json', ...HOST_HEADER } }
   );
   const cookies = loginRes.cookies?.cineslot_session;
   const sessionCookie = cookies && cookies.length > 0 ? cookies[0].value : '';
@@ -47,20 +48,20 @@ export function setup() {
 export default function (data) {
   const rand = Math.random();
   const authHeader = data?.sessionCookie
-    ? { Cookie: `cineslot_session=${data.sessionCookie}` }
-    : {};
+    ? { ...HOST_HEADER, Cookie: `cineslot_session=${data.sessionCookie}` }
+    : { ...HOST_HEADER };
 
   if (rand < 0.25) {
-    const res = http.get(`${BASE_URL}/health`);
+    const res = http.get(`${BASE_URL}/health`, { headers: HOST_HEADER });
     const ok = check(res, { 'status is 200': (r) => r.status === 200 });
     customErrorRate.add(!ok);
   } else if (rand < 0.65) {
-    const res = http.get(`${BASE_URL}/api/movies`);
+    const res = http.get(`${BASE_URL}/api/movies`, { headers: HOST_HEADER });
     const ok = check(res, { 'status is 200': (r) => r.status === 200 });
     customErrorRate.add(!ok);
   } else if (rand < 0.85) {
     const genre = GENRES[Math.floor(Math.random() * GENRES.length)];
-    const res = http.get(`${BASE_URL}/api/movies?genre=${genre}&minRating=7`);
+    const res = http.get(`${BASE_URL}/api/movies?genre=${genre}&minRating=7`, { headers: HOST_HEADER });
     const ok = check(res, { 'status is 200': (r) => r.status === 200 });
     customErrorRate.add(!ok);
   } else {
@@ -106,9 +107,9 @@ export default function (data) {
 
 export function teardown(data) {
   const authHeader = data?.sessionCookie
-    ? { Cookie: `cineslot_session=${data.sessionCookie}` }
-    : {};
-  const res = http.get(`${BASE_URL}/api/movies?limit=100`);
+    ? { ...HOST_HEADER, Cookie: `cineslot_session=${data.sessionCookie}` }
+    : { ...HOST_HEADER };
+  const res = http.get(`${BASE_URL}/api/movies?limit=100`, { headers: HOST_HEADER });
   if (res.status === 200) {
     try {
       const payload = JSON.parse(res.body);

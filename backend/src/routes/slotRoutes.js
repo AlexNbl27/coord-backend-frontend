@@ -19,9 +19,9 @@ slotRouter.get('/events', (req, res) => {
   subscribeSse(req, res);
 });
 
-slotRouter.get('/', async (_req, res, next) => {
+slotRouter.get('/', async (req, res, next) => {
   try {
-    const slots = await allSlots();
+    const slots = await allSlots(req.tenant);
     res.json(slots);
   } catch (err) {
     next(err);
@@ -38,7 +38,7 @@ slotRouter.post('/:id/reservations', requireSession, async (req, res, next) => {
     const isMeasured = req.headers['x-ab-measure'] === 'true';
     const rawTickets = Array.isArray(req.body?.tickets) ? req.body.tickets : null;
 
-    const booking = await reserveSlot(id, req.body?.customerId ?? null, visitorId, isMeasured, req.sessionUser, rawTickets);
+    const booking = await reserveSlot(id, req.body?.customerId ?? null, visitorId, isMeasured, req.sessionUser, rawTickets, req.tenant);
     return res.status(201).json(booking);
   } catch (err) {
     if (err.status) {
@@ -54,7 +54,7 @@ slotRouter.delete('/:id/reservations', requireSession, async (req, res, next) =>
     if (!isValidEntityId(id)) {
       return res.status(400).json({ message: 'Identifiant de créneau invalide' });
     }
-    const slot = await cancelSlot(id, req.sessionUser);
+    const slot = await cancelSlot(id, req.sessionUser, req.tenant);
     return res.json(slot);
   } catch (err) {
     if (err.status) {
@@ -64,9 +64,9 @@ slotRouter.delete('/:id/reservations', requireSession, async (req, res, next) =>
   }
 });
 
-slotRouter.post('/lab', requireSession, async (_req, res, next) => {
+slotRouter.post('/lab', requireSession, async (req, res, next) => {
   try {
-    const demo = await createDemoSlot();
+    const demo = await createDemoSlot(req.tenant);
     res.status(201).json(demo);
   } catch (err) {
     next(err);
@@ -79,7 +79,7 @@ slotRouter.get('/:id/proof', requireSession, async (req, res, next) => {
     if (!isValidEntityId(id)) {
       return res.status(400).json({ message: 'Identifiant de créneau invalide' });
     }
-    const proof = await getSlotProof(id);
+    const proof = await getSlotProof(id, req.tenant);
     return res.json(proof);
   } catch (err) {
     if (err.status) {
@@ -89,9 +89,9 @@ slotRouter.get('/:id/proof', requireSession, async (req, res, next) => {
   }
 });
 
-slotRouter.post('/reset', requireSession, async (_req, res, next) => {
+slotRouter.post('/reset', requireSession, async (req, res, next) => {
   try {
-    const result = await resetAllSlots();
+    const result = await resetAllSlots(req.tenant);
     res.json(result);
   } catch (err) {
     next(err);
