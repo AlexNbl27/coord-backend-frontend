@@ -8,92 +8,100 @@ import {
   getSlotProof,
   resetAllSlots
 } from '../services/slotService.js';
-import { requireSession } from '../services/sessionService.js';
-import { isValidEntityId } from '../utils/securityMiddleware.js';
-
-export const slotRouter = Router();
+import { requireRole, requireSession } from '../services/sessionService.js';
+import { areDemoRoutesEnabled, isValidEntityId } from '../utils/securityMiddleware.js';
 
 const COOKIE_NAME = 'ab_visitor';
 
-slotRouter.get('/events', (req, res) => {
-  subscribeSse(req, res);
-});
+export function createSlotRouter({ demoRoutes = areDemoRoutesEnabled() } = {}) {
+  const slotRouter = Router();
 
-slotRouter.get('/', async (req, res, next) => {
-  try {
-    const slots = await allSlots(req.tenant);
-    res.json(slots);
-  } catch (err) {
-    next(err);
-  }
-});
+  slotRouter.get('/events', (req, res) => {
+    subscribeSse(req, res);
+  });
 
-slotRouter.post('/:id/reservations', requireSession, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    if (!isValidEntityId(id)) {
-      return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+  slotRouter.get('/', async (req, res, next) => {
+    try {
+      const slots = await allSlots(req.tenant);
+      res.json(slots);
+    } catch (err) {
+      next(err);
     }
-    const visitorId = req.cookies?.[COOKIE_NAME];
-    const isMeasured = req.headers['x-ab-measure'] === 'true';
-    const rawTickets = Array.isArray(req.body?.tickets) ? req.body.tickets : null;
+  });
 
-    const booking = await reserveSlot(id, req.body?.customerId ?? null, visitorId, isMeasured, req.sessionUser, rawTickets, req.tenant);
-    return res.status(201).json(booking);
-  } catch (err) {
-    if (err.status) {
-      return res.status(err.status).json({ message: err.message });
-    }
-    return next(err);
-  }
-});
+  slotRouter.post('/:id/reservations', requireSession, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      if (!isValidEntityId(id)) {
+        return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+      }
+      const visitorId = req.cookies?.[COOKIE_NAME];
+      const isMeasured = req.headers['x-ab-measure'] === 'true';
+      const rawTickets = Array.isArray(req.body?.tickets) ? req.body.tickets : null;
 
-slotRouter.delete('/:id/reservations', requireSession, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    if (!isValidEntityId(id)) {
-      return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+      const booking = await reserveSlot(id, req.body?.customerId ?? null, visitorId, isMeasured, req.sessionUser, rawTickets, req.tenant);
+      return res.status(201).json(booking);
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ message: err.message });
+      }
+      return next(err);
     }
-    const slot = await cancelSlot(id, req.sessionUser, req.tenant);
-    return res.json(slot);
-  } catch (err) {
-    if (err.status) {
-      return res.status(err.status).json({ message: err.message });
-    }
-    return next(err);
-  }
-});
+  });
 
-slotRouter.post('/lab', requireSession, async (req, res, next) => {
-  try {
-    const demo = await createDemoSlot(req.tenant);
-    res.status(201).json(demo);
-  } catch (err) {
-    next(err);
-  }
-});
-
-slotRouter.get('/:id/proof', requireSession, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    if (!isValidEntityId(id)) {
-      return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+  slotRouter.delete('/:id/reservations', requireSession, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      if (!isValidEntityId(id)) {
+        return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+      }
+      const slot = await cancelSlot(id, req.sessionUser, req.tenant);
+      return res.json(slot);
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ message: err.message });
+      }
+      return next(err);
     }
-    const proof = await getSlotProof(id, req.tenant);
-    return res.json(proof);
-  } catch (err) {
-    if (err.status) {
-      return res.status(err.status).json({ message: err.message });
-    }
-    return next(err);
-  }
-});
+  });
 
-slotRouter.post('/reset', requireSession, async (req, res, next) => {
-  try {
-    const result = await resetAllSlots(req.tenant);
-    res.json(result);
-  } catch (err) {
-    next(err);
+  slotRouter.get('/:id/proof', requireRole('SUPER_ADMIN'), async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      if (!isValidEntityId(id)) {
+        return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+      }
+      const proof = await getSlotProof(id, req.tenant);
+      return res.json(proof);
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ message: err.message });
+      }
+      return next(err);
+    }
+  });
+
+  if (demoRoutes) {
+    slotRouter.post('/lab', requireRole('SUPER_ADMIN'), async (req, res, next) => {
+      try {
+        const demo = await createDemoSlot(req.tenant);
+        res.status(201).json(demo);
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    slotRouter.post('/reset', requireRole('SUPER_ADMIN'), async (req, res, next) => {
+      try {
+        const result = await resetAllSlots(req.tenant);
+        res.json(result);
+      } catch (err) {
+        next(err);
+      }
+    });
   }
-});
+
+  return slotRouter;
+}
+
+export const slotRouter = createSlotRouter();

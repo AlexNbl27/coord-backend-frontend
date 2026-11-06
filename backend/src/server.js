@@ -5,7 +5,7 @@ import cluster from 'node:cluster';
 import os from 'node:os';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import { trace, isSpanContextValid, SpanStatusCode } from '@opentelemetry/api';
+import { trace, isSpanContextValid } from '@opentelemetry/api';
 import { movieRouter } from './routes/movieRoutes.js';
 import { abRouter } from './routes/abRoutes.js';
 import { slotRouter } from './routes/slotRoutes.js';
@@ -20,6 +20,7 @@ import { attachSession, rejectDuplicateSessionCookies } from './services/session
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
 import { connectDatabases, createCrossOriginWriteGuard, databasesReady, requireTenant, resolveTenant } from './tenancy/index.js';
 import { isForwardableIpcMessage } from './services/sseMessages.js';
+import { errorHandler } from './utils/errorHandler.js';
 
 dotenv.config();
 
@@ -104,20 +105,7 @@ function createServer() {
   app.use('/api/admin/session', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminSessionRouter);
   app.use('/api/admin/cinemas', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminCinemaRouter);
 
-  app.use((err, _req, res, _next) => {
-    const span = trace.getActiveSpan();
-    const ctx = span?.spanContext();
-    if (span) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: err.name || 'Error' });
-    }
-    if (ctx && isSpanContextValid(ctx) && !res.headersSent) {
-      res.setHeader('X-Trace-Id', ctx.traceId);
-    }
-    const status = err.status || 500;
-    res.status(status).json({
-      message: status >= 500 ? 'Le service est momentanément indisponible.' : err.message
-    });
-  });
+  app.use(errorHandler);
 
   return app;
 }

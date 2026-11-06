@@ -1,17 +1,20 @@
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { apiClient } from '../services/apiClient';
+
+export type UserRole = 'SUPER_ADMIN' | 'CINEMA_ADMIN' | 'SPECTATOR';
 
 export interface SpectatorUser {
   id: string;
   name: string;
   email: string;
-  role?: 'SUPER_ADMIN' | 'CINEMA_ADMIN' | 'SPECTATOR';
+  role?: UserRole;
   cinemaSlugs?: string[];
 }
 
 const currentUser = ref<SpectatorUser | null>(null);
 const googleEnabled = ref(false);
 let initPromise: Promise<void> | null = null;
+const isSuperAdmin = computed(() => currentUser.value?.role === 'SUPER_ADMIN');
 
 const REQUEST_OPTIONS = { withCredentials: true, skipOfflineTrigger: true };
 
@@ -85,6 +88,7 @@ export function useSession() {
 
   return {
     currentUser,
+    isSuperAdmin,
     googleEnabled,
     initSession,
     login,

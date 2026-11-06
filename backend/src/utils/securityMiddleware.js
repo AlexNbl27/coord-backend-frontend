@@ -109,3 +109,7 @@ export function sanitizeMoviePayload(body) {
   }
   return allowed;
 }
+
+export function areDemoRoutesEnabled(env = process.env) {
+  return env.NODE_ENV !== 'production' || env.ENABLE_DEMO_ROUTES === 'true';
+}
