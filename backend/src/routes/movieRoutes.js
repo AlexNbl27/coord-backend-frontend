@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Movie } from '../models/Movie.js';
-import { requireSession } from '../services/sessionService.js';
+import { requireRole } from '../services/sessionService.js';
 import {
   escapeRegex,
   isPlainString,
@@ -143,7 +143,7 @@ movieRouter.get('/:id', async (req, res) => {
   }
 });
 
-movieRouter.post('/', requireSession, async (req, res) => {
+movieRouter.post('/', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
     const payload = sanitizeMoviePayload(req.body);
     if (!payload || !payload.title || !payload.director || !payload.year) {
@@ -161,7 +161,7 @@ movieRouter.post('/', requireSession, async (req, res) => {
   }
 });
 
-movieRouter.put('/:id', requireSession, async (req, res) => {
+movieRouter.put('/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
   if (!isValidObjectId(req.params.id)) {
     return res.status(400).json({ error: 'Identifiant de film invalide' });
   }
@@ -188,7 +188,7 @@ movieRouter.put('/:id', requireSession, async (req, res) => {
   }
 });
 
-movieRouter.delete('/:id', requireSession, async (req, res) => {
+movieRouter.delete('/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
   if (!isValidObjectId(req.params.id)) {
     return res.status(400).json({ error: 'Identifiant de film invalide' });
   }
