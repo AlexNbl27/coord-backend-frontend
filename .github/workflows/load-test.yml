@@ -29,6 +29,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Generate ephemeral secrets
+        run: |
+          {
+            echo "SESSION_SECRET=$(openssl rand -hex 32)"
+            echo "MONGO_ROOT_USERNAME=root"
+            echo "MONGO_ROOT_PASSWORD=$(openssl rand -hex 24)"
+            echo "MONGO_MASTER_PASSWORD=$(openssl rand -hex 24)"
+            echo "MONGO_TENANT_PASSWORD=$(openssl rand -hex 24)"
+            echo "MONGO_PURGE_PASSWORD=$(openssl rand -hex 24)"
+          } >> "$GITHUB_ENV"
+
       - name: Start MongoDB & Backend stack
         run: |
           docker compose up -d mongodb backend

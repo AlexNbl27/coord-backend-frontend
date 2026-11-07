@@ -36,3 +36,7 @@ export const bookingSchema = new mongoose.Schema({
 bookingSchema.index({ ownerId: 1, bookedAt: -1 });
 bookingSchema.index({ slotId: 1, status: 1 });
 bookingSchema.index({ movieId: 1, bookedAt: -1 });
+bookingSchema.index(
+  { slotId: 1, ownerId: 1 },
+  { unique: true, partialFilterExpression: { status: 'CONFIRMED' } }
+);

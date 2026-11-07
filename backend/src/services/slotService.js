@@ -422,23 +422,32 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
 
       const seat = generateSeatLabel(winner._id, bookingId, totalQuantity);
       const address = await resolveAddress(tenant.slug);
-      await BookingModel.create({
-        _id: bookingId,
-        slotId: winner._id,
-        ownerId,
-        ownerName,
-        movieId: winner.movieId ?? null,
-        movieTitle: winner.movieTitle || 'Séance Cinéma',
-        hall: winner.hall || 'Salle Principale',
-        address,
-        startsAt: winner.startsAt,
-        seat,
-        tickets: lines,
-        totalQuantity,
-        totalAmount,
-        status: 'CONFIRMED',
-        bookedAt
-      });
+      try {
+        await BookingModel.create({
+          _id: bookingId,
+          slotId: winner._id,
+          ownerId,
+          ownerName,
+          movieId: winner.movieId ?? null,
+          movieTitle: winner.movieTitle || 'Séance Cinéma',
+          hall: winner.hall || 'Salle Principale',
+          address,
+          startsAt: winner.startsAt,
+          seat,
+          tickets: lines,
+          totalQuantity,
+          totalAmount,
+          status: 'CONFIRMED',
+          bookedAt
+        });
+      } catch (err) {
+        if (err?.code !== 11000) throw err;
+        await releaseSeats(winner._id, totalQuantity, { Slot: SlotModel, Booking: BookingModel }, tenant?.slug);
+        await logEvent('REJECTED_CONFLICT', { movieId: winner.movieId });
+        const error = new Error('Vous avez déjà une réservation active pour cette séance');
+        error.status = 409;
+        throw error;
+      }
 
       await logEvent('BOOKED', { bookingId, movieId: winner.movieId });
 
@@ -476,7 +485,10 @@ export async function cancelSlot(slotId, sessionUser, tenant) {
     ? { slotId: safeSlotId, ownerId: sessionUser.id, status: 'CONFIRMED' }
     : { slotId: safeSlotId, status: 'CONFIRMED' };
 
-  const activeBooking = await Booking.findOne(bookingFilter).lean();
+  const activeBooking = await Booking.findOneAndUpdate(
+    bookingFilter,
+    { $set: { status: 'CANCELLED', cancelledAt: new Date() } }
+  ).lean();
   if (!activeBooking) {
     const anyBooking = await Booking.findOne({ slotId: safeSlotId, status: 'CONFIRMED' }).lean();
     if (anyBooking && sessionUser && anyBooking.ownerId !== sessionUser.id) {
@@ -491,11 +503,24 @@ export async function cancelSlot(slotId, sessionUser, tenant) {
   }
 
   const restoreQty = activeBooking.totalQuantity || 1;
-  await Booking.updateOne(
-    { _id: activeBooking._id },
-    { $set: { status: 'CANCELLED', cancelledAt: new Date() } }
-  );
-  const remainingActive = await Booking.countDocuments({ slotId: safeSlotId, status: 'CONFIRMED' });
+  const updated = await releaseSeats(safeSlotId, restoreQty, { Slot, Booking }, tenant?.slug);
+
+  await emitReservationEvent({
+    action: 'CANCELLED',
+    cinemaSlug: tenant?.slug ?? null,
+    slotId: safeSlotId,
+    movieId: activeBooking.movieId ?? updated?.movieId,
+    bookingId: activeBooking._id,
+    userId: activeBooking.ownerId,
+    quantity: restoreQty
+  });
+
+  return toSlotView(updated);
+}
+
+async function releaseSeats(slotId, restoreQty, models, tenantSlug) {
+  const safeSlotId = String(slotId);
+  const remainingActive = await models.Booking.countDocuments({ slotId: safeSlotId, status: 'CONFIRMED' });
 
   const pipeline = [
     {
@@ -521,24 +546,14 @@ export async function cancelSlot(slotId, sessionUser, tenant) {
     pipeline.push({ $unset: ['bookedBy', 'bookingId', 'bookedAt', 'experimentId', 'subjectId'] });
   }
 
-  const updated = await Slot.findOneAndUpdate(
+  const updated = await models.Slot.findOneAndUpdate(
     { _id: safeSlotId },
     pipeline,
     { new: true }
   );
 
-  await emitReservationEvent({
-    action: 'CANCELLED',
-    cinemaSlug: tenant?.slug ?? null,
-    slotId: safeSlotId,
-    movieId: activeBooking.movieId ?? updated?.movieId,
-    bookingId: activeBooking._id,
-    userId: activeBooking.ownerId,
-    quantity: restoreQty
-  });
-
-  broadcastSlotChange(updated, tenant.slug);
-  return toSlotView(updated);
+  broadcastSlotChange(updated, tenantSlug);
+  return updated;
 }
 
 export async function createDemoSlot(tenant) {
