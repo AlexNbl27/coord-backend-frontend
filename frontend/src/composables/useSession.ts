@@ -15,6 +15,7 @@ const currentUser = ref<SpectatorUser | null>(null);
 const googleEnabled = ref(false);
 let initPromise: Promise<void> | null = null;
 const isSuperAdmin = computed(() => currentUser.value?.role === 'SUPER_ADMIN');
+const isAdmin = computed(() => isSuperAdmin.value || currentUser.value?.role === 'CINEMA_ADMIN');
 
 const REQUEST_OPTIONS = { withCredentials: true, skipOfflineTrigger: true };
 
@@ -89,6 +90,7 @@ export function useSession() {
   return {
     currentUser,
     isSuperAdmin,
+    isAdmin,
     googleEnabled,
     initSession,
     login,

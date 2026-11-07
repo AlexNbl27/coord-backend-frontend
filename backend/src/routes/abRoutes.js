@@ -3,6 +3,7 @@ import { EXP, isEnabled, assign, expose, getMetrics, simulateData } from '../ser
 import { requireRole } from '../services/sessionService.js';
 import { requireTenant } from '../tenancy/index.js';
 import { areDemoRoutesEnabled } from '../utils/securityMiddleware.js';
+import { auditRequest } from '../events/audit.js';
 
 const COOKIE_NAME = 'ab_visitor';
 const COOKIE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -79,6 +80,10 @@ export function createAbRouter({ demoRoutes = areDemoRoutesEnabled() } = {}) {
         const convB = Math.min(clamp(req.body?.convB, 30), countB);
 
         const result = await simulateData({ countA, convA, countB, convB }, req.tenant);
+        await auditRequest(req, 'AB_SIMULATE', {
+          target: { type: 'experiment', id: EXP },
+          after: { countA, convA, countB, convB }
+        });
         res.json({
           message: 'Données de test A/B simulées avec succès',
           metrics: result
