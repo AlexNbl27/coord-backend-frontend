@@ -1,7 +1,11 @@
-export async function emitReservationEvent(event) {
-  return event;
-}
-
-export async function appendAudit(entry) {
-  return entry;
-}
+export {
+  emitReservationEvent,
+  onReservationEvent,
+  RESERVATION_ACTIONS
+} from './reservationEvents.js';
+export {
+  appendAudit,
+  auditRequest,
+  auditForbiddenResponses,
+  verifyAuditChain
+} from './audit.js';
