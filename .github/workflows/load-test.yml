@@ -38,6 +38,8 @@ jobs:
             echo "MONGO_MASTER_PASSWORD=$(openssl rand -hex 24)"
             echo "MONGO_TENANT_PASSWORD=$(openssl rand -hex 24)"
             echo "MONGO_PURGE_PASSWORD=$(openssl rand -hex 24)"
+            echo "K6_ADMIN_EMAIL=k6-admin-${{ github.run_id }}@cineslot.test"
+            echo "K6_ADMIN_PASSWORD=$(openssl rand -hex 24)"
           } >> "$GITHUB_ENV"
 
       - name: Start MongoDB & Backend stack
@@ -59,6 +61,11 @@ jobs:
             fi
           done
           echo "API is up and connected to MongoDB!"
+
+      - name: Create k6 admin account
+        run: |
+          docker compose exec -T backend node scripts/create-admin.js \
+            --email "$K6_ADMIN_EMAIL" --name "k6 Admin" --password "$K6_ADMIN_PASSWORD"
 
       - name: Execute k6 Load Test
         id: k6_test

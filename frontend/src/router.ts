@@ -91,6 +91,17 @@ const routes = [
     },
   },
   {
+    path: '/admin/stats',
+    name: 'admin-stats',
+    component: () => import('./views/AdminStatsView.vue'),
+    meta: {
+      title: 'CinéSlot - Statistiques de réservation',
+      description: 'Tableau de bord des réservations par cinéma, film et jour',
+      requiresAuth: true,
+      requiresRole: ['SUPER_ADMIN', 'CINEMA_ADMIN'],
+    },
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('./views/LoginView.vue'),
