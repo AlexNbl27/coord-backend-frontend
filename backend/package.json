@@ -7,8 +7,8 @@
   "scripts": {
     "start": "node --import ./src/tracing.js src/server.js",
     "dev": "node --watch --import ./src/tracing.js src/server.js",
-    "test": "node --test test/**/*.test.js",
-    "test:coverage": "node -e \"fs.mkdirSync('coverage', {recursive: true})\" && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-reporter=spec --test-reporter-destination=stdout test/**/*.test.js",
+    "test": "NODE_ENV=test node --test test/**/*.test.js",
+    "test:coverage": "node -e \"fs.mkdirSync('coverage', {recursive: true})\" && NODE_ENV=test node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-reporter=spec --test-reporter-destination=stdout test/**/*.test.js",
     "lint": "eslint .",
     "audit:verify": "node scripts/verify-audit-chain.js",
     "migrate:tenancy": "node scripts/migrate-to-multitenant.js"

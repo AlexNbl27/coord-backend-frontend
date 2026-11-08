@@ -51,6 +51,12 @@ if (-not $healthy) {
 
 Write-Host "✅ Backend opérationnel et connecté à MongoDB !" -ForegroundColor Green
 
+if (-not $env:K6_ADMIN_EMAIL) { $env:K6_ADMIN_EMAIL = "k6-admin@cineslot.test" }
+if (-not $env:K6_ADMIN_PASSWORD) { $env:K6_ADMIN_PASSWORD = -join ((48..57) + (97..102) | Get-Random -Count 32 | ForEach-Object { [char]$_ }) }
+Write-Host "`nCréation du compte admin k6 ($env:K6_ADMIN_EMAIL)..." -ForegroundColor Yellow
+docker compose exec -T backend node scripts/create-admin.js --email "$env:K6_ADMIN_EMAIL" --name "k6 Admin" --password "$env:K6_ADMIN_PASSWORD"
+if ($LASTEXITCODE -ne 0) { Write-Host "⚠️ Compte déjà existant : K6_ADMIN_PASSWORD doit correspondre à son mot de passe." -ForegroundColor Yellow }
+
 # 3. Exécution du test de charge k6
 Write-Host "`n[3/4] Exécution du test de montée en charge k6 (mode CI)..." -ForegroundColor Yellow
 docker compose run --rm -e MAX_VUS="$MaxVus" -e MAX_PING_MS="$MaxPingMs" k6-ci

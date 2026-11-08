@@ -33,6 +33,12 @@ until docker compose exec -T backend node -e "fetch('http://127.0.0.1:3000/healt
 done
 echo "✅ API opérationnelle et connectée à MongoDB !"
 
+: "${K6_ADMIN_EMAIL:=k6-admin@cineslot.test}"
+: "${K6_ADMIN_PASSWORD:=$(openssl rand -hex 24)}"
+export K6_ADMIN_EMAIL K6_ADMIN_PASSWORD
+echo -e "\nCréation du compte admin k6 ($K6_ADMIN_EMAIL)..."
+docker compose exec -T backend node scripts/create-admin.js --email "$K6_ADMIN_EMAIL" --name "k6 Admin" --password "$K6_ADMIN_PASSWORD" || echo "⚠️ Compte déjà existant : K6_ADMIN_PASSWORD doit correspondre à son mot de passe."
+
 echo -e "\n[3/4] Exécution du test de montée en charge k6 (mode CI)..."
 set +e
 docker compose run --rm -e MAX_VUS="$MAX_VUS" -e MAX_PING_MS="$MAX_PING_MS" k6-ci
