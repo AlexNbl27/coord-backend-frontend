@@ -66,6 +66,14 @@
           >
             Journaux
           </router-link>
+          <router-link
+            v-if="isAdmin"
+            to="/admin/stats"
+            class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium"
+            active-class="text-accent-gold font-semibold"
+          >
+            Statistiques
+          </router-link>
         </div>
 
         <!-- Right side: Status + User Tickets -->
@@ -210,6 +218,15 @@
               @click="mobileMenuOpen = false"
             >
               Journaux
+            </router-link>
+            <router-link
+              v-if="isAdmin"
+              to="/admin/stats"
+              class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2"
+              active-class="text-accent-gold font-semibold"
+              @click="mobileMenuOpen = false"
+            >
+              Statistiques
             </router-link>
             <div class="pt-3 border-t border-cinema-border/30 flex items-center justify-between gap-2">
               <template v-if="currentUser">

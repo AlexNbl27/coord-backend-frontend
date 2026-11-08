@@ -62,8 +62,8 @@ export function adminUrl(path = '/', loc: LocationLike = window.location): strin
 }
 
 const TENANT_ONLY_ROUTES = new Set(['home', 'slots', 'slot-booking', 'reservations']);
-const ADMIN_ROUTES = new Set(['admin-cinemas']);
-const ADMIN_PLANE_ROUTES = new Set(['admin-cinemas', 'login', 'not-found']);
+const ADMIN_ROUTES = new Set(['admin-cinemas', 'admin-logs', 'admin-stats']);
+const ADMIN_PLANE_ROUTES = new Set([...ADMIN_ROUTES, 'login', 'not-found']);
 
 export function planeRedirect(ctx: HostContext, routeName: string | null | undefined): string | null {
   const name = routeName ?? '';

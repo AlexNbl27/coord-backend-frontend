@@ -49,6 +49,8 @@ describe('services/tenant', () => {
 
     expect(planeRedirect(tenant, 'slots')).toBeNull();
     expect(planeRedirect(tenant, 'admin-cinemas')).toBe('not-found');
+    expect(planeRedirect(tenant, 'admin-logs')).toBe('not-found');
+    expect(planeRedirect(tenant, 'admin-stats')).toBe('not-found');
     expect(planeRedirect(tenant, 'choose-cinema')).toBe('home');
 
     expect(planeRedirect(pub, 'home')).toBe('choose-cinema');
@@ -60,6 +62,8 @@ describe('services/tenant', () => {
 
     expect(planeRedirect(admin, 'admin-cinemas')).toBeNull();
     expect(planeRedirect(admin, 'login')).toBeNull();
+    expect(planeRedirect(admin, 'admin-logs')).toBeNull();
+    expect(planeRedirect(admin, 'admin-stats')).toBeNull();
     expect(planeRedirect(admin, 'slots')).toBe('admin-cinemas');
     expect(planeRedirect(admin, 'home')).toBe('admin-cinemas');
 
