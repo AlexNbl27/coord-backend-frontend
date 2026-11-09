@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
 import 'dotenv/config';
 import { recomputeBookingStats } from '../src/stats/bookingStats.js';
+import { resolveMongoConfig } from '../src/tenancy/index.js';
 
-const mongoUri = process.env.MONGO_URI || 'mongodb://mongodb:27017/cineslot_master?directConnection=true';
-
-await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
+const { masterUri, masterDbName } = resolveMongoConfig();
+await mongoose.connect(masterUri, { dbName: masterDbName, serverSelectionTimeoutMS: 5000 });
 try {
   const logs = mongoose.connection
     .collection('reservation_logs')

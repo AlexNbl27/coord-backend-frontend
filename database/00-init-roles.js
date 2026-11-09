@@ -3,7 +3,7 @@ const MASTER_DB = 'cineslot_master';
 const LEGACY_DB = 'cours_db';
 const TENANT_COLLECTIONS = ['slots', 'bookings'];
 const APPEND_ONLY = ['reservation_logs', 'audit_logs'];
-const MASTER_RW = ['cinemas', 'users', 'movies', 'booking_stats'];
+const MASTER_RW = ['cinemas', 'users', 'movies', 'booking_stats', 'ab_subjects', 'job_locks'];
 const RW = ['find', 'insert', 'update', 'remove', 'createIndex', 'listIndexes', 'createCollection'];
 
 const on = (dbName, collection, actions) => ({ resource: { db: dbName, collection }, actions });

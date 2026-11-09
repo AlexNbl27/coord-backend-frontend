@@ -20,7 +20,7 @@ MongoDB démarre avec authentification (`MONGO_ROOT_USERNAME` / `MONGO_ROOT_PASS
 
 | Compte | Droits |
 |---|---|
-| `cineslotMaster` | `cineslot_master` (cinemas, users, movies, booking_stats en lecture/écriture ; reservation_logs et audit_logs en insert/find seulement) et `cours_db` tant que la migration multitenant n'est pas faite |
+| `cineslotMaster` | `cineslot_master` (cinemas, users, movies, booking_stats, ab_subjects, job_locks en lecture/écriture ; reservation_logs et audit_logs en insert/find seulement) et `cours_db` tant que la migration multitenant n'est pas faite |
 | `cineslotTenant` | collections `slots` et `bookings` des BDD `cinema_<slug>` (y compris leur suppression par la purge J+60), aucun droit sur `cineslot_master` |
 | `cineslotPurge` | find/update sur `cineslot_master.cinemas`, insert/find sur les logs, suppression des collections tenant |
 

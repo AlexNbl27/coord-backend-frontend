@@ -33,6 +33,7 @@ jobs:
         run: |
           {
             echo "SESSION_SECRET=$(openssl rand -hex 32)"
+            echo "AUDIT_KEY=$(openssl rand -hex 32)"
             echo "MONGO_ROOT_USERNAME=root"
             echo "MONGO_ROOT_PASSWORD=$(openssl rand -hex 24)"
             echo "MONGO_MASTER_PASSWORD=$(openssl rand -hex 24)"

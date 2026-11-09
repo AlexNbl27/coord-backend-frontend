@@ -6,7 +6,7 @@ const BASE_URL = __ENV.TARGET_URL || 'http://backend:3000';
 const MAX_VUS = parseInt(__ENV.MAX_VUS || '500', 10);
 const MAX_PING_MS = parseInt(__ENV.MAX_PING_MS || '500', 10);
 const ROOT_DOMAIN = __ENV.K6_ROOT_DOMAIN || 'cineslot.localhost:3001';
-const TENANTS = (__ENV.K6_TENANTS || 'lumiere,rex').split(',').map((s) => s.trim()).filter(Boolean);
+const TENANTS = (__ENV.K6_TENANTS || 'cine-bellecour,cine-part-dieu').split(',').map((s) => s.trim()).filter(Boolean);
 const ADMIN_HOST = `admin.${ROOT_DOMAIN}`;
 const ADMIN_EMAIL = __ENV.K6_ADMIN_EMAIL || '';
 const ADMIN_PASSWORD = __ENV.K6_ADMIN_PASSWORD || '';

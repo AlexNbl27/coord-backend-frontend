@@ -39,5 +39,5 @@ Variables configurables :
 - `MAX_VUS` (défaut `500`) : nombre maximal d'utilisateurs virtuels sur les paliers `10 % -> 30 % -> 60 % -> 100 % -> 0 %`.
 - `MAX_PING_MS` (défaut `500`) : seuil `p(95)` sur `http_req_duration`.
 - `K6_ROOT_DOMAIN` (défaut `cineslot.localhost:3001`) : domaine racine utilisé dans l'en-tête `Host`.
-- `K6_TENANTS` (défaut `lumiere,rex`) : slugs des cinémas ciblés.
+- `K6_TENANTS` (défaut `cine-bellecour,cine-part-dieu`) : slugs des cinémas ciblés.
 - `K6_ADMIN_EMAIL`, `K6_ADMIN_PASSWORD` : compte admin, obligatoires.

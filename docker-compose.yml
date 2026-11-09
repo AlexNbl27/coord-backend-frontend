@@ -39,6 +39,8 @@ services:
       - MONGO_TENANT_URI=mongodb://cineslotTenant:${MONGO_TENANT_PASSWORD:?MONGO_TENANT_PASSWORD requis}@mongodb:27017/?authSource=admin&directConnection=true
       - WEB_CONCURRENCY=${WEB_CONCURRENCY:-1}
       - SESSION_SECRET=${SESSION_SECRET:?SESSION_SECRET requis}
+      - AUDIT_KEY=${AUDIT_KEY:?AUDIT_KEY requis}
+      - ENABLE_DEMO_ROUTES=${ENABLE_DEMO_ROUTES:-false}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3001,http://localhost:5173,http://127.0.0.1:3001,http://127.0.0.1:5173}
       - SMS_GATEWAY_URL=http://sms-passerelle:8090/sms
       - SMTP_URL=${SMTP_URL:-smtp://mailpit:1025}
@@ -116,7 +118,7 @@ services:
       - MAX_VUS=${MAX_VUS:-500}
       - MAX_PING_MS=${MAX_PING_MS:-500}
       - K6_ROOT_DOMAIN=${K6_ROOT_DOMAIN:-cineslot.localhost:3001}
-      - K6_TENANTS=${K6_TENANTS:-lumiere,rex}
+      - K6_TENANTS=${K6_TENANTS:-cine-bellecour,cine-part-dieu}
       - K6_ADMIN_EMAIL=${K6_ADMIN_EMAIL:-}
       - K6_ADMIN_PASSWORD=${K6_ADMIN_PASSWORD:-}
     entrypoint: ["k6", "run", "--linger", "/scripts/load-test.js"]
@@ -135,7 +137,7 @@ services:
       - MAX_VUS=${MAX_VUS:-500}
       - MAX_PING_MS=${MAX_PING_MS:-500}
       - K6_ROOT_DOMAIN=${K6_ROOT_DOMAIN:-cineslot.localhost:3001}
-      - K6_TENANTS=${K6_TENANTS:-lumiere,rex}
+      - K6_TENANTS=${K6_TENANTS:-cine-bellecour,cine-part-dieu}
       - K6_ADMIN_EMAIL=${K6_ADMIN_EMAIL:-}
       - K6_ADMIN_PASSWORD=${K6_ADMIN_PASSWORD:-}
     entrypoint: ["k6", "run", "/scripts/load-test.js"]
@@ -218,6 +220,10 @@ volumes:
 networks:
   ynov-network:
     driver: bridge
+    # fixed subnet inside 172.16.0.0/12 so the host gateway matches frontend/nginx/admin-allowlist.conf (OrbStack defaults to 192.168.x.x)
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
   data-network:
     driver: bridge
     internal: true
