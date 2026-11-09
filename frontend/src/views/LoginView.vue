@@ -6,7 +6,31 @@
       <p v-if="notice" role="status" class="success-message mb-4">{{ notice }}</p>
       <p v-if="error" role="alert" class="error-message mb-4">{{ error }}</p>
 
-      <form class="space-y-4" novalidate @submit.prevent="submit">
+      <form v-if="mode === 'mfa'" class="space-y-4" novalidate @submit.prevent="submitMfa">
+        <div v-if="totpSecret" class="rounded-xl bg-cinema-darker border border-cinema-border/60 p-4 space-y-2 text-xs text-cinema-textMuted">
+          <p class="text-white font-medium">Configuration MFA TOTP</p>
+          <p>Ajoutez ce secret dans votre application d'authentification :</p>
+          <p class="font-mono text-accent-gold break-all select-all">{{ totpSecret }}</p>
+        </div>
+        <div>
+          <label for="auth-totp" class="block text-sm font-medium text-cinema-text mb-1">Code TOTP (6 chiffres)</label>
+          <input
+            id="auth-totp"
+            v-model.trim="totpCode"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            required
+            class="input"
+          />
+        </div>
+        <button type="submit" class="btn btn-primary w-full" :disabled="pending">
+          {{ pending ? 'Vérification…' : 'Valider le code MFA' }}
+        </button>
+      </form>
+
+      <form v-else class="space-y-4" novalidate @submit.prevent="submit">
         <div>
           <label for="auth-email" class="block text-sm font-medium text-cinema-text mb-1">Email</label>
           <input id="auth-email" v-model.trim="email" type="email" autocomplete="email" required class="input" />
@@ -38,12 +62,12 @@
         </button>
       </form>
 
-      <template v-if="googleEnabled && mode !== 'forgot'">
+      <template v-if="!isAdminPlane && googleEnabled && mode !== 'forgot'">
         <p class="my-4 text-center text-xs text-cinema-textMuted">ou</p>
         <a :href="googleUrl" class="btn btn-outline w-full text-center">Continuer avec Google</a>
       </template>
 
-      <div class="mt-6 flex flex-col gap-2 text-sm">
+      <div v-if="!isAdminPlane" class="mt-6 flex flex-col gap-2 text-sm">
         <button v-if="mode === 'login'" type="button" class="text-accent-gold hover:underline text-left cursor-pointer" @click="switchMode('forgot')">
           Mot de passe oublié ?
         </button>
@@ -63,22 +87,35 @@ import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSession } from '../composables/useSession';
 
-type Mode = 'login' | 'register' | 'forgot';
+type Mode = 'login' | 'register' | 'forgot' | 'mfa';
 
 const TITLES: Record<Mode, string> = {
   login: 'Connexion',
   register: 'Créer un compte',
   forgot: 'Mot de passe oublié',
+  mfa: 'Vérification MFA',
 };
 const SUBMIT_LABELS: Record<Mode, string> = {
   login: 'Se connecter',
   register: 'Créer mon compte',
   forgot: 'Envoyer le lien',
+  mfa: 'Valider le code MFA',
 };
 
 const route = useRoute();
 const router = useRouter();
-const { login, register, forgotPassword, googleEnabled, initSession } = useSession();
+const {
+  login,
+  register,
+  forgotPassword,
+  setupMfa,
+  verifyMfa,
+  isAdminPlane,
+  googleEnabled,
+  mfaEnabled,
+  mfaVerifiedAt,
+  initSession
+} = useSession();
 void initSession();
 
 const OAUTH_ERRORS: Record<string, string> = {
@@ -90,6 +127,8 @@ const mode = ref<Mode>('login');
 const email = ref('');
 const name = ref('');
 const password = ref('');
+const totpCode = ref('');
+const totpSecret = ref('');
 const error = ref(OAUTH_ERRORS[String(route.query.error)] ?? '');
 const notice = ref(route.query.reset === 'ok' ? 'Mot de passe modifié. Vous pouvez vous connecter.' : '');
 const pending = ref(false);
@@ -126,6 +165,33 @@ const submit = async () => {
     const failure = mode.value === 'login'
       ? await login(email.value, password.value)
       : await register(email.value, name.value, password.value);
+    if (failure) {
+      error.value = failure;
+      return;
+    }
+    if (isAdminPlane && !mfaVerifiedAt.value) {
+      if (!mfaEnabled.value) {
+        const setup = await setupMfa();
+        if (typeof setup === 'string') {
+          error.value = setup;
+          return;
+        }
+        totpSecret.value = setup.secret;
+      }
+      mode.value = 'mfa';
+      return;
+    }
+    await router.replace(redirectTarget());
+  } finally {
+    pending.value = false;
+  }
+};
+
+const submitMfa = async () => {
+  error.value = '';
+  pending.value = true;
+  try {
+    const failure = await verifyMfa(totpCode.value);
     if (failure) {
       error.value = failure;
       return;
