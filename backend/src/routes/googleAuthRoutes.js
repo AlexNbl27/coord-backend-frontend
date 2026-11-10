@@ -15,10 +15,26 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
 const STATE_COOKIE = 'cineslot_oauth';
 const STATE_TTL_MS = 10 * 60 * 1000;
+const HANDOFF_TTL_MS = 60 * 1000;
+const DEFAULT_APP_URL = 'http://cineslot.localhost:3001';
 
 export function isGoogleAuthEnabled(env = process.env) {
   return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 }
+
+/**
+ * Google only accepts plain-http redirect URIs on localhost, not on *.cineslot.localhost.
+ * When GOOGLE_REDIRECT_URI is on another host than APP_URL, the OAuth dance runs on that host
+ * and the session is handed to the cinema host with a signed single-use token (relay).
+ * Returns that OAuth hostname, or null when no relay is needed.
+ */
+export function googleOAuthRelayHost(env = process.env) {
+  if (!env.GOOGLE_REDIRECT_URI) return null;
+  const oauth = new URL(env.GOOGLE_REDIRECT_URI);
+  return oauth.host === new URL(env.APP_URL || DEFAULT_APP_URL).host ? null : oauth.hostname;
+}
+
+const hashJti = (jti) => crypto.createHash('sha256').update(jti).digest('base64url');
 
 function safeRedirectPath(value) {
   return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/';
@@ -32,15 +48,18 @@ export function createGoogleAuthRouter(deps = {}) {
   const users = deps.users || User;
   const cinemas = deps.cinemas || Cinema;
   const fetchImpl = deps.fetch || fetch;
-  const appUrl = (env.APP_URL || 'http://cineslot.localhost:3001').replace(/\/$/, '');
+  const appUrl = (env.APP_URL || DEFAULT_APP_URL).replace(/\/$/, '');
   const redirectUri = env.GOOGLE_REDIRECT_URI || `${appUrl}/api/session/google/callback`;
+  const relayHost = googleOAuthRelayHost(env);
+  const oauthOrigin = new URL(redirectUri).origin;
   const stateSecret = env.SESSION_SECRET || 'dev-only-ephemeral-hmac-secret-key-32bytes';
   const cookieDomain = env.SESSION_COOKIE_DOMAIN || '.cineslot.localhost';
   const stateCookieOptions = {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
     sameSite: 'lax',
-    domain: cookieDomain,
+    // host-only on the relay host: the browser would refuse a .cineslot.localhost cookie from localhost
+    domain: relayHost ? undefined : cookieDomain,
     path: '/api/session/google',
     maxAge: STATE_TTL_MS
   };
@@ -71,7 +90,7 @@ export function createGoogleAuthRouter(deps = {}) {
   };
 
   const fail = (res, reason) => {
-    res.clearCookie(STATE_COOKIE, { path: stateCookieOptions.path, domain: cookieDomain });
+    res.clearCookie(STATE_COOKIE, { path: stateCookieOptions.path, domain: stateCookieOptions.domain });
     return res.redirect(302, `${appUrl}/login?error=${reason}`);
   };
 
@@ -84,6 +103,12 @@ export function createGoogleAuthRouter(deps = {}) {
     const redirect = safeRedirectPath(req.query.redirect);
     const rawSlug = typeof req.query.slug === 'string' ? req.query.slug.trim() : req.tenant?.slug;
     const slug = isValidSlug(rawSlug) ? rawSlug : null;
+
+    if (relayHost && req.hostname !== relayHost) {
+      const relayStart = new URL('/api/session/google', oauthOrigin);
+      relayStart.search = new URLSearchParams({ redirect, ...(slug ? { slug } : {}) }).toString();
+      return res.redirect(302, relayStart.toString());
+    }
 
     res.cookie(STATE_COOKIE, signStateCookie({ state, verifier, redirect, slug }), stateCookieOptions);
     const url = new URL(GOOGLE_AUTH_URL);
@@ -103,7 +128,7 @@ export function createGoogleAuthRouter(deps = {}) {
   router.get('/callback', limiter, async (req, res) => {
     const saved = verifyStateCookie(req.cookies?.[STATE_COOKIE]);
     const { code, state } = req.query;
-    if (!saved || typeof state !== 'string' || typeof code !== 'string' || state !== saved.state) {
+    if (!saved || saved.typ || typeof state !== 'string' || typeof code !== 'string' || state !== saved.state) {
       return fail(res, 'google');
     }
 
@@ -166,11 +191,41 @@ export function createGoogleAuthRouter(deps = {}) {
         });
       }
 
-      res.clearCookie(STATE_COOKIE, { path: stateCookieOptions.path, domain: cookieDomain });
+      res.clearCookie(STATE_COOKIE, { path: stateCookieOptions.path, domain: stateCookieOptions.domain });
+      if (relayHost) {
+        const jti = crypto.randomBytes(24).toString('base64url');
+        await users.updateOne({ _id: user._id }, { $set: { oauthHandoffJti: hashJti(jti) } });
+        const token = signStateCookie({
+          typ: 'handoff', uid: user._id, jti, slug: saved.slug ?? null, redirect: saved.redirect, exp: Date.now() + HANDOFF_TTL_MS
+        });
+        return res.redirect(302, `${targetBaseUrl}/api/session/google/complete?token=${encodeURIComponent(token)}`);
+      }
       res.cookie(SESSION_COOKIE_NAME, signSessionToken(user), getSessionCookieOptions());
       return res.redirect(302, `${targetBaseUrl}${safeRedirectPath(saved.redirect)}`);
     } catch (err) {
       console.warn('[OAuth Google] Callback failed:', err.message);
+      return fail(res, 'google');
+    }
+  });
+
+  // Relay landing on the cinema (or apex) host: single-use, 60 s, bound to that host.
+  router.get('/complete', limiter, async (req, res) => {
+    const data = verifyStateCookie(req.query.token);
+    if (!relayHost || data?.typ !== 'handoff' || typeof data.uid !== 'string' || typeof data.jti !== 'string'
+      || !(data.exp > Date.now()) || (data.slug ?? null) !== (req.tenant?.slug ?? null)) {
+      return fail(res, 'google');
+    }
+    try {
+      // Atomic consume: a replayed token (other tab, other worker) finds no matching jti.
+      const user = await users.findOneAndUpdate(
+        { _id: data.uid, oauthHandoffJti: hashJti(data.jti) },
+        { $unset: { oauthHandoffJti: 1 } }
+      );
+      if (!user) return fail(res, 'google');
+      res.cookie(SESSION_COOKIE_NAME, signSessionToken(user), getSessionCookieOptions());
+      return res.redirect(302, safeRedirectPath(data.redirect));
+    } catch (err) {
+      console.warn('[OAuth Google] Handoff failed:', err.message);
       return fail(res, 'google');
     }
   });

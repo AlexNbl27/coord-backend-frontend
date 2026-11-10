@@ -10,7 +10,7 @@ import { movieRouter } from './routes/movieRoutes.js';
 import { abRouter } from './routes/abRoutes.js';
 import { slotRouter } from './routes/slotRoutes.js';
 import { sessionRouter } from './routes/sessionRoutes.js';
-import { googleAuthRouter } from './routes/googleAuthRoutes.js';
+import { googleAuthRouter, googleOAuthRelayHost } from './routes/googleAuthRoutes.js';
 import { ticketRouter } from './routes/ticketRoutes.js';
 import { cinemaRouter } from './routes/cinemaRoutes.js';
 import { adminSessionRouter } from './routes/adminSessionRoutes.js';
@@ -96,6 +96,11 @@ function createServer() {
   app.get('/health', healthHandler);
   app.get('/api/health', healthHandler);
 
+  // Google OAuth relay host (localhost) is outside the tenant domains: serve it before resolveTenant.
+  const oauthRelayHost = googleOAuthRelayHost();
+  if (oauthRelayHost) {
+    app.use('/api/session/google', (req, res, next) => (req.hostname === oauthRelayHost ? googleAuthRouter(req, res, next) : next()));
+  }
   app.use(resolveTenant);
   app.use(rejectDuplicateSessionCookies);
   app.use(attachSession);

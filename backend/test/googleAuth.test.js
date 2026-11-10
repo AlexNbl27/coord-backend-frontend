@@ -138,3 +138,65 @@ test('googleAuth: ignores external redirect targets', async () => {
     assert.equal(res.headers.get('location'), 'http://app.test/');
   });
 });
+
+test('googleAuth relay: OAuth on the localhost redirect host, session handed over once to the app host', async () => {
+  const users = createUserStore();
+  users.updateOne = async (filter, update) => {
+    const doc = users.docs.find((d) => d._id === filter._id);
+    Object.assign(doc, update.$set);
+  };
+  users.findOneAndUpdate = async (filter, update) => {
+    const doc = users.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v));
+    if (!doc) return null;
+    const before = { ...doc };
+    for (const key of Object.keys(update.$unset)) delete doc[key];
+    return before;
+  };
+  const profile = { sub: 'g-9', email: 'relay@gmail.com', email_verified: true, name: 'Relay' };
+
+  const app = express();
+  app.use(cookieParser());
+  app.use((req, _res, next) => {
+    if (req.headers['x-tenant']) req.tenant = { slug: req.headers['x-tenant'] };
+    next();
+  });
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  const env = { ...ENV, GOOGLE_REDIRECT_URI: `http://127.0.0.1:${port}/api/session/google/callback` };
+  app.use('/api/session/google', createGoogleAuthRouter({ env, users, fetch: fakeGoogle(profile), limiter: (_q, _r, n) => n() }));
+  const get = (url, headers = {}) => fetch(url, { redirect: 'manual', headers });
+
+  try {
+    // App host (not the OAuth host): bounce to the OAuth host first
+    const bounce = await get(`http://localhost:${port}/api/session/google?redirect=%2Freservations`);
+    assert.equal(bounce.headers.get('location'), `http://127.0.0.1:${port}/api/session/google?redirect=%2Freservations`);
+
+    const startRes = await get(bounce.headers.get('location'));
+    const stateHeader = startRes.headers.getSetCookie().find((c) => c.startsWith('cineslot_oauth='));
+    assert.doesNotMatch(stateHeader, /Domain=/i, 'state cookie is host-only on the relay host');
+    const state = new URL(startRes.headers.get('location')).searchParams.get('state');
+
+    const cb = await get(`http://127.0.0.1:${port}/api/session/google/callback?code=abc&state=${state}`, { Cookie: stateHeader.split(';')[0] });
+    assert.equal(cookieValue(cb, SESSION_COOKIE_NAME), null, 'no session cookie on the relay host');
+    const handoff = new URL(cb.headers.get('location'));
+    assert.equal(`${handoff.origin}${handoff.pathname}`, 'http://app.test/api/session/google/complete');
+    const token = handoff.searchParams.get('token');
+    const complete = (t, headers) => get(`http://127.0.0.1:${port}/api/session/google/complete?token=${encodeURIComponent(t)}`, headers);
+
+    const forged = await complete(`${token.slice(0, -2)}xx`);
+    assert.equal(forged.headers.get('location'), 'http://app.test/login?error=google');
+    const otherCinema = await complete(token, { 'x-tenant': 'other-cinema' });
+    assert.equal(otherCinema.headers.get('location'), 'http://app.test/login?error=google');
+
+    const ok = await complete(token);
+    assert.equal(ok.headers.get('location'), '/reservations');
+    assert.equal(verifySessionToken(cookieValue(ok, SESSION_COOKIE_NAME).split('=')[1]).email, 'relay@gmail.com');
+
+    const replay = await complete(token);
+    assert.equal(replay.headers.get('location'), 'http://app.test/login?error=google');
+    assert.equal(cookieValue(replay, SESSION_COOKIE_NAME), null);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

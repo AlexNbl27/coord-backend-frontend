@@ -14,6 +14,8 @@ const userSchema = new mongoose.Schema({
   googleId: { type: String, default: undefined, unique: true, sparse: true },
   resetTokenHash: { type: String, default: undefined, index: { sparse: true } },
   resetTokenExpires: { type: Date, default: undefined },
+  // sha256 of the pending Google relay token id, consumed once by /api/session/google/complete
+  oauthHandoffJti: { type: String, default: undefined },
   createdAt: { type: Date, default: Date.now }
 }, {
   collection: 'users',
