@@ -155,7 +155,9 @@ services:
     volumes:
       - ./observabilite/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     networks:
-      - ynov-network
+      ynov-network:
+        aliases:
+          - collector
     depends_on:
       - jaeger
 
