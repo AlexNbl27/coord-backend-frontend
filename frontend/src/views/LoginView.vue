@@ -9,7 +9,16 @@
       <form v-if="mode === 'mfa'" class="space-y-4" novalidate @submit.prevent="submitMfa">
         <div v-if="totpSecret" class="rounded-xl bg-cinema-darker border border-cinema-border/60 p-4 space-y-2 text-xs text-cinema-textMuted">
           <p class="text-white font-medium">Configuration MFA TOTP</p>
-          <p>Ajoutez ce secret dans votre application d'authentification :</p>
+          <p>Scannez ce QR code avec votre application d'authentification :</p>
+          <img
+            v-if="totpQr"
+            :src="totpQr"
+            width="192"
+            height="192"
+            alt="QR code de configuration TOTP pour votre application d'authentification"
+            class="mx-auto rounded-lg bg-white p-2"
+          />
+          <p>Ou saisissez ce secret manuellement :</p>
           <p class="font-mono text-accent-gold break-all select-all">{{ totpSecret }}</p>
         </div>
         <div>
@@ -84,6 +93,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import QRCode from 'qrcode';
 import { useRoute, useRouter } from 'vue-router';
 import { useSession } from '../composables/useSession';
 
@@ -129,6 +139,7 @@ const name = ref('');
 const password = ref('');
 const totpCode = ref('');
 const totpSecret = ref('');
+const totpQr = ref('');
 const error = ref(OAUTH_ERRORS[String(route.query.error)] ?? '');
 const notice = ref(route.query.reset === 'ok' ? 'Mot de passe modifié. Vous pouvez vous connecter.' : '');
 const pending = ref(false);
@@ -177,6 +188,8 @@ const submit = async () => {
           return;
         }
         totpSecret.value = setup.secret;
+        // Generated in the browser: the secret never leaves the page.
+        totpQr.value = await QRCode.toDataURL(setup.otpauthUri, { margin: 1, width: 192 }).catch(() => '');
       }
       mode.value = 'mfa';
       return;
