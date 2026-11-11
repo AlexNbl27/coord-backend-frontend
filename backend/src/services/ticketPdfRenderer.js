@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import PDFDocument from 'pdfkit';
+import QRCode from 'qrcode';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,32 +47,16 @@ function assertEmbeddedFonts(fontsDir) {
   return { regularPath, boldPath };
 }
 
-function drawQrMatrix(doc, x, y, size, seedText) {
-  const cells = 11;
-  const cellSize = size / cells;
-  let hash = 2166136261;
-  for (let i = 0; i < seedText.length; i += 1) {
-    hash ^= seedText.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  const isFinder = (r, c) =>
-    (r < 3 && c < 3) || (r < 3 && c >= cells - 3) || (r >= cells - 3 && c < 3);
+// Real, scannable QR code drawn as vector squares (stays sharp in the PDF).
+function drawQrCode(doc, x, y, size, text) {
+  const { modules } = QRCode.create(text, { errorCorrectionLevel: 'M' });
+  const cellSize = size / modules.size;
 
   doc.save();
   doc.rect(x - 4, y - 4, size + 8, size + 8).fill('#FFFFFF').stroke('#CBD5E1');
-  for (let r = 0; r < cells; r += 1) {
-    for (let c = 0; c < cells; c += 1) {
-      let filled = false;
-      if (isFinder(r, c)) {
-        const lr = r >= cells - 3 ? r - (cells - 3) : r;
-        const lc = c >= cells - 3 ? c - (cells - 3) : c;
-        filled = lr === 0 || lr === 2 || lc === 0 || lc === 2 || (lr === 1 && lc === 1);
-      } else {
-        const bit = ((hash >>> ((r * cells + c) % 24)) ^ (r * 7 + c * 13)) & 1;
-        filled = bit === 1;
-      }
-      if (filled) {
+  for (let r = 0; r < modules.size; r += 1) {
+    for (let c = 0; c < modules.size; c += 1) {
+      if (modules.get(r, c)) {
         doc.rect(x + c * cellSize, y + r * cellSize, cellSize, cellSize).fill('#0F172A');
       }
     }
@@ -308,7 +293,7 @@ export async function renderTicketPdf(view, options = {}) {
         const qrSize = 78;
         const qrX = left + contentWidth - qrSize - 6;
         const qrY = stubY + 12;
-        drawQrMatrix(doc, qrX, qrY, qrSize, `${view.reference}:${view.seat}`);
+        drawQrCode(doc, qrX, qrY, qrSize, view.bookingId || view.reference);
         doc.font('DejaVu-Bold').fontSize(8).fillColor('#0F172A').text(
           view.reference,
           qrX - 4,

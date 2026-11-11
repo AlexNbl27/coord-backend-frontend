@@ -108,6 +108,7 @@ export function createTicketView(booking) {
     : '';
 
   return {
+    bookingId: String(booking._id ?? ''),
     reference: buildTicketReference(booking._id),
     spectatorName: booking.ownerName || 'Spectateur CinéSlot',
     movieTitle: booking.movieTitle || 'Séance CinéSlot',

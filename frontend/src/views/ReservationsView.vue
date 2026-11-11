@@ -253,23 +253,20 @@
           <!-- QR Code Section -->
           <div class="hidden lg:flex flex-col items-center justify-center p-6 bg-cinema-darker/60 border-l border-cinema-border/40 shrink-0 text-center" aria-hidden="true">
             <div class="p-2.5 bg-white rounded-xl shadow-md mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-black" viewBox="0 0 110 110" fill="currentColor" aria-hidden="true">
-                <rect x="0" y="0" width="30" height="30" fill="black" />
-                <rect x="5" y="5" width="20" height="20" fill="white" />
-                <rect x="10" y="10" width="10" height="10" fill="black" />
-                <rect x="80" y="0" width="30" height="30" fill="black" />
-                <rect x="85" y="5" width="20" height="20" fill="white" />
-                <rect x="90" y="10" width="10" height="10" fill="black" />
-                <rect x="0" y="80" width="30" height="30" fill="black" />
-                <rect x="5" y="85" width="20" height="20" fill="white" />
-                <rect x="10" y="90" width="10" height="10" fill="black" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-20 h-20"
+                :viewBox="`0 0 ${qrCodes.get(booking.bookingId)?.size ?? 0} ${qrCodes.get(booking.bookingId)?.size ?? 0}`"
+                shape-rendering="crispEdges"
+                aria-hidden="true"
+              >
                 <rect
-                  v-for="(cell, idx) in qrCells(booking.bookingId)"
+                  v-for="(cell, idx) in qrCodes.get(booking.bookingId)?.cells ?? []"
                   :key="idx"
                   :x="cell.x"
                   :y="cell.y"
-                  width="10"
-                  height="10"
+                  width="1"
+                  height="1"
                   fill="black"
                 />
               </svg>
@@ -335,6 +332,7 @@
 </template>
 
 <script setup lang="ts">
+import QRCode from 'qrcode';
 import { ref, computed } from 'vue';
 import { useReservations, type UserBooking } from '../composables/useReservations';
 import { useConnectionStore } from '../stores/connection';
@@ -428,23 +426,18 @@ const formatDateTime = (dateStr: string) => {
   }
 };
 
-const qrCells = (seed: string) => {
-  let hash = 2166136261;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash ^= seed.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
+// Real QR code of the booking id, same payload as the PDF ticket.
+const qrCode = (bookingId: string) => {
+  const { modules } = QRCode.create(bookingId, { errorCorrectionLevel: 'M' });
   const cells: Array<{ x: number; y: number }> = [];
-  for (let r = 0; r < 11; r += 1) {
-    for (let c = 0; c < 11; c += 1) {
-      const inFinder = (r < 3 && c < 3) || (r < 3 && c >= 8) || (r >= 8 && c < 3);
-      if (!inFinder && (((hash >>> ((r * 11 + c) % 24)) ^ (r * 7 + c * 13)) & 1) === 1) {
-        cells.push({ x: c * 10, y: r * 10 });
-      }
+  for (let y = 0; y < modules.size; y += 1) {
+    for (let x = 0; x < modules.size; x += 1) {
+      if (modules.get(y, x)) cells.push({ x, y });
     }
   }
-  return cells;
+  return { size: modules.size, cells };
 };
+const qrCodes = computed(() => new Map(displayedBookings.value.map((b) => [b.bookingId, qrCode(b.bookingId)])));
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';

@@ -46,6 +46,7 @@ async function extractPdfText(pdfDoc) {
 
 test('ticketPdfRenderer: generates example PDF, extracts text, accents, A4 page, and structure', async () => {
   const view = createTicketView(SAMPLE_BOOKING);
+  assert.equal(view.bookingId, SAMPLE_BOOKING._id, 'QR code payload is the full booking id');
   const pdfBuffer = await renderTicketPdf(view);
 
   fs.mkdirSync(TARGET_DIR, { recursive: true });
