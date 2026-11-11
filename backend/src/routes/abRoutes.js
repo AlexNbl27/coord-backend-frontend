@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { EXP, isEnabled, assign, expose, getMetrics, simulateData } from '../services/abService.js';
-import { requireRole } from '../services/sessionService.js';
+import { allowInsecureCookies, requireRole } from '../services/sessionService.js';
 import { requireTenant } from '../tenancy/index.js';
 import { areDemoRoutesEnabled } from '../utils/securityMiddleware.js';
 import { auditRequest } from '../events/audit.js';
@@ -27,7 +27,7 @@ export function createAbRouter({ demoRoutes = areDemoRoutesEnabled() } = {}) {
       if (!visitorId || visitorId !== subject.visitorId) {
         res.cookie(COOKIE_NAME, subject.visitorId, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.NODE_ENV === 'production' && !allowInsecureCookies(),
           sameSite: 'lax',
           path: '/api',
           maxAge: COOKIE_MAX_AGE_MS

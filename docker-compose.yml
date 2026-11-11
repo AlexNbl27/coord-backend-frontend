@@ -34,6 +34,8 @@ services:
     environment:
       - PORT=3000
       - NODE_ENV=production
+      # local stack is served over http: Safari refuses Secure cookies there; set true behind HTTPS
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - MONGO_URI=mongodb://cineslotMaster:${MONGO_MASTER_PASSWORD:?MONGO_MASTER_PASSWORD requis}@mongodb:27017/cours_db?authSource=admin&directConnection=true
       - MONGO_MASTER_URI=mongodb://cineslotMaster:${MONGO_MASTER_PASSWORD:?MONGO_MASTER_PASSWORD requis}@mongodb:27017/?authSource=admin&directConnection=true
       - MONGO_TENANT_URI=mongodb://cineslotTenant:${MONGO_TENANT_PASSWORD:?MONGO_TENANT_PASSWORD requis}@mongodb:27017/?authSource=admin&directConnection=true

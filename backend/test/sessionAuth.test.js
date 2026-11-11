@@ -178,3 +178,19 @@ test('attachSession: deleted account loses its session', async () => {
     assert.equal((await (await get(cookie)).json()).authenticated, false);
   });
 });
+
+test('cookies: COOKIE_SECURE=false drops Secure and the __Host- prefix for the local http stack only', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const probe = (env) => {
+    const { COOKIE_SECURE: _c, ...rest } = process.env;
+    const run = spawnSync(process.execPath, ['--input-type=module', '-e',
+      "const s = await import('./src/services/sessionService.js'); console.log(JSON.stringify([s.ADMIN_COOKIE_NAME, s.getAdminCookieOptions().secure, s.getSessionCookieOptions().secure]))"], {
+      cwd: new URL('..', import.meta.url), env: { ...rest, SESSION_SECRET: 'x'.repeat(32), NODE_ENV: 'production', ...env }, encoding: 'utf8'
+    });
+    assert.equal(run.status, 0, run.stderr);
+    return JSON.parse(run.stdout.trim());
+  };
+  assert.deepEqual(probe({}), ['__Host-cineslot_admin', true, true]);
+  assert.deepEqual(probe({ COOKIE_SECURE: 'true' }), ['__Host-cineslot_admin', true, true]);
+  assert.deepEqual(probe({ COOKIE_SECURE: 'false' }), ['cineslot_admin', false, false]);
+});

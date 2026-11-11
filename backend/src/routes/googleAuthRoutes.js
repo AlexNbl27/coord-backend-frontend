@@ -4,6 +4,7 @@ import { Cinema } from '../models/Cinema.js';
 import { User } from '../models/User.js';
 import {
   SESSION_COOKIE_NAME,
+  allowInsecureCookies,
   getSessionCookieOptions,
   signSessionToken
 } from '../services/sessionService.js';
@@ -56,7 +57,7 @@ export function createGoogleAuthRouter(deps = {}) {
   const cookieDomain = env.SESSION_COOKIE_DOMAIN || '.cineslot.localhost';
   const stateCookieOptions = {
     httpOnly: true,
-    secure: env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === 'production' && !allowInsecureCookies(env),
     sameSite: 'lax',
     // host-only on the relay host: the browser would refuse a .cineslot.localhost cookie from localhost
     domain: relayHost ? undefined : cookieDomain,

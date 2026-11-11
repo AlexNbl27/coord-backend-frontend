@@ -6,7 +6,7 @@ Ce dossier contient le scénario de montée en charge k6 (`load-test.js`) ciblan
 
 Le back résout le tenant à partir de l'en-tête `Host`. k6 attaque directement `TARGET_URL` et fixe `Host` à chaque requête :
 
-- `setup()` : connexion admin sur `POST /api/admin/session/login` avec `Host: admin.<K6_ROOT_DOMAIN>`. Le cookie `__Host-cineslot_admin` reçu est renvoyé par les VUs admin. Le compte k6 ne doit pas avoir la TOTP activée.
+- `setup()` : connexion admin sur `POST /api/admin/session/login` avec `Host: admin.<K6_ROOT_DOMAIN>`. Le cookie admin reçu (`__Host-cineslot_admin`, ou `cineslot_admin` avec `COOKIE_SECURE=false`) est renvoyé par les VUs admin. Le compte k6 ne doit pas avoir la TOTP activée.
 - **spectators** (montée `10 % -> 30 % -> 60 % -> 100 % -> 0 %` de `MAX_VUS`), `Host: <slug>.<K6_ROOT_DOMAIN>` tiré dans `K6_TENANTS` :
   - **20 %** : `GET /health`
   - **30 %** : `GET /api/slots`

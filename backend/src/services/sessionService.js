@@ -5,7 +5,10 @@ import { User } from '../models/User.js';
 const scrypt = promisify(crypto.scrypt);
 
 export const SESSION_COOKIE_NAME = 'cineslot_session';
-export const ADMIN_COOKIE_NAME = '__Host-cineslot_admin';
+// COOKIE_SECURE=false: local http stack only (Safari drops Secure cookies over http, even on *.localhost).
+export const allowInsecureCookies = (env = process.env) => env.COOKIE_SECURE === 'false';
+// __Host- requires Secure, so the prefix goes away with it.
+export const ADMIN_COOKIE_NAME = allowInsecureCookies() ? 'cineslot_admin' : '__Host-cineslot_admin';
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const ADMIN_SLIDING_TTL_MS = 30 * 60 * 1000;
 export const ADMIN_ABSOLUTE_TTL_MS = 8 * 60 * 60 * 1000;
@@ -401,7 +404,7 @@ export function requireRecentMfa(maxAgeMs = MFA_STEP_UP_TTL_MS) {
 export function getSessionCookieOptions() {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' && !allowInsecureCookies(),
     sameSite: 'lax',
     domain: process.env.SESSION_COOKIE_DOMAIN || '.cineslot.localhost',
     path: '/api',
@@ -412,7 +415,7 @@ export function getSessionCookieOptions() {
 export function getAdminCookieOptions(maxAge = ADMIN_SLIDING_TTL_MS) {
   return {
     httpOnly: true,
-    secure: true,
+    secure: !allowInsecureCookies(),
     sameSite: 'lax',
     path: '/',
     maxAge
