@@ -144,8 +144,13 @@
                   <h2 class="text-xl sm:text-2xl font-bold text-white group-hover:text-accent-gold transition-colors break-words">
                     {{ booking.movieTitle }}
                   </h2>
-                  <div class="inline-block mt-1 px-2.5 py-0.5 rounded-md bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-xs font-semibold">
-                    {{ booking.hall }}
+                  <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span class="inline-block px-2.5 py-0.5 rounded-md bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-xs font-semibold">
+                      {{ booking.hall }}
+                    </span>
+                    <span class="inline-block px-2 py-0.5 rounded-md bg-cinema-darker border border-cinema-border/50 text-cinema-textMuted text-[11px] font-medium">
+                      e-Billet Borne
+                    </span>
                   </div>
                 </div>
 
@@ -158,7 +163,7 @@
               </div>
 
               <!-- Details Grid -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-cinema-border/40">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-5 pt-4 border-t border-cinema-border/40">
                 <div>
                   <span class="text-xs text-cinema-textMuted">Date & Heure</span>
                   <p class="text-sm font-mono tabular-nums font-semibold text-white mt-0.5">
@@ -181,71 +186,69 @@
                     <span>{{ formatDate(booking.bookedAt) }}</span>
                   </p>
                 </div>
-                <div>
-                  <span class="text-xs text-cinema-textMuted">Accès</span>
-                  <p class="text-sm font-semibold text-accent-gold mt-0.5">
-                    <span>e-Billet Borne</span>
-                  </p>
-                </div>
               </div>
             </div>
 
             <!-- Ticket Footer / Actions -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6 pt-4 border-t border-cinema-border/30">
-              <div class="flex flex-wrap items-center gap-2">
-                <TicketPdfButton
-                  v-if="booking.status === 'ACTIVE'"
-                  :booking-id="booking.bookingId"
-                  :movie-title="booking.movieTitle"
-                />
-                <button
-                  v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
-                  @click="downloadCalendarFile(booking)"
-                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
-                  :aria-label="`Ajouter la séance de ${booking.movieTitle} du ${formatDateTime(booking.startsAt)} à mon agenda`"
-                  title="Ajouter cet événement à mon calendrier"
-                >
-                  <span>Agenda (.ics)</span>
-                </button>
-                <button
-                  v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
-                  @click="openGoogleCalendar(booking)"
-                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
-                  :aria-label="`Exporter vers Google Agenda la séance de ${booking.movieTitle} du ${formatDateTime(booking.startsAt)}`"
-                  title="Ajouter à Google Agenda"
-                >
-                  <span>Google Agenda</span>
-                </button>
-                <button
-                  v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
-                  @click="printTicket"
-                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
-                  :aria-label="`Imprimer le billet pour ${booking.movieTitle}, fauteuil ${booking.seat || 'non spécifié'}`"
-                  title="Imprimer ce billet"
-                >
-                  <span>Imprimer</span>
-                </button>
-              </div>
+            <div class="flex flex-col gap-3 mt-5 pt-4 border-t border-cinema-border/30">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <TicketPdfButton
+                    v-if="booking.status === 'ACTIVE'"
+                    :booking-id="booking.bookingId"
+                    :movie-title="booking.movieTitle"
+                  />
+                  <div
+                    v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
+                    class="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto"
+                  >
+                    <button
+                      @click="downloadCalendarFile(booking)"
+                      class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      :aria-label="`Ajouter la séance de ${booking.movieTitle} du ${formatDateTime(booking.startsAt)} à mon agenda`"
+                      title="Ajouter cet événement à mon calendrier"
+                    >
+                      <span>Agenda (.ics)</span>
+                    </button>
+                    <button
+                      @click="openGoogleCalendar(booking)"
+                      class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      :aria-label="`Exporter vers Google Agenda la séance de ${booking.movieTitle} du ${formatDateTime(booking.startsAt)}`"
+                      title="Ajouter à Google Agenda"
+                    >
+                      <span>Google Agenda</span>
+                    </button>
+                    <button
+                      @click="printTicket"
+                      class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      :aria-label="`Imprimer le billet pour ${booking.movieTitle}, fauteuil ${booking.seat || 'non spécifié'}`"
+                      title="Imprimer ce billet"
+                    >
+                      <span>Imprimer</span>
+                    </button>
+                  </div>
+                </div>
 
-              <div class="w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-cinema-border/20 flex justify-end">
-                <button
-                  v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
-                  @click="confirmCancel(booking)"
-                  :disabled="cancellingSlotId === booking.slotId"
-                  :aria-label="`Annuler ma réservation pour le film ${booking.movieTitle}, séance du ${formatDateTime(booking.startsAt)}`"
-                  class="w-full sm:w-auto justify-center px-4 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 hover:border-red-600 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                >
-                  <span>{{ cancellingSlotId === booking.slotId ? 'Annulation...' : 'Annuler ma réservation' }}</span>
-                </button>
-                <button
-                  v-else
-                  @click="deleteFromHistory(booking.bookingId)"
-                  :aria-label="`Supprimer de mon historique le billet pour ${booking.movieTitle}`"
-                  class="w-full sm:w-auto px-3.5 py-2 rounded-xl text-xs font-medium text-cinema-textMuted hover:text-white bg-cinema-darker/50 hover:bg-cinema-darker border border-cinema-border/40 transition-all cursor-pointer"
-                  title="Supprimer de l'historique"
-                >
-                  Supprimer
-                </button>
+                <div class="w-full md:w-auto md:shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-cinema-border/20 flex justify-end">
+                  <button
+                    v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
+                    @click="confirmCancel(booking)"
+                    :disabled="cancellingSlotId === booking.slotId"
+                    :aria-label="`Annuler ma réservation pour le film ${booking.movieTitle}, séance du ${formatDateTime(booking.startsAt)}`"
+                    class="w-full md:w-auto justify-center px-4 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 hover:border-red-600 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                  >
+                    <span>{{ cancellingSlotId === booking.slotId ? 'Annulation...' : 'Annuler ma réservation' }}</span>
+                  </button>
+                  <button
+                    v-else
+                    @click="deleteFromHistory(booking.bookingId)"
+                    :aria-label="`Supprimer de mon historique le billet pour ${booking.movieTitle}`"
+                    class="w-full md:w-auto px-3.5 py-2 rounded-xl text-xs font-medium text-cinema-textMuted hover:text-white bg-cinema-darker/50 hover:bg-cinema-darker border border-cinema-border/40 transition-all cursor-pointer whitespace-nowrap"
+                    title="Supprimer de l'historique"
+                  >
+                    Supprimer
+                  </button>
+                </div>
               </div>
             </div>
           </div>
