@@ -95,8 +95,8 @@
           <!-- Poster / Film visual -->
           <div class="w-full md:w-52 h-48 md:h-auto relative bg-cinema-darker overflow-hidden shrink-0">
             <img
-              v-if="booking.poster"
-              :src="booking.poster"
+              v-if="posterFor(booking)"
+              :src="posterFor(booking)"
               :alt="`Affiche de ${booking.movieTitle}`"
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
@@ -333,14 +333,30 @@
 
 <script setup lang="ts">
 import QRCode from 'qrcode';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useReservations, type UserBooking } from '../composables/useReservations';
+import { useMovies } from '../composables/useMovies';
+import { useMoviesStore } from '../stores/movies';
 import { useConnectionStore } from '../stores/connection';
 import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 import TicketPdfButton from '../components/TicketPdfButton.vue';
 
 const { bookings, activeBookingsCount, cancelBooking, deleteFromHistory, downloadCalendarFile, openGoogleCalendar } = useReservations();
+const { fetchMovies } = useMovies();
+const moviesStore = useMoviesStore();
 const connectionStore = useConnectionStore();
+
+onMounted(() => {
+  if (moviesStore.movies.length === 0) {
+    void fetchMovies();
+  }
+});
+
+const posterFor = (booking: UserBooking): string | undefined => {
+  if (booking.poster) return booking.poster;
+  const title = booking.movieTitle?.trim().toLowerCase();
+  return moviesStore.movies.find((m) => m.title.trim().toLowerCase() === title)?.poster;
+};
 
 const filter = ref<'ALL' | 'ACTIVE' | 'CANCELLED'>('ALL');
 const cancellingSlotId = ref<string | null>(null);
