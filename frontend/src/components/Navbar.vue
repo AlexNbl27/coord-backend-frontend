@@ -14,7 +14,7 @@
         </router-link>
 
         <!-- Navigation Links -->
-        <div class="hidden md:flex items-center gap-5 lg:gap-7">
+        <div class="hidden md:flex items-center gap-4 lg:gap-6 text-sm">
           <template v-for="link in navLinks" :key="link.label">
             <a v-if="link.href" :href="link.href" class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium whitespace-nowrap">{{ link.label }}</a>
             <router-link v-else :to="link.to!" class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium whitespace-nowrap" active-class="text-accent-gold font-semibold">
@@ -24,44 +24,25 @@
         </div>
 
         <!-- Right side: Status + User Tickets -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
           <!-- Indicateur de Connexion & Résilience -->
-          <ConnectionBadge class="hidden sm:inline-flex" />
-
-          <!-- Session spectateur -->
-          <div v-if="currentUser" class="hidden lg:flex items-center gap-2">
-            <span class="text-cinema-text text-xs font-medium truncate max-w-[10rem]">{{ currentUser.name }}</span>
-            <button
-              type="button"
-              class="px-2.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border text-cinema-textMuted hover:text-cinema-text text-xs font-medium cursor-pointer whitespace-nowrap"
-              @click="handleLogout"
-            >
-              Se déconnecter
-            </button>
-          </div>
-          <router-link
-            v-else
-            to="/login"
-            class="hidden lg:inline-block px-2.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium hover:border-accent-gold/50"
-          >
-            Se connecter
-          </router-link>
+          <ConnectionBadge class="hidden xl:inline-flex" />
 
           <!-- User / Mes Billets Quick Action Button -->
           <router-link
             v-if="!isAdminPlane"
             to="/reservations"
-            class="relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cinema-card hover:bg-cinema-border/80 border border-cinema-border text-cinema-text text-xs font-semibold transition-all hover:border-accent-gold/50 shadow-sm"
+            class="relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-cinema-card hover:bg-cinema-border/80 border border-cinema-border text-white text-xs font-semibold transition-all hover:border-accent-gold/50 shadow-sm whitespace-nowrap"
             aria-label="Mes Billets de cinéma"
             title="Consulter mes billets"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-accent-gold shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
             <span class="hidden sm:inline">Mes Billets</span>
             <span
               v-if="activeBookingsCount > 0"
-              class="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-accent-gold text-cinema-dark ml-0.5"
+              class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-accent-gold text-cinema-dark leading-none"
             >
               {{ activeBookingsCount }}
             </span>
@@ -71,14 +52,32 @@
           <button
             v-if="isSuperAdmin && !isAdminPlane"
             @click="handleOpenAbModal"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/40 text-accent-gold text-xs font-bold transition-all shadow-sm cursor-pointer"
+            class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/40 text-accent-gold text-xs font-bold transition-all cursor-pointer whitespace-nowrap"
             aria-label="Consulter les métriques du Test A/B"
             title="Consulter les métriques du Test A/B"
           >
             <span class="w-1.5 h-1.5 rounded-full bg-accent-gold" aria-hidden="true"></span>
-            <span class="hidden sm:inline">Test A/B :</span>
-            <span>{{ variant }}</span>
+            <span>Test A/B : {{ variant }}</span>
           </button>
+
+          <!-- Session spectateur / admin -->
+          <div v-if="currentUser" class="hidden md:flex items-center gap-2.5 pl-2 border-l border-cinema-border/40">
+            <span class="text-cinema-text text-xs font-medium truncate max-w-[9rem]" :title="currentUser.name">{{ currentUser.name }}</span>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-xl bg-transparent hover:bg-cinema-card border border-cinema-border/60 text-cinema-textMuted hover:text-white text-xs font-medium cursor-pointer whitespace-nowrap transition-colors"
+              @click="handleLogout"
+            >
+              Se déconnecter
+            </button>
+          </div>
+          <router-link
+            v-else
+            to="/login"
+            class="hidden md:inline-flex items-center px-3.5 py-1.5 rounded-xl bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/50 text-accent-gold text-xs font-semibold whitespace-nowrap transition-colors"
+          >
+            Se connecter
+          </router-link>
 
           <!-- Mobile menu button -->
           <button
@@ -158,22 +157,6 @@
               >
                 {{ activeBookingsCount }}
               </span>
-            </router-link>
-            <button
-              v-if="currentUser"
-              type="button"
-              class="text-left text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2 cursor-pointer"
-              @click="mobileMenuOpen = false; handleLogout()"
-            >
-              Se déconnecter ({{ currentUser.name }})
-            </button>
-            <router-link
-              v-else
-              to="/login"
-              class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2"
-              @click="mobileMenuOpen = false"
-            >
-              Se connecter
             </router-link>
           </div>
         </div>
