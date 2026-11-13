@@ -35,7 +35,7 @@ describe('services/tenant', () => {
   it('construit les url avec protocole et port', () => {
     expect(tenantUrl('cine-b', '/slots', loc)).toBe('http://cine-b.cineslot.localhost:3001/slots');
     expect(tenantUrl('cine-b', 'slots', loc)).toBe('http://cine-b.cineslot.localhost:3001/slots');
-    expect(apexUrl('/choisir-un-cinema', loc)).toBe('http://cineslot.localhost:3001/choisir-un-cinema');
+    expect(apexUrl('/cinemas', loc)).toBe('http://cineslot.localhost:3001/cinemas');
     expect(adminUrl('/', { ...loc, port: '' })).toBe('http://admin.cineslot.localhost/');
     expect(() => tenantUrl('admin', '/', loc)).toThrow(TypeError);
     expect(() => tenantUrl('evil.com/x', '/', loc)).toThrow(TypeError);
@@ -51,13 +51,13 @@ describe('services/tenant', () => {
     expect(planeRedirect(tenant, 'admin-cinemas')).toBe('not-found');
     expect(planeRedirect(tenant, 'admin-logs')).toBe('not-found');
     expect(planeRedirect(tenant, 'admin-stats')).toBe('not-found');
-    expect(planeRedirect(tenant, 'choose-cinema')).toBe('home');
+    expect(planeRedirect(tenant, 'cinemas')).toBe('home');
 
-    expect(planeRedirect(pub, 'home')).toBe('choose-cinema');
-    expect(planeRedirect(pub, 'slots')).toBe('choose-cinema');
-    expect(planeRedirect(pub, 'reservations')).toBe('choose-cinema');
+    expect(planeRedirect(pub, 'home')).toBe('cinemas');
+    expect(planeRedirect(pub, 'slots')).toBe('cinemas');
+    expect(planeRedirect(pub, 'reservations')).toBe('cinemas');
     expect(planeRedirect(pub, 'movies')).toBeNull();
-    expect(planeRedirect(pub, 'choose-cinema')).toBeNull();
+    expect(planeRedirect(pub, 'cinemas')).toBeNull();
     expect(planeRedirect(pub, 'admin-cinemas')).toBe('not-found');
 
     expect(planeRedirect(admin, 'admin-cinemas')).toBeNull();

@@ -73,9 +73,9 @@ export function planeRedirect(ctx: HostContext, routeName: string | null | undef
   }
   if (ADMIN_ROUTES.has(name)) return 'not-found';
   if (ctx.plane !== 'tenant' && TENANT_ONLY_ROUTES.has(name)) {
-    return 'choose-cinema';
+    return 'cinemas';
   }
-  if (ctx.plane === 'tenant' && name === 'choose-cinema') {
+  if (ctx.plane === 'tenant' && name === 'cinemas') {
     return 'home';
   }
   return null;

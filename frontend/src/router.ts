@@ -14,12 +14,7 @@ const routes = [
   },
   {
     path: '/choisir-un-cinema',
-    name: 'choose-cinema',
-    component: () => import('./views/ChooseCinemaView.vue'),
-    meta: {
-      title: 'CinéSlot - Choisir un cinéma',
-      description: 'Choisissez le cinéma dans lequel réserver vos séances',
-    },
+    redirect: '/cinemas',
   },
   {
     path: '/movies',

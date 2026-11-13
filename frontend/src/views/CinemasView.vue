@@ -54,7 +54,8 @@
           <div>
             <p class="font-semibold text-white">{{ c.name }}</p>
             <p class="text-sm text-cinema-textMuted">{{ c.address }}, {{ c.city }}</p>
-            <p class="text-xs text-cinema-textMuted mt-1">{{ c.features.join(', ').toUpperCase() }}</p>
+            <p v-if="c.features?.length" class="text-xs text-cinema-textMuted mt-1">{{ c.features.join(', ').toUpperCase() }}</p>
+            <p v-if="c.status === 'DISABLED'" class="text-xs text-amber-300 mt-1">Réservations temporairement suspendues</p>
             <a
               v-if="isValidSlug(c.slug)"
               :href="tenantUrl(c.slug, '/slots')"
@@ -98,6 +99,7 @@ interface Cinema {
   address: string;
   city: string;
   features: string[];
+  status?: 'ACTIVE' | 'DISABLED';
   latitude: number;
   longitude: number;
   distanceKm: number | null;

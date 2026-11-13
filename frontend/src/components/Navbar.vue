@@ -183,7 +183,7 @@ const { variant } = useAbTest();
 const { currentUser, isSuperAdmin, initSession, logout } = useSession();
 const router = useRouter();
 const hostContext = currentHostContext();
-const chooseCinemaHref = apexUrl('/choisir-un-cinema');
+const chooseCinemaHref = apexUrl('/cinemas');
 const isAdminPlane = hostContext.plane === 'admin';
 
 type NavLink = { label: string; to?: string; href?: string };
