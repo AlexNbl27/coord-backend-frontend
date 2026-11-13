@@ -200,7 +200,7 @@
                   />
                   <div
                     v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
-                    class="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto"
+                    class="grid grid-cols-1 sm:grid-cols-3 md:flex md:flex-wrap items-center gap-2 w-full sm:w-auto"
                   >
                     <button
                       @click="downloadCalendarFile(booking)"

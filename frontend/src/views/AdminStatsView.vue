@@ -61,7 +61,8 @@
               </li>
             </ul>
             <figcaption class="sr-only">Graphique en barres des places vendues, détaillé dans le tableau suivant.</figcaption>
-            <table class="w-full text-sm text-left text-white">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left text-white">
               <caption class="text-left text-cinema-textMuted text-xs mb-2">Données du classement {{ groupBy === 'movie' ? 'par film' : 'par cinéma' }}</caption>
               <thead>
                 <tr>
@@ -81,7 +82,8 @@
                   <td class="text-right">{{ percent(row.cancellationRate) }}</td>
                 </tr>
               </tbody>
-            </table>
+              </table>
+            </div>
           </figure>
         </section>
 
@@ -101,7 +103,8 @@
               />
             </svg>
             <figcaption class="sr-only">Histogramme des places vendues par jour, détaillé dans le tableau suivant.</figcaption>
-            <table class="w-full text-sm text-left text-white">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left text-white">
               <caption class="text-left text-cinema-textMuted text-xs mb-2">Données quotidiennes (heure de Paris)</caption>
               <thead>
                 <tr>
@@ -121,7 +124,8 @@
                   <td class="text-right">{{ percent(day.cancellationRate) }}</td>
                 </tr>
               </tbody>
-            </table>
+              </table>
+            </div>
           </figure>
         </section>
       </template>

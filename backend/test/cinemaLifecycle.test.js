@@ -200,7 +200,8 @@ test('disabling a cinema returns 423 on subsequent reservation and 503 if regist
         { slug: 'lyon-bellecour' },
         {
           Booking: { findOne: () => ({ lean: async () => null }) },
-          getCinemaStatus: (slug) => cache.getStatus(slug)
+          getCinemaStatus: (slug) => cache.getStatus(slug),
+          emitReservationEvent: async () => {}
         }
       ),
       (err) => err.status === 423
@@ -470,6 +471,19 @@ test('admin session TTL (30m sliding, 8h absolute), TOTP encryption/verify, and 
     assert.equal(verifyRes.status, 200);
     const verifyBody = await verifyRes.json();
     assert.equal(typeof verifyBody.mfaVerifiedAt, 'number');
+
+    const resetWithoutMfa = await fetch(`${base}/api/admin/session/mfa/setup`, {
+      method: 'POST',
+      headers: { Cookie: cookiePair }
+    });
+    assert.equal(resetWithoutMfa.status, 403);
+
+    const verifiedCookiePair = verifyRes.headers.getSetCookie().at(-1).split(';')[0];
+    const resetWithMfa = await fetch(`${base}/api/admin/session/mfa/setup`, {
+      method: 'POST',
+      headers: { Cookie: verifiedCookiePair }
+    });
+    assert.equal(resetWithMfa.status, 200);
   });
 });
 

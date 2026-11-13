@@ -264,8 +264,7 @@ export function useSlots() {
     } catch (err: any) {
       const isNetworkOrServer = !err.response || err.response.status >= 500;
 
-      // Si le backend est déconnecté ou en panne : Outbox Pattern & Résilience
-      if (isNetworkOrServer) {
+      if (isNetworkOrServer && !cinemaDisabled.value) {
         console.warn(`[useSlots] Backend hors-ligne : mise en file d'attente de la réservation pour le créneau ${slotId}.`);
 
         const tempBookingId = `temp_bk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -295,7 +294,7 @@ export function useSlots() {
       }
 
       // En cas de conflit réel 409 ou autre erreur métier
-      const errorMessage = err.response?.data?.message || (err instanceof Error ? err.message : 'Impossible de réserver cette séance.');
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || (err instanceof Error ? err.message : 'Impossible de réserver cette séance.');
       throw new Error(errorMessage);
     }
   };

@@ -33,7 +33,10 @@ export function useAccessibleDialog(options: UseAccessibleDialogOptions) {
         'textarea:not([disabled]):not([aria-hidden="true"]), ' +
         '[tabindex]:not([tabindex="-1"]):not([aria-hidden="true"])'
       )
-    ).filter((el) => el.offsetParent !== null || el.getAttribute('role') !== null || true);
+    ).filter((el) => {
+      const style = window.getComputedStyle(el);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    });
   };
 
   const makeBackgroundInert = () => {

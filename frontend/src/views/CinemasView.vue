@@ -126,7 +126,7 @@ const load = async () => {
     : { feature: feature.value || undefined, page: page.value, limit: 6 };
   try {
     const { data } = await apiClient.get('/api/cinemas', { params });
-    cinemas.value = data.data;
+    cinemas.value = (data.data as Cinema[]).filter((c) => isValidSlug(c.slug));
     total.value = data.total;
   } catch (err: any) {
     cinemas.value = [];

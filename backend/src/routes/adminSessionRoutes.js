@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { User } from '../models/User.js';
 import {
   ADMIN_COOKIE_NAME,
+  MFA_STEP_UP_TTL_MS,
   buildProblemDetail,
   getAdminCookieOptions,
   hashPassword,
@@ -42,6 +43,11 @@ export function createAdminSessionRouter(deps = {}) {
     windowMs: 15 * 60_000,
     max: 10,
     keyFn: (req) => `admin:${readEmail(req.body?.email) ?? req.ip}`
+  });
+  const mfaLimiter = deps.mfaLimiter || createRateLimiter({
+    windowMs: 15 * 60_000,
+    max: 10,
+    keyFn: (req) => `mfa:${req.sessionUser?.id ?? req.ip}`
   });
 
   router.get('/', (req, res) => {
@@ -92,8 +98,16 @@ export function createAdminSessionRouter(deps = {}) {
     }
   });
 
-  router.post('/mfa/setup', requireRole('SUPER_ADMIN', 'CINEMA_ADMIN'), async (req, res, next) => {
+  router.post('/mfa/setup', authLimiter, requireRole('SUPER_ADMIN', 'CINEMA_ADMIN'), async (req, res, next) => {
     try {
+      const existingQuery = users.findOne({ _id: req.sessionUser.id }, 'totpEnabled');
+      const existing = typeof existingQuery?.lean === 'function' ? await existingQuery.lean() : await existingQuery;
+      if (existing?.totpEnabled) {
+        const verifiedAt = req.adminSession?.mfaVerifiedAt;
+        if (typeof verifiedAt !== 'number' || Date.now() - verifiedAt > MFA_STEP_UP_TTL_MS) {
+          return problem(res, 403, 'Forbidden', 'Vérification MFA récente requise pour reconfigurer le MFA.');
+        }
+      }
       const secret = generateTotpSecret();
       const encrypted = encryptTotpSecret(secret);
       await users.findOneAndUpdate(
@@ -109,7 +123,7 @@ export function createAdminSessionRouter(deps = {}) {
     }
   });
 
-  router.post('/mfa/verify', requireRole('SUPER_ADMIN', 'CINEMA_ADMIN'), async (req, res, next) => {
+  router.post('/mfa/verify', authLimiter, mfaLimiter, requireRole('SUPER_ADMIN', 'CINEMA_ADMIN'), async (req, res, next) => {
     try {
       const code = req.body?.code;
       const query = users.findOne({ _id: req.sessionUser.id }, 'totpSecretEncrypted totpEnabled sessionVersion name email role');

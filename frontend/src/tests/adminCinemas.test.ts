@@ -25,7 +25,7 @@ describe('AdminCinemasView & role guard', () => {
       data: { slug: 'lyon', status: 'DELETED' }
     } as any);
 
-    const wrapper = mount(AdminCinemasView);
+    const wrapper = mount(AdminCinemasView, { attachTo: document.body });
     await flushPromises();
 
     expect(getSpy).toHaveBeenCalledWith('/api/admin/cinemas', { withCredentials: true });
@@ -43,20 +43,29 @@ describe('AdminCinemasView & role guard', () => {
 
     const deleteBtn = wrapper.findAll('button').find((b) => b.text() === 'Supprimer');
     await deleteBtn!.trigger('click');
+    await flushPromises();
 
-    const confirmBtn = wrapper.findAll('button').find((b) => b.text() === 'Confirmer la suppression');
-    expect((confirmBtn!.element as HTMLButtonElement).disabled).toBe(true);
+    const confirmBtn = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Confirmer la suppression'
+    ) as HTMLButtonElement;
+    expect(confirmBtn).toBeTruthy();
+    expect(confirmBtn.disabled).toBe(true);
 
-    const confirmInput = wrapper.find('#confirm-slug-input');
-    await confirmInput.setValue('wrong');
-    expect((confirmBtn!.element as HTMLButtonElement).disabled).toBe(true);
+    const confirmInput = document.body.querySelector('#confirm-slug-input') as HTMLInputElement;
+    confirmInput.value = 'wrong';
+    confirmInput.dispatchEvent(new Event('input'));
+    await flushPromises();
+    expect(confirmBtn.disabled).toBe(true);
 
-    await confirmInput.setValue('lyon');
-    expect((confirmBtn!.element as HTMLButtonElement).disabled).toBe(false);
+    confirmInput.value = 'lyon';
+    confirmInput.dispatchEvent(new Event('input'));
+    await flushPromises();
+    expect(confirmBtn.disabled).toBe(false);
 
-    await confirmBtn!.trigger('click');
+    confirmBtn.click();
     await flushPromises();
     expect(deleteSpy).toHaveBeenCalledWith('/api/admin/cinemas/lyon', { withCredentials: true });
+    wrapper.unmount();
   });
 
   it('blocks non-SUPER_ADMIN users from /admin/cinemas via router guard', async () => {

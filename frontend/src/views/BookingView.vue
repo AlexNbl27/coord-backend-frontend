@@ -162,10 +162,14 @@
               <span class="text-xs text-cinema-textMuted ml-2">({{ totalQuantity }} billet{{ totalQuantity > 1 ? 's' : '' }})</span>
             </div>
 
+            <div v-if="cinemaDisabled" role="alert" class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 mb-4">
+              Ce cinéma est temporairement désactivé. Les réservations sont suspendues.
+            </div>
+
             <button
               type="button"
               @click="submitBooking"
-              :disabled="submitting || totalQuantity < 1 || remainingSeats < 1 || totalQuantity > remainingSeats"
+              :disabled="submitting || cinemaDisabled || totalQuantity < 1 || remainingSeats < 1 || totalQuantity > remainingSeats"
               class="w-full sm:w-auto text-center justify-center px-6 py-3 rounded-md bg-accent-gold hover:bg-accent-goldLight text-cinema-dark font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {{ submitting ? 'Confirmation en cours...' : 'Confirmer la réservation' }}
@@ -188,7 +192,7 @@ import TicketPdfButton from '../components/TicketPdfButton.vue';
 const route = useRoute();
 const router = useRouter();
 const moviesStore = useMoviesStore();
-const { slots, loading, fetchSlots, connectSse, reserveSlot } = useSlots();
+const { slots, loading, cinemaDisabled, fetchSlots, connectSse, reserveSlot } = useSlots();
 const { bookings, saveBooking, markBookingCancelled, syncBookingsWithServer } = useReservations();
 
 const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');

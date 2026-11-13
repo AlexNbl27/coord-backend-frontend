@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises, RouterLinkStub } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import ChooseCinemaView from '../views/ChooseCinemaView.vue';
+import CinemasView from '../views/CinemasView.vue';
 import { apiClient } from '../services/apiClient';
 import {
   adminUrl,
@@ -71,7 +71,7 @@ describe('services/tenant', () => {
   });
 });
 
-describe('ChooseCinemaView', () => {
+describe('CinemasView', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.restoreAllMocks();
@@ -82,28 +82,28 @@ describe('ChooseCinemaView', () => {
       data: {
         total: 3,
         data: [
-          { slug: 'cine-a', name: 'Ciné A', address: '1 place A', city: 'Lyon', status: 'ACTIVE' },
-          { slug: 'cine-b', name: 'Ciné B', address: '2 place B', city: 'Paris', status: 'DISABLED' },
-          { slug: 'admin', name: 'Piège', address: 'x', city: 'x', status: 'ACTIVE' },
+          { slug: 'cine-a', name: 'Ciné A', address: '1 place A', city: 'Lyon', status: 'ACTIVE', features: [], latitude: 45.75, longitude: 4.83, distanceKm: null },
+          { slug: 'cine-b', name: 'Ciné B', address: '2 place B', city: 'Paris', status: 'DISABLED', features: [], latitude: 48.85, longitude: 2.35, distanceKm: null },
+          { slug: 'admin', name: 'Piège', address: 'x', city: 'x', status: 'ACTIVE', features: [], latitude: 0, longitude: 0, distanceKm: null },
         ],
       },
     } as any);
 
-    const wrapper = mount(ChooseCinemaView, { global: { stubs: { RouterLink: RouterLinkStub } } });
+    const wrapper = mount(CinemasView, { global: { stubs: { RouterLink: RouterLinkStub, NearbyBar: true } } });
     await flushPromises();
 
-    expect(getSpy).toHaveBeenCalledWith('/api/cinemas', { params: { page: 1, limit: 20 } });
+    expect(getSpy).toHaveBeenCalledWith('/api/cinemas', { params: { feature: undefined, page: 1, limit: 6 } });
     const links = wrapper.findAll('ul a');
     expect(links).toHaveLength(2);
     const origin = `${window.location.protocol}//`;
     expect(links[0].attributes('href')).toMatch(new RegExp(`^${origin}cine-a\\.cineslot\\.localhost`));
-    expect(links[1].text()).toContain('Réservations temporairement suspendues');
+    expect(wrapper.text()).toContain('Réservations temporairement suspendues');
     expect(wrapper.text()).not.toContain('Piège');
   });
 
   it('erreur si annuaire indisponible', async () => {
     vi.spyOn(apiClient, 'get').mockRejectedValue({ response: { data: { detail: 'Annuaire indisponible.' } } });
-    const wrapper = mount(ChooseCinemaView, { global: { stubs: { RouterLink: RouterLinkStub } } });
+    const wrapper = mount(CinemasView, { global: { stubs: { RouterLink: RouterLinkStub, NearbyBar: true } } });
     await flushPromises();
     expect(wrapper.find('[role="alert"]').text()).toBe('Annuaire indisponible.');
   });

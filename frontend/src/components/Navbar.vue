@@ -166,18 +166,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, inject } from 'vue';
-import { storeToRefs } from 'pinia';
+import { ref, computed, onMounted, onUnmounted, inject } from 'vue';
 import ConnectionBadge from './ConnectionBadge.vue';
-import { useSlotsStore } from '../stores/slots';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
 import { useRouter } from 'vue-router';
 import { useSession } from '../composables/useSession';
 import { apexUrl, currentHostContext } from '../services/tenant';
 
-const slotsStore = useSlotsStore();
-const { sseConnected } = storeToRefs(slotsStore);
 const { activeBookingsCount } = useReservations();
 const { variant } = useAbTest();
 const { currentUser, isSuperAdmin, initSession, logout } = useSession();
@@ -223,14 +219,28 @@ const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value;
 };
 
+const handleDocumentClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.navbar') && !target.closest('[data-mobile-menu]')) {
+    mobileMenuOpen.value = false;
+  }
+};
+
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && mobileMenuOpen.value) {
+    mobileMenuOpen.value = false;
+  }
+};
+
 onMounted(() => {
   void initSession();
-  document.addEventListener('click', (event) => {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.navbar') && !target.closest('[data-mobile-menu]')) {
-      mobileMenuOpen.value = false;
-    }
-  });
+  document.addEventListener('click', handleDocumentClick);
+  document.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleDocumentClick);
+  document.removeEventListener('keydown', handleKeyDown);
 });
 </script>
 

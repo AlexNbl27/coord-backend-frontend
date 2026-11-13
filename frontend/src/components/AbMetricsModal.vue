@@ -1,6 +1,7 @@
 <template>
-  <div
-    v-if="show"
+  <Teleport to="body">
+    <div
+      v-if="show"
     ref="modalRef"
     role="dialog"
     aria-modal="true"
@@ -258,7 +259,8 @@
         </div>
       </div>
     </div>
-  </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

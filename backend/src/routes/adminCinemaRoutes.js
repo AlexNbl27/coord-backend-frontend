@@ -127,9 +127,7 @@ export function createAdminCinemaRouter(deps = {}) {
         return problem(res, 400, 'Bad Request', 'Statut invalide (ACTIVE ou DISABLED attendu).');
       }
 
-      const updateFields = nextStatus === 'ACTIVE'
-        ? { status: 'ACTIVE', deletedAt: null, purgeState: null }
-        : { status: 'DISABLED' };
+      const updateFields = { status: nextStatus, deletedAt: null, purgeState: null };
 
       const before = await cinemas.findOneAndUpdate(
         { slug },
@@ -154,8 +152,8 @@ export function createAdminCinemaRouter(deps = {}) {
       return res.json({
         slug,
         status: nextStatus,
-        deletedAt: nextStatus === 'ACTIVE' ? null : before.deletedAt ?? null,
-        purgeState: nextStatus === 'ACTIVE' ? null : before.purgeState ?? null
+        deletedAt: null,
+        purgeState: null
       });
     } catch (err) {
       return next(err);
@@ -201,7 +199,20 @@ export function createAdminCinemaRouter(deps = {}) {
         if (typeof Slot.findOneAndUpdate === 'function') {
           await Slot.findOneAndUpdate(
             { _id: booking.slotId },
-            { $inc: { availableSeats: qty }, $set: { status: 'AVAILABLE' } }
+            [
+              {
+                $set: {
+                  availableSeats: {
+                    $min: [
+                      { $add: [{ $ifNull: ['$availableSeats', 0] }, qty] },
+                      { $ifNull: ['$capacity', 40] }
+                    ]
+                  },
+                  status: 'AVAILABLE'
+                }
+              }
+            ],
+            { new: true }
           );
         }
         await emitEvent({

@@ -15,6 +15,7 @@
         <!-- Actions et Pastille de statut SSE -->
         <div class="flex items-center gap-3 self-start sm:self-auto">
           <button
+            v-if="isSuperAdmin"
             @click="handleResetSlots"
             class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-cinema-card hover:bg-cinema-border/80 border border-cinema-border/60 text-cinema-text hover:text-white text-xs font-semibold transition-all cursor-pointer shadow-sm hover:border-accent-gold/40"
             aria-label="Réinitialiser toutes les séances à l'état disponible"
@@ -170,6 +171,14 @@
         {{ displayedSlots.length }} séance{{ displayedSlots.length > 1 ? 's' : '' }} trouvée{{ displayedSlots.length > 1 ? 's' : '' }}
       </div>
 
+      <div
+        v-if="cinemaDisabled"
+        role="alert"
+        class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+      >
+        Ce cinéma est temporairement désactivé. Les réservations sont suspendues.
+      </div>
+
       <!-- Résultats : Grille des séances -->
       <div v-if="loading && displayedSlots.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div v-for="n in 6" :key="n" class="bg-gray-800 h-44 rounded-xl animate-pulse"></div>
@@ -187,14 +196,6 @@
         >
           Réinitialiser les filtres
         </button>
-      </div>
-
-      <div
-        v-if="cinemaDisabled"
-        role="alert"
-        class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
-      >
-        Ce cinéma est temporairement désactivé. Les réservations sont suspendues.
       </div>
 
       <div
@@ -224,6 +225,7 @@ import { useSlots } from '../composables/useSlots';
 import { useMovies } from '../composables/useMovies';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
+import { useSession } from '../composables/useSession';
 import SlotCard from '../components/SlotCard.vue';
 
 const router = useRouter();
@@ -233,6 +235,7 @@ const { fetchMovies } = useMovies();
 const { fetchSlots, connectSse, resetSlots, sseConnected, cinemaDisabled } = useSlots();
 const { bookings } = useReservations();
 const { exposeIfAvailable } = useAbTest();
+const { isSuperAdmin } = useSession();
 
 const bookedSlotIds = computed(() =>
   new Set(

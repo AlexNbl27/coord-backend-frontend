@@ -164,7 +164,8 @@ const router = createRouter({
 
 // Navigation guard pour mettre à jour le titre de la page
 router.beforeEach(async (to) => {
-  const redirectName = planeRedirect(currentHostContext(), to.name as string | undefined);
+  const hostCtx = currentHostContext();
+  const redirectName = planeRedirect(hostCtx, to.name as string | undefined);
   if (redirectName === 'not-found') {
     return { name: 'not-found', params: { pathMatch: to.path.slice(1).split('/') }, query: to.query, hash: to.hash, replace: true };
   }
@@ -173,7 +174,7 @@ router.beforeEach(async (to) => {
   }
   const requiredRoles = to.meta.requiresRole as string[] | undefined;
   if (to.meta.requiresAuth || (requiredRoles && requiredRoles.length > 0)) {
-    const { currentUser, initSession } = useSession();
+    const { currentUser, mfaVerifiedAt, initSession } = useSession();
     await initSession();
     if (!currentUser.value) {
       return { name: 'login', query: { redirect: to.fullPath } };
@@ -181,6 +182,12 @@ router.beforeEach(async (to) => {
     if (requiredRoles && requiredRoles.length > 0) {
       if (!currentUser.value.role || !requiredRoles.includes(currentUser.value.role)) {
         return { name: 'home' };
+      }
+    }
+    if (hostCtx.plane === 'admin' && requiredRoles && requiredRoles.length > 0) {
+      const mfaAge = typeof mfaVerifiedAt.value === 'number' ? Date.now() - mfaVerifiedAt.value : Infinity;
+      if (mfaAge > 5 * 60 * 1000) {
+        return { name: 'login', query: { redirect: to.fullPath, mfa: '1' } };
       }
     }
   }

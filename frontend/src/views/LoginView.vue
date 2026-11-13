@@ -60,7 +60,7 @@
             :minlength="mode === 'register' ? 12 : undefined"
             maxlength="128"
             required
-            aria-describedby="auth-password-hint"
+            :aria-describedby="mode === 'register' ? 'auth-password-hint' : undefined"
             class="input"
           />
           <p v-if="mode === 'register'" id="auth-password-hint" class="text-xs text-cinema-textMuted mt-1">12 caractères minimum.</p>
@@ -92,8 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import QRCode from 'qrcode';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSession } from '../composables/useSession';
 
@@ -115,6 +114,7 @@ const SUBMIT_LABELS: Record<Mode, string> = {
 const route = useRoute();
 const router = useRouter();
 const {
+  currentUser,
   login,
   register,
   forgotPassword,
@@ -126,11 +126,11 @@ const {
   mfaVerifiedAt,
   initSession
 } = useSession();
-void initSession();
 
 const OAUTH_ERRORS: Record<string, string> = {
   google: 'La connexion avec Google a échoué. Réessayez.',
   google_email_taken: 'Un compte existe déjà avec cet email : connectez-vous avec votre mot de passe.',
+  cinema_unavailable: 'Ce cinéma est temporairement indisponible.',
 };
 
 const mode = ref<Mode>('login');
@@ -188,7 +188,7 @@ const submit = async () => {
           return;
         }
         totpSecret.value = setup.secret;
-        // Generated in the browser: the secret never leaves the page.
+        const { default: QRCode } = await import('qrcode');
         totpQr.value = await QRCode.toDataURL(setup.otpauthUri, { margin: 1, width: 192 }).catch(() => '');
       }
       mode.value = 'mfa';
@@ -199,6 +199,16 @@ const submit = async () => {
     pending.value = false;
   }
 };
+
+onMounted(async () => {
+  await initSession();
+  if (isAdminPlane && currentUser?.value) {
+    const mfaAge = typeof mfaVerifiedAt?.value === 'number' ? Date.now() - mfaVerifiedAt.value : Infinity;
+    if (mfaAge > 5 * 60 * 1000) {
+      mode.value = 'mfa';
+    }
+  }
+});
 
 const submitMfa = async () => {
   error.value = '';

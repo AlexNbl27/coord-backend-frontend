@@ -10,8 +10,9 @@
         </div>
         <button
           type="button"
+          :disabled="loading || submitting"
           @click="fetchCinemas"
-          class="px-4 py-2 rounded-xl bg-cinema-card border border-cinema-border text-sm font-medium text-cinema-text hover:text-white transition-colors"
+          class="px-4 py-2 rounded-xl bg-cinema-card border border-cinema-border text-sm font-medium text-cinema-text hover:text-white transition-colors disabled:opacity-50"
         >
           Actualiser
         </button>
@@ -139,8 +140,9 @@
                 role="switch"
                 :aria-checked="cinema.status === 'ACTIVE' ? 'true' : 'false'"
                 :aria-label="`Basculer l'état de ${cinema.slug}`"
+                :disabled="loading || submitting"
                 @click="toggleStatus(cinema)"
-                class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-colors"
+                class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-colors disabled:opacity-50"
                 :class="cinema.status === 'ACTIVE'
                   ? 'border-amber-500/50 text-amber-300 hover:bg-amber-500/10'
                   : 'border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10'"
@@ -160,57 +162,64 @@
         </div>
       </section>
 
-      <div
-        v-if="deleteTarget"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="delete-dialog-title"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      >
-        <div class="w-full max-w-md rounded-2xl bg-cinema-card border border-cinema-border p-6 space-y-4">
-          <h3 id="delete-dialog-title" class="text-lg font-semibold text-white">
-            Confirmer la suppression de {{ deleteTarget }}
-          </h3>
-          <p class="text-sm text-cinema-textMuted">
-            Les réservations futures seront annulées. Saisissez le slug
-            <strong class="text-white">{{ deleteTarget }}</strong> pour confirmer.
-          </p>
-          <div>
-            <label for="confirm-slug-input" class="sr-only">Slug de confirmation</label>
-            <input
-              id="confirm-slug-input"
-              v-model="deleteConfirmInput"
-              type="text"
-              :placeholder="deleteTarget"
-              class="w-full px-3 py-2 rounded-xl bg-cinema-darker border border-cinema-border text-sm text-white"
-            />
-          </div>
-          <div class="flex justify-end gap-3">
-            <button
-              type="button"
-              @click="closeDeleteModal"
-              class="px-4 py-2 rounded-xl border border-cinema-border text-sm text-cinema-text"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              :disabled="deleteConfirmInput !== deleteTarget || submitting"
-              @click="confirmDelete"
-              class="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold disabled:opacity-40"
-            >
-              Confirmer la suppression
-            </button>
+      <Teleport to="body">
+        <div
+          v-if="deleteTarget"
+          ref="deleteDialogRef"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          tabindex="-1"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          @click.self="closeDeleteModal"
+        >
+          <div class="w-full max-w-md rounded-2xl bg-cinema-card border border-cinema-border p-6 space-y-4">
+            <h3 id="delete-dialog-title" class="text-lg font-semibold text-white">
+              Confirmer la suppression de {{ deleteTarget }}
+            </h3>
+            <p class="text-sm text-cinema-textMuted">
+              Les réservations futures seront annulées. Saisissez le slug
+              <strong class="text-white">{{ deleteTarget }}</strong> pour confirmer.
+            </p>
+            <div>
+              <label for="confirm-slug-input" class="sr-only">Slug de confirmation</label>
+              <input
+                id="confirm-slug-input"
+                ref="deleteConfirmInputRef"
+                v-model="deleteConfirmInput"
+                type="text"
+                :placeholder="deleteTarget"
+                class="w-full px-3 py-2 rounded-xl bg-cinema-darker border border-cinema-border text-sm text-white"
+              />
+            </div>
+            <div class="flex justify-end gap-3">
+              <button
+                type="button"
+                @click="closeDeleteModal"
+                class="px-4 py-2 rounded-xl border border-cinema-border text-sm text-cinema-text"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                :disabled="deleteConfirmInput !== deleteTarget || submitting"
+                @click="confirmDelete"
+                class="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold disabled:opacity-40"
+              >
+                Confirmer la suppression
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Teleport>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { apiClient } from '../services/apiClient';
+import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 
 interface AdminCinema {
   slug: string;
@@ -226,6 +235,16 @@ const submitting = ref(false);
 const errorMessage = ref<string | null>(null);
 const deleteTarget = ref<string | null>(null);
 const deleteConfirmInput = ref('');
+const deleteDialogRef = ref<HTMLElement | null>(null);
+const deleteConfirmInputRef = ref<HTMLInputElement | null>(null);
+const isDeleteOpen = computed(() => Boolean(deleteTarget.value));
+
+useAccessibleDialog({
+  isOpen: isDeleteOpen,
+  dialogRef: deleteDialogRef,
+  initialFocusRef: deleteConfirmInputRef,
+  onClose: closeDeleteModal
+});
 
 const form = reactive({
   slug: '',

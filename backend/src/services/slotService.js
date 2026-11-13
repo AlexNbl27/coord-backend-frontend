@@ -302,13 +302,14 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
     try {
       const checkStatus = deps.getCinemaStatus || getCinemaStatus;
       const resolveAddress = deps.getCinemaAddress || getCinemaAddress;
+      const emitEvent = deps.emitReservationEvent || emitReservationEvent;
 
       const { lines, totalQuantity, totalAmount } = normalizeTickets(rawTickets);
 
       const ownerId = sessionUser?.id || 'spectator-1';
       const safeCustomer = typeof customerId === 'string' ? customerId.trim().slice(0, 80) : '';
       const ownerName = sessionUser?.name || safeCustomer || 'Hélène Durand';
-      const logEvent = (action, extra = {}) => emitReservationEvent({
+      const logEvent = (action, extra = {}) => emitEvent({
         action,
         cinemaSlug: tenant?.slug ?? null,
         slotId: String(slotId),
@@ -421,7 +422,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       }
 
       const seat = generateSeatLabel(winner._id, bookingId, totalQuantity);
-      const address = await resolveAddress(tenant.slug);
+      const address = await resolveAddress(tenant?.slug);
       try {
         await BookingModel.create({
           _id: bookingId,
@@ -456,7 +457,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       span.setAttribute('cineslot.reservation.id', String(bookingId));
       span.setAttribute('cineslot.status', String(winner.status));
 
-      broadcastSlotChange(winner, tenant.slug);
+      broadcastSlotChange(winner, tenant?.slug);
       return {
         bookingId,
         slotId: winner._id,
@@ -551,6 +552,9 @@ async function releaseSeats(slotId, restoreQty, models, tenantSlug) {
     pipeline,
     { new: true }
   );
+  if (!updated) {
+    return null;
+  }
 
   broadcastSlotChange(updated, tenantSlug);
   return updated;
