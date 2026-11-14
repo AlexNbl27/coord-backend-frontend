@@ -64,13 +64,11 @@ describe('Flux 4 : Gestion & Annulation de Réservations (A11y)', () => {
     expect(cancelBtn.getAttribute('aria-label') || cancelBtn.textContent).toMatch(/Dune/i);
   });
 
-  it('les messages de notification (toast) doivent porter role="alert" pour une vocalisation immédiate', async () => {
+  it('aucune alerte role="alert" n\'est affichée au chargement initial sans erreur', async () => {
     const { container } = render(ReservationsView);
 
-    // Si une alerte est affichée, elle doit avoir role="alert"
     const alertRegions = container.querySelectorAll('[role="alert"]');
-    // Le composant doit prévoir cette zone accessible pour les retours d'annulation
-    expect(alertRegions.length).toBeGreaterThanOrEqual(0);
+    expect(alertRegions.length).toBe(0);
   });
 });
 

@@ -27,7 +27,7 @@ Le billet PDF est fabriqué **côté serveur** (Express + `pdfkit` + polices emb
 
 ## 3 · Le bug du fuseau horaire (`Europe/Paris`)
 
-Les créneaux `startsAt` sont stockés en base MongoDB au format ISO 8601 UTC (`...Z`), et le conteneur Node.js tourne en UTC : sans conversion explicite, un rendez-vous/séance réservé pour `9 h 30` en France était imprimé `8 h 30` en hiver (UTC+1) ou `7 h 30` en été (UTC+2). Le formateur serveur (`backend/src/utils/ticketFormatters.js`) et les vues front (`ReservationsView.vue`, `ReservationModal.vue`, `SlotCard.vue`) imposent désormais explicitement `timeZone: 'Europe/Paris'`, garantissant `9 h 30` été comme hiver.
+Les créneaux `startsAt` sont stockés en base MongoDB au format ISO 8601 UTC (`...Z`), et le conteneur Node.js tourne en UTC : sans conversion explicite, une séance réservée pour `9 h 30` en France était imprimée `8 h 30` en hiver (UTC+1) ou `7 h 30` en été (UTC+2). Le formateur serveur (`backend/src/utils/ticketFormatters.js`) et les vues front (`ReservationsView.vue`, `ReservationModal.vue`, `SlotCard.vue`) imposent désormais explicitement `timeZone: 'Europe/Paris'`, garantissant `9 h 30` été comme hiver.
 
 ---
 
@@ -39,7 +39,7 @@ Preuves relevées sur la pile Docker Compose complète (`http://localhost:3001/a
 
 ```http
 HTTP/1.1 200 OK
-Server: nginx/1.31.8
+Server: nginx
 Content-Type: application/pdf
 Content-Length: 28051
 Content-Disposition: inline; filename="ticket-ce139aff-9a3.pdf"

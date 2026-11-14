@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Cinema } from '../models/Cinema.js';
 import {
   allSlots,
   reserveSlot,
@@ -6,8 +7,10 @@ import {
   subscribeSse,
   createDemoSlot,
   getSlotProof,
-  resetAllSlots
+  resetAllSlots,
+  toSlotView
 } from '../services/slotService.js';
+import { getTenantModels, isValidSlug, useTenantDb } from '../tenancy/index.js';
 import { requireRole, requireSession } from '../services/sessionService.js';
 import { areDemoRoutesEnabled, isValidEntityId } from '../utils/securityMiddleware.js';
 import { auditRequest } from '../events/audit.js';
@@ -113,3 +116,45 @@ export function createSlotRouter({ demoRoutes = areDemoRoutesEnabled() } = {}) {
 }
 
 export const slotRouter = createSlotRouter();
+
+export function createPublicSlotsRouter(deps = {}) {
+  const cinemas = deps.cinemas || Cinema;
+  const getDb = deps.useTenantDb || useTenantDb;
+  const getModels = deps.getTenantModels || getTenantModels;
+  const router = Router();
+
+  router.get('/', async (req, res, next) => {
+    try {
+      if (req.plane === 'admin') {
+        return res.status(404).end();
+      }
+      const list = await cinemas
+        .find({ status: { $ne: 'DELETED' } }, 'slug name address city status')
+        .sort({ name: 1 })
+        .lean();
+      const result = [];
+      for (const c of list) {
+        if (!isValidSlug(c.slug)) continue;
+        const { Slot } = getModels(getDb(c.slug));
+        const rows = await Slot.find({}).sort({ startsAt: 1 }).lean();
+        if (rows.length > 0) {
+          result.push({
+            slug: c.slug,
+            name: c.name,
+            address: c.address,
+            city: c.city,
+            status: c.status,
+            slots: rows.map(toSlotView)
+          });
+        }
+      }
+      return res.json({ cinemas: result });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  return router;
+}
+
+export const publicSlotsRouter = createPublicSlotsRouter();

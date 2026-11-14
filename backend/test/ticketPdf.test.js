@@ -55,23 +55,19 @@ test('ticketPdfRenderer: generates example PDF, extracts text, accents, A4 page,
   const pdfDoc = await loadPdfDocument(pdfBuffer);
   const text = await extractPdfText(pdfDoc);
 
-  // 1. Expected date, Paris time, and movie title
   assert.match(text, /mardi 24 novembre 2026/i);
   assert.match(text, /9 h 30/);
   assert.match(text, /Dune : Deuxième Partie/);
 
-  // 2. French accents preserved by embedded DejaVu Sans fonts
   assert.ok(text.includes('Hélène Durand'), `Expected "Hélène Durand" in PDF text, got: ${text}`);
   assert.ok(text.includes('Rangée E · Fauteuil 12'));
 
-  // 3. Single A4 page (595 x 842 pt)
   assert.equal(pdfDoc.numPages, 1);
   const firstPage = await pdfDoc.getPage(1);
   const [, , width, height] = firstPage.view;
   assert.equal(Math.round(width), 595);
   assert.equal(Math.round(height), 842);
 
-  // 4. Accessibility: tagged PDF structure tree, French language, and title metadata
   const structTree = await firstPage.getStructTree();
   assert.ok(structTree, 'PDF must contain a StructureTreeRoot for accessibility');
   const metadata = await pdfDoc.getMetadata();

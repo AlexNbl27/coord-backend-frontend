@@ -248,13 +248,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMoviesStore } from '../stores/movies';
 import { useSlotsStore } from '../stores/slots';
 import { useMovies } from '../composables/useMovies';
 import { useSlots } from '../composables/useSlots';
-import { useReservations } from '../composables/useReservations';
 import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 import MovieCard from '../components/MovieCard.vue';
 import SearchBar from '../components/SearchBar.vue';
@@ -264,10 +263,7 @@ const router = useRouter();
 const moviesStore = useMoviesStore();
 const slotsStore = useSlotsStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse, reserveSlot } = useSlots();
-const { saveBooking } = useReservations();
-
-const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
+const { fetchSlots, connectSse } = useSlots();
 
 const loading = ref(false);
 const selectedMovie = ref<Movie | null>(null);

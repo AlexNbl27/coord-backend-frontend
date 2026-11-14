@@ -7,6 +7,7 @@ import { useConnectionStore } from '../stores/connection';
 import { useConnection } from './useConnection';
 import { useAbTest } from './useAbTest';
 import { useReservations } from './useReservations';
+import { currentHostContext } from '../services/tenant';
 
 export interface Slot {
   id: string;
@@ -19,6 +20,18 @@ export interface Slot {
   availableSeats?: number;
   bookingId?: string;
   bookedBy?: string;
+  cinemaSlug?: string;
+  cinemaName?: string;
+  cinemaStatus?: string;
+}
+
+export interface CinemaSlotsGroup {
+  slug: string;
+  name: string;
+  address: string;
+  city: string;
+  status: string;
+  slots: Slot[];
 }
 
 export interface SlotView {
@@ -65,6 +78,7 @@ const API_SSE_EVENTS_URL = '/api/slots/events';
 
 let sharedEventSource: EventSource | null = null;
 const cinemaDisabled = ref(false);
+const cinemaGroups = ref<CinemaSlotsGroup[]>([]);
 
 // Initialisation du cache persistant
 const initialCachedSlots = cacheManager.get<Slot[]>(CacheKeys.SLOTS);
@@ -108,7 +122,43 @@ export function useSlots() {
 
     try {
       error.value = null;
-      
+
+      let hostPlane = 'unknown';
+      try {
+        hostPlane = currentHostContext().plane;
+      } catch {
+        hostPlane = 'unknown';
+      }
+
+      if (hostPlane === 'public') {
+        const response = await apiClient.get<{ cinemas: Array<{ slug: string; name: string; address: string; city: string; status: string; slots: SlotView[] }> }>('/api/public-slots', {
+          withCredentials: true,
+        });
+        const groups: CinemaSlotsGroup[] = (response.data?.cinemas ?? []).map((g) => ({
+          slug: g.slug,
+          name: g.name,
+          address: g.address,
+          city: g.city,
+          status: g.status,
+          slots: g.slots.map((slot) => ({
+            id: slot.id,
+            startsAt: slot.startsAt,
+            status: slot.status as 'AVAILABLE' | 'BOOKED',
+            version: slot.version,
+            movieTitle: slot.movieTitle,
+            hall: slot.hall,
+            capacity: slot.capacity,
+            availableSeats: slot.availableSeats,
+            cinemaSlug: g.slug,
+            cinemaName: g.name,
+            cinemaStatus: g.status,
+          })),
+        }));
+        cinemaGroups.value = groups;
+        slotsStore.setSlots(groups.flatMap((g) => g.slots));
+        return;
+      }
+
       const response = await apiClient.get<SlotView[]>(API_SLOTS_URL, {
         withCredentials: true,
       });
@@ -146,6 +196,11 @@ export function useSlots() {
 
   // Connexion au flux SSE avec surveillance
   const connectSse = () => {
+    try {
+      if (currentHostContext().plane === 'public') {
+        return;
+      }
+    } catch {}
     if (sharedEventSource && sharedEventSource.readyState !== EventSource.CLOSED) {
       return;
     }
@@ -332,6 +387,7 @@ export function useSlots() {
     sseConnected,
     sseError,
     cinemaDisabled,
+    cinemaGroups,
     fetchSlots,
     connectSse,
     disconnectSse,

@@ -8,7 +8,7 @@ import cookieParser from 'cookie-parser';
 import { trace, isSpanContextValid } from '@opentelemetry/api';
 import { movieRouter } from './routes/movieRoutes.js';
 import { abRouter } from './routes/abRoutes.js';
-import { slotRouter } from './routes/slotRoutes.js';
+import { publicSlotsRouter, slotRouter } from './routes/slotRoutes.js';
 import { sessionRouter } from './routes/sessionRoutes.js';
 import { googleAuthRouter, googleOAuthRelayHost } from './routes/googleAuthRoutes.js';
 import { myBookingsRouter, ticketRouter } from './routes/ticketRoutes.js';
@@ -108,6 +108,7 @@ function createServer() {
 
   app.use('/api/movies', movieRouter);
   app.use('/api/slots', requireTenant, slotRouter);
+  app.use('/api/public-slots', publicSlotsRouter);
   app.use('/api/ab', abRouter);
   app.use('/api/session/google', googleAuthRouter);
   app.use('/api/session', sessionRouter);

@@ -6,20 +6,15 @@
         <p class="text-cinema-textMuted text-sm mt-1">Plateforme de réservation de cinéma en temps réel</p>
       </div>
 
-      <!-- Contenu principal -->
       <div class="space-y-12">
-        <!-- Introduction -->
         <div class="mb-12">
           <h2 class="text-2xl font-bold text-white mb-4">Qu'est-ce que CinéSlot ?</h2>
           <p class="text-cinema-textMuted leading-relaxed">
-            CinéSlot est une plateforme moderne de découverte et de réservation de films avec 
-            synchronisation en temps réel entre tous les utilisateurs. Grâce à la technologie 
-            <span class="text-accent-gold font-semibold">Server-Sent Events (SSE)</span>, les mises à jour 
-            des disponibilités sont instantanées et visibles par tous les clients connectés.
+            CinéSlot est une application web de consultation du catalogue et de réservation de séances
+            avec mise à jour des disponibilités via <span class="text-accent-gold font-semibold">Server-Sent Events (SSE)</span>.
           </p>
         </div>
 
-        <!-- Fonctionnalités -->
         <div class="mb-12">
           <h2 class="text-2xl font-bold text-white mb-6">Fonctionnalités</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -43,7 +38,7 @@
               </div>
               <h3 class="text-white font-semibold mb-2">Synchronisation temps réel</h3>
               <p class="text-sm text-cinema-textMuted">
-                Les réservations sont instantanément visibles par tous les utilisateurs grâce à la technologie SSE.
+                Les disponibilités des séances sont diffusées en direct par SSE dès qu'une réservation est validée ou annulée.
               </p>
             </div>
 
@@ -53,9 +48,9 @@
                   <path d="M8.433 7.418c.158-.103.346-.196.552-.257m-4.283 6.018c.32.32.755.523 1.227.523s.907-.203 1.227-.523c.64-.64.64-1.672 0-2.312a1.633 1.633 0 00-2.454 0c-1.282 1.282-2.953 1.282-2.953 0a1.633 1.633 0 00-2.454 0c-.84.84-1.127 2.376 0 3.212C5.468 14.382 6.78 14.382 7.62 13.212a1.633 1.633 0 000-2.454z" />
                 </svg>
               </div>
-              <h3 class="text-white font-semibold mb-2">Architecture moderne</h3>
+              <h3 class="text-white font-semibold mb-2">Pile technique</h3>
               <p class="text-sm text-cinema-textMuted">
-                Vue 3, Vite, TypeScript, Pinia, Tailwind CSS et Docker pour une expérience fluide et scalable.
+                Vue 3, Vite, TypeScript, Pinia, Tailwind CSS et Docker pour le déploiement des services.
               </p>
             </div>
 

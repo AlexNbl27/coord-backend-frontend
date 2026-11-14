@@ -3,17 +3,10 @@ import { trace, isSpanContextValid } from '@opentelemetry/api';
 import { Cinema } from '../models/Cinema.js';
 import { appendAudit, emitReservationEvent } from '../events/index.js';
 import { invalidateCinemaStatusCache } from '../services/cinemaStatusService.js';
-import { buildProblemDetail, requireRecentMfa, requireRole } from '../services/sessionService.js';
+import { requireRecentMfa, requireRole, sendProblem as problem } from '../services/sessionService.js';
 import { broadcastCinemaStatus } from '../services/slotService.js';
 import { getTenantModels, isValidSlug, useTenantDb } from '../tenancy/index.js';
 import { isPlainString } from '../utils/securityMiddleware.js';
-
-function problem(res, status, title, detail) {
-  return res
-    .status(status)
-    .type('application/problem+json')
-    .json(buildProblemDetail(status, title, detail));
-}
 
 function getTraceId() {
   const ctx = trace.getActiveSpan()?.spanContext();

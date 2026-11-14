@@ -4,10 +4,10 @@ import { User } from '../models/User.js';
 import {
   ADMIN_COOKIE_NAME,
   MFA_STEP_UP_TTL_MS,
-  buildProblemDetail,
   getAdminCookieOptions,
   hashPassword,
   requireRole,
+  sendProblem as problem,
   signAdminSessionToken,
   toPublicUser,
   verifyPassword
@@ -23,13 +23,6 @@ import { createRateLimiter, isPlainString } from '../utils/securityMiddleware.js
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DUMMY_HASH_PROMISE = hashPassword(crypto.randomBytes(16).toString('hex'));
-
-function problem(res, status, title, detail) {
-  return res
-    .status(status)
-    .type('application/problem+json')
-    .json(buildProblemDetail(status, title, detail));
-}
 
 function readEmail(value) {
   return isPlainString(value, 254) && EMAIL_RE.test(value.trim()) ? value.trim().toLowerCase() : null;

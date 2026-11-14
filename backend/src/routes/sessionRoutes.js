@@ -4,10 +4,10 @@ import { User } from '../models/User.js';
 import { sendPasswordResetEmail } from '../services/mailService.js';
 import {
   SESSION_COOKIE_NAME,
-  buildProblemDetail,
   getSessionCookieOptions,
   hashPassword,
   hashResetToken,
+  sendProblem as problem,
   signSessionToken,
   toPublicUser,
   verifyPassword
@@ -20,13 +20,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const APP_URL = (process.env.APP_URL || 'http://localhost:3001').replace(/\/$/, '');
 // Used when the email is unknown so that login timing does not leak existing accounts.
 const DUMMY_HASH_PROMISE = hashPassword(crypto.randomBytes(16).toString('hex'));
-
-function problem(res, status, title, detail) {
-  return res
-    .status(status)
-    .type('application/problem+json')
-    .json(buildProblemDetail(status, title, detail));
-}
 
 function readEmail(value) {
   return isPlainString(value, 254) && EMAIL_RE.test(value.trim()) ? value.trim().toLowerCase() : null;

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ReservationLog, RESERVATION_ACTIONS } from '../models/ReservationLog.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { auditRequest } from '../events/audit.js';
-import { buildProblemDetail, requireRole } from '../services/sessionService.js';
+import { requireRole, sendProblem as problem } from '../services/sessionService.js';
 import { isValidSlug } from '../tenancy/index.js';
 import { isPlainString, isValidEntityId } from '../utils/securityMiddleware.js';
 
@@ -15,13 +15,6 @@ const AUDIT_ACTION_RE = /^[A-Z][A-Z0-9_]{0,63}$/;
 const FORBIDDEN = Symbol('forbidden');
 
 class BadQuery extends Error {}
-
-function problem(res, status, title, detail) {
-  return res
-    .status(status)
-    .type('application/problem+json')
-    .json(buildProblemDetail(status, title, detail));
-}
 
 function readInt(value, fallback, min, max, label) {
   if (value === undefined) {

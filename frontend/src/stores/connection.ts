@@ -43,10 +43,6 @@ export const useConnectionStore = defineStore('connection', () => {
     activeToast.value = null;
   };
 
-  /**
-   * Bascule en ligne : annule tout passage en hors-ligne en cours
-   * N'affiche un toast que si l'application a réellement été coupée pendant un temps significatif
-   */
   const setOnline = () => {
     if (offlineDebounceTimer) {
       clearTimeout(offlineDebounceTimer);
@@ -60,10 +56,6 @@ export const useConnectionStore = defineStore('connection', () => {
     }
   };
 
-  /**
-   * Enregistre un échec réseau avec debounce anti-flapping (1,5 seconde)
-   * Pas de popup intempestive : mise à jour silencieuse du statut dans la navbar
-   */
   const setOffline = (immediate = false) => {
     if (status.value === 'OFFLINE') return;
 
@@ -80,8 +72,6 @@ export const useConnectionStore = defineStore('connection', () => {
         if (status.value !== 'OFFLINE') {
           status.value = 'OFFLINE';
           offlineStartTime = Date.now();
-          // Note UX : Nous n'affichons volontairement PAS de popup invasive ici !
-          // Le badge discret dans la barre de navigation suffit amplement pour informer l'utilisateur.
         }
       }, 1500);
     }

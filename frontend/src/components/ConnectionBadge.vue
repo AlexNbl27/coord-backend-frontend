@@ -1,12 +1,10 @@
 <template>
-  <!-- Badge de statut réseau intégré dans la barre de navigation -->
   <div
     role="status"
     :aria-label="`Statut de connexion réseau : ${statusLabel}`"
     class="inline-flex flex-row items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 whitespace-nowrap shrink-0"
     :class="statusBadgeClasses"
     :title="statusTooltip"
-    style="display: inline-flex !important; flex-direction: row !important; align-items: center !important; white-space: nowrap !important;"
   >
     <!-- Pastille lumineuse d'état avec icône pour double encodage -->
     <span
@@ -51,7 +49,6 @@ import { computed } from 'vue';
 import { useConnection } from '../composables/useConnection';
 
 const {
-  status,
   isOnline,
   isOffline,
   isReconnecting,

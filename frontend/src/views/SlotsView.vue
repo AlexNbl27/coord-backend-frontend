@@ -198,6 +198,49 @@
         </button>
       </div>
 
+      <div v-else-if="isPublicPlane" class="space-y-8">
+        <section
+          v-for="group in groupedDisplayedSlots"
+          :key="group.slug"
+          class="space-y-4"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-cinema-border/50">
+            <div>
+              <h2 class="font-display text-2xl font-bold text-white">{{ group.name }}</h2>
+              <p class="text-xs text-cinema-textMuted">{{ group.address }}, {{ group.city }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span
+                v-if="group.status === 'DISABLED'"
+                class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40"
+              >
+                Réservations suspendues
+              </span>
+              <a
+                :href="tenantUrl(group.slug, '/slots')"
+                class="text-xs font-semibold text-accent-gold hover:underline whitespace-nowrap"
+              >
+                Ouvrir l'espace cinéma →
+              </a>
+            </div>
+          </div>
+
+          <div
+            :class="['grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4', group.status === 'DISABLED' ? 'opacity-50 grayscale pointer-events-none select-none' : '']"
+            :aria-disabled="group.status === 'DISABLED' ? 'true' : undefined"
+          >
+            <SlotCard
+              v-for="slot in group.slots"
+              :key="`${group.slug}-${slot.id}`"
+              :slot="slot"
+              :sse-connected="false"
+              :already-booked="bookedSlotIds.has(slot.id)"
+              @reserve="handleReserve"
+            />
+          </div>
+        </section>
+      </div>
+
       <div
         v-else
         :class="['grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4', cinemaDisabled ? 'opacity-50 grayscale pointer-events-none select-none' : '']"
@@ -226,16 +269,25 @@ import { useMovies } from '../composables/useMovies';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
 import { useSession } from '../composables/useSession';
+import { currentHostContext, isValidSlug, tenantUrl } from '../services/tenant';
 import SlotCard from '../components/SlotCard.vue';
 
 const router = useRouter();
 const slotsStore = useSlotsStore();
 const moviesStore = useMoviesStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse, resetSlots, sseConnected, cinemaDisabled } = useSlots();
+const { fetchSlots, connectSse, resetSlots, sseConnected, cinemaDisabled, cinemaGroups } = useSlots();
 const { bookings } = useReservations();
 const { exposeIfAvailable } = useAbTest();
 const { isSuperAdmin } = useSession();
+
+const isPublicPlane = (() => {
+  try {
+    return currentHostContext().plane === 'public';
+  } catch {
+    return false;
+  }
+})();
 
 const bookedSlotIds = computed(() =>
   new Set(
@@ -307,7 +359,34 @@ const resetFilters = () => {
   techFilter.value = 'ALL';
 };
 
+const groupedDisplayedSlots = computed(() => {
+  if (!isPublicPlane) return [];
+  const allowedIds = new Map<string, Set<string>>();
+  for (const s of displayedSlots.value) {
+    if (!s.cinemaSlug) continue;
+    let set = allowedIds.get(s.cinemaSlug);
+    if (!set) {
+      set = new Set();
+      allowedIds.set(s.cinemaSlug, set);
+    }
+    set.add(s.id);
+  }
+  return cinemaGroups.value
+    .map((g) => ({
+      ...g,
+      slots: g.slots.filter((s) => allowedIds.get(g.slug)?.has(s.id)),
+    }))
+    .filter((g) => g.slots.length > 0);
+});
+
 const handleReserve = (slotId: string) => {
+  if (isPublicPlane) {
+    const target = displayedSlots.value.find((s) => s.id === slotId);
+    if (target?.cinemaSlug && isValidSlug(target.cinemaSlug)) {
+      window.location.href = tenantUrl(target.cinemaSlug, `/slots/${slotId}/book`);
+      return;
+    }
+  }
   router.push(`/slots/${slotId}/book`);
 };
 
