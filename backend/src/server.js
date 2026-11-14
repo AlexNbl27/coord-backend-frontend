@@ -11,7 +11,7 @@ import { abRouter } from './routes/abRoutes.js';
 import { slotRouter } from './routes/slotRoutes.js';
 import { sessionRouter } from './routes/sessionRoutes.js';
 import { googleAuthRouter, googleOAuthRelayHost } from './routes/googleAuthRoutes.js';
-import { ticketRouter } from './routes/ticketRoutes.js';
+import { myBookingsRouter, ticketRouter } from './routes/ticketRoutes.js';
 import { cinemaRouter } from './routes/cinemaRoutes.js';
 import { adminSessionRouter } from './routes/adminSessionRoutes.js';
 import { adminCinemaRouter } from './routes/adminCinemaRoutes.js';
@@ -112,6 +112,7 @@ function createServer() {
   app.use('/api/session/google', googleAuthRouter);
   app.use('/api/session', sessionRouter);
   app.use('/api/bookings', requireTenant, ticketRouter);
+  app.use('/api/my-bookings', myBookingsRouter);
   app.use('/api/cinemas', cinemaRouter);
   app.use('/api/admin/session', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminSessionRouter);
   app.use('/api/admin/cinemas', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminCinemaRouter);

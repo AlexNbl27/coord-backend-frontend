@@ -55,7 +55,7 @@ describe('services/tenant', () => {
 
     expect(planeRedirect(pub, 'home')).toBe('cinemas');
     expect(planeRedirect(pub, 'slots')).toBe('cinemas');
-    expect(planeRedirect(pub, 'reservations')).toBe('cinemas');
+    expect(planeRedirect(pub, 'reservations')).toBeNull();
     expect(planeRedirect(pub, 'movies')).toBeNull();
     expect(planeRedirect(pub, 'cinemas')).toBeNull();
     expect(planeRedirect(pub, 'admin-cinemas')).toBe('not-found');

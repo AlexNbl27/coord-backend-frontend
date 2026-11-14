@@ -61,7 +61,7 @@ export function adminUrl(path = '/', loc: LocationLike = window.location): strin
   return `${originFor('admin', loc)}${normalizePath(path)}`;
 }
 
-const TENANT_ONLY_ROUTES = new Set(['home', 'slots', 'slot-booking', 'reservations']);
+const TENANT_ONLY_ROUTES = new Set(['home', 'slots', 'slot-booking']);
 const ADMIN_ROUTES = new Set(['admin-cinemas', 'admin-logs', 'admin-stats']);
 const ADMIN_PLANE_ROUTES = new Set([...ADMIN_ROUTES, 'login', 'not-found']);
 

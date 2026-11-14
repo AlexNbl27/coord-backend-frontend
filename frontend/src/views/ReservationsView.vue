@@ -145,6 +145,13 @@
                     {{ booking.movieTitle }}
                   </h2>
                   <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                    <a
+                      v-if="booking.cinemaSlug && isValidSlug(booking.cinemaSlug)"
+                      :href="tenantUrl(booking.cinemaSlug, '/slots')"
+                      class="inline-block px-2.5 py-0.5 rounded-md bg-cinema-darker border border-cinema-border/60 text-white hover:border-accent-gold text-xs font-semibold transition-colors"
+                    >
+                      {{ booking.cinemaName || booking.cinemaSlug }}
+                    </a>
                     <span class="inline-block px-2.5 py-0.5 rounded-md bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-xs font-semibold">
                       {{ booking.hall }}
                     </span>
@@ -197,6 +204,7 @@
                     v-if="booking.status === 'ACTIVE'"
                     :booking-id="booking.bookingId"
                     :movie-title="booking.movieTitle"
+                    :cinema-slug="booking.cinemaSlug"
                   />
                   <div
                     v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
@@ -342,14 +350,18 @@ import { useMovies } from '../composables/useMovies';
 import { useMoviesStore } from '../stores/movies';
 import { useConnectionStore } from '../stores/connection';
 import { useAccessibleDialog } from '../composables/useAccessibleDialog';
+import { currentHostContext, isValidSlug, tenantUrl } from '../services/tenant';
 import TicketPdfButton from '../components/TicketPdfButton.vue';
 
-const { bookings, activeBookingsCount, cancelBooking, deleteFromHistory, downloadCalendarFile, openGoogleCalendar } = useReservations();
+const { bookings, activeBookingsCount, cancelBooking, deleteFromHistory, fetchAllCinemasBookings, downloadCalendarFile, openGoogleCalendar } = useReservations();
 const { fetchMovies } = useMovies();
 const moviesStore = useMoviesStore();
 const connectionStore = useConnectionStore();
 
 onMounted(() => {
+  if (currentHostContext().plane === 'public') {
+    void fetchAllCinemasBookings();
+  }
   if (moviesStore.movies.length === 0) {
     void fetchMovies();
   }
@@ -407,7 +419,7 @@ const executeCancel = async () => {
   cancellingSlotId.value = booking.slotId;
 
   try {
-    await cancelBooking(booking.slotId);
+    await cancelBooking(booking.slotId, booking.cinemaSlug);
     toastType.value = 'success';
     if (connectionStore.isOffline || booking.status === 'CANCELLED_PENDING_SYNC') {
       toastMessage.value = `Annulation enregistrée pour "${booking.movieTitle}". Elle sera synchronisée avec le serveur dès le retour de la connexion.`;

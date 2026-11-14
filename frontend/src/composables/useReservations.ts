@@ -2,10 +2,13 @@ import { ref, computed } from "vue";
 import { apiClient } from "../services/apiClient";
 import { offlineQueue } from "../services/offlineQueue";
 import { useConnectionStore } from "../stores/connection";
+import { currentHostContext, isValidSlug, tenantUrl } from "../services/tenant";
 
 export interface UserBooking {
   bookingId: string;
   slotId: string;
+  cinemaSlug?: string;
+  cinemaName?: string;
   movieTitle: string;
   startsAt: string;
   hall: string;
@@ -165,9 +168,13 @@ export function useReservations() {
     return newBooking;
   };
 
-  const cancelBooking = async (slotId: string): Promise<boolean> => {
+  const cancelBooking = async (slotId: string, cinemaSlug?: string): Promise<boolean> => {
     try {
-      await apiClient.delete(`/api/slots/${slotId}/reservations`, {
+      const useCrossOrigin = Boolean(cinemaSlug && currentHostContext().plane === 'public' && isValidSlug(cinemaSlug));
+      const cancelUrl = useCrossOrigin
+        ? tenantUrl(cinemaSlug!, `/api/slots/${slotId}/reservations`)
+        : `/api/slots/${slotId}/reservations`;
+      await apiClient.delete(cancelUrl, {
         withCredentials: true,
       });
       const target = bookings.value.find((b) => b.slotId === slotId);
@@ -299,6 +306,20 @@ export function useReservations() {
     }
   };
 
+  const fetchAllCinemasBookings = async () => {
+    try {
+      const response = await apiClient.get<{ bookings: UserBooking[] }>('/api/my-bookings', {
+        withCredentials: true,
+        skipOfflineTrigger: true,
+      });
+      if (Array.isArray(response.data?.bookings)) {
+        bookings.value = response.data.bookings;
+      }
+    } catch {
+      // Unauthenticated or offline
+    }
+  };
+
   const hasActiveBookingForSlot = (slotId: string) =>
     bookings.value.some(
       (b) => b.slotId === slotId && (b.status === 'ACTIVE' || b.status === 'PENDING_SYNC')
@@ -314,6 +335,7 @@ export function useReservations() {
     markAllCancelledLocally,
     markBookingCancelled,
     syncBookingsWithServer,
+    fetchAllCinemasBookings,
     downloadCalendarFile,
     openGoogleCalendar,
   };

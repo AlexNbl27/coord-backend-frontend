@@ -72,9 +72,9 @@ export const realBrowser: BrowserAdapter = {
   }
 };
 
-export function ticketPdfUrl(bookingId: string, download = false): string {
-  const base = `/api/bookings/${encodeURIComponent(bookingId)}/ticket.pdf`;
-  return download ? `${base}?download=true` : base;
+export function ticketPdfUrl(bookingId: string, download = false, baseOrigin = ''): string {
+  const path = `/api/bookings/${encodeURIComponent(bookingId)}/ticket.pdf${download ? '?download=true' : ''}`;
+  return baseOrigin ? `${baseOrigin.replace(/\/$/, '')}${path}` : path;
 }
 
 export function filenameFrom(contentDisposition: string | null, bookingId: string): string {
@@ -111,12 +111,13 @@ async function messageOf(response: Response): Promise<string> {
 
 export async function fetchTicketPdf(
   bookingId: string,
-  download = false
+  download = false,
+  baseOrigin = ''
 ): Promise<{ blob: Blob; filename: string }> {
   let response: Response;
   try {
-    response = await fetch(ticketPdfUrl(bookingId, download), {
-      credentials: 'same-origin',
+    response = await fetch(ticketPdfUrl(bookingId, download, baseOrigin), {
+      credentials: baseOrigin ? 'include' : 'same-origin',
       headers: {
         Accept: 'application/pdf, application/problem+json'
       }
@@ -141,11 +142,12 @@ export async function fetchTicketPdf(
 
 export async function openTicketPdf(
   bookingId: string,
-  browser: BrowserAdapter = realBrowser
+  browser: BrowserAdapter = realBrowser,
+  baseOrigin = ''
 ): Promise<void> {
   const tab = browser.openTab();
   try {
-    const { blob } = await fetchTicketPdf(bookingId, false);
+    const { blob } = await fetchTicketPdf(bookingId, false, baseOrigin);
     const url = browser.createObjectURL(blob);
     tab.show(url);
     browser.later(() => browser.revokeObjectURL(url), REVOKE_AFTER_MS);
@@ -157,8 +159,9 @@ export async function openTicketPdf(
 
 export async function saveTicketPdf(
   bookingId: string,
-  browser: BrowserAdapter = realBrowser
+  browser: BrowserAdapter = realBrowser,
+  baseOrigin = ''
 ): Promise<void> {
-  const { blob, filename } = await fetchTicketPdf(bookingId, true);
+  const { blob, filename } = await fetchTicketPdf(bookingId, true, baseOrigin);
   browser.save(blob, filename);
 }

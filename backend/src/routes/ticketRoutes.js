@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import { Cinema } from '../models/Cinema.js';
 import { buildProblemDetail, requireSession } from '../services/sessionService.js';
 import { buildTicket } from '../services/ticketService.js';
-import { getTenantModels } from '../tenancy/index.js';
+import { getTenantModels, isValidSlug, useTenantDb } from '../tenancy/index.js';
 
 const STATUS_TITLES = {
   401: 'Unauthorized',
@@ -71,3 +72,54 @@ export function createTicketRouter(deps = {}) {
 }
 
 export const ticketRouter = createTicketRouter();
+
+export function createMyBookingsRouter(deps = {}) {
+  const cinemas = deps.cinemas || Cinema;
+  const getDb = deps.useTenantDb || useTenantDb;
+  const getModels = deps.getTenantModels || getTenantModels;
+  const router = Router();
+
+  router.get('/', requireSession, async (req, res, next) => {
+    try {
+      if (req.plane === 'admin') {
+        return res.status(404).end();
+      }
+      const list = await cinemas.find({ status: { $ne: 'DELETED' } }, 'slug name').lean();
+      const all = [];
+      for (const cinema of list) {
+        if (!isValidSlug(cinema.slug)) {
+          continue;
+        }
+        const { Booking } = getModels(getDb(cinema.slug));
+        const rows = await Booking.find({ ownerId: req.sessionUser.id }).sort({ bookedAt: -1 }).lean();
+        for (const b of rows) {
+          all.push({
+            bookingId: b._id,
+            slotId: b.slotId,
+            cinemaSlug: cinema.slug,
+            cinemaName: cinema.name,
+            movieTitle: b.movieTitle,
+            hall: b.hall,
+            address: b.address,
+            startsAt: b.startsAt,
+            seat: b.seat,
+            tickets: b.tickets,
+            totalQuantity: b.totalQuantity,
+            totalAmount: b.totalAmount,
+            status: b.status === 'CONFIRMED' ? 'ACTIVE' : 'CANCELLED',
+            bookedAt: b.bookedAt,
+            cancelledAt: b.cancelledAt
+          });
+        }
+      }
+      all.sort((a, b) => new Date(b.bookedAt).getTime() - new Date(a.bookedAt).getTime());
+      return res.json({ bookings: all });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  return router;
+}
+
+export const myBookingsRouter = createMyBookingsRouter();

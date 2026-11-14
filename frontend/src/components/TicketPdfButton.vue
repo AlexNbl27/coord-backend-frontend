@@ -36,6 +36,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { currentHostContext, isValidSlug, tenantUrl } from '../services/tenant';
 import {
   type BrowserAdapter,
   FALLBACK,
@@ -48,6 +49,7 @@ import {
 const props = defineProps<{
   bookingId: string;
   movieTitle?: string;
+  cinemaSlug?: string;
   browser?: BrowserAdapter;
 }>();
 
@@ -65,7 +67,10 @@ async function run(save: boolean) {
   try {
     const adapter = props.browser ?? realBrowser;
     const action = save ? saveTicketPdf : openTicketPdf;
-    await action(props.bookingId, adapter);
+    const baseOrigin = props.cinemaSlug && currentHostContext().plane === 'public' && isValidSlug(props.cinemaSlug)
+      ? tenantUrl(props.cinemaSlug, '').replace(/\/$/, '')
+      : '';
+    await action(props.bookingId, adapter, baseOrigin);
   } catch (err) {
     if (err instanceof TicketPdfError) {
       error.value = err.message;
