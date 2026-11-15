@@ -199,11 +199,14 @@
                 <div v-if="movieSlots.length > 0" class="flex flex-wrap gap-2">
                   <button
                     v-for="slot in movieSlots"
-                    :key="slot.id"
-                    @click="handleReserveFromModal(slot.id)"
-                    :aria-label="`Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}`"
+                    :key="`${slot.cinemaSlug || 't'}-${slot.id}`"
+                    @click="handleReserveFromModal(slot.id, slot.cinemaSlug)"
+                    :aria-label="`Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}${slot.cinemaName ? ` (${slot.cinemaName})` : ''}`"
                     class="group px-3 py-2 rounded-lg bg-cinema-card hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
                   >
+                    <span v-if="slot.cinemaName" class="text-[11px] font-bold text-accent-gold group-hover:text-cinema-dark">
+                      {{ slot.cinemaName }} ·
+                    </span>
                     <span class="font-mono tabular-nums">
                       <span>{{ formatSlotTime(slot.startsAt) }}</span>
                     </span>
@@ -250,6 +253,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { currentHostContext, isValidSlug, tenantUrl } from '../services/tenant';
 import { useMoviesStore } from '../stores/movies';
 import { useSlotsStore } from '../stores/slots';
 import { useMovies } from '../composables/useMovies';
@@ -346,8 +350,12 @@ const resetAllFilters = () => {
   onSearch();
 };
 
-const handleReserveFromModal = (slotId: string) => {
+const handleReserveFromModal = (slotId: string, cinemaSlug?: string) => {
   selectedMovie.value = null;
+  if (cinemaSlug && isValidSlug(cinemaSlug) && currentHostContext().plane === 'public') {
+    window.location.href = tenantUrl(cinemaSlug, `/slots/${slotId}/book`);
+    return;
+  }
   router.push(`/slots/${slotId}/book`);
 };
 

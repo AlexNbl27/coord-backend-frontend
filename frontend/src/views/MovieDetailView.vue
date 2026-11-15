@@ -220,14 +220,25 @@
           </div>
 
           <div v-if="slotsForMovie.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <SlotCard
+            <div
               v-for="slot in slotsForMovie"
-              :key="slot.id"
-              :slot="slot"
-              :sse-connected="sseConnected"
-              :already-booked="bookedSlotIds.has(slot.id)"
-              @reserve="handleReserve"
-            />
+              :key="`${slot.cinemaSlug || 't'}-${slot.id}`"
+              class="flex flex-col gap-1.5"
+            >
+              <a
+                v-if="slot.cinemaName && slot.cinemaSlug && isValidSlug(slot.cinemaSlug)"
+                :href="tenantUrl(slot.cinemaSlug, '/slots')"
+                class="text-xs font-semibold text-accent-gold hover:underline px-1"
+              >
+                {{ slot.cinemaName }}
+              </a>
+              <SlotCard
+                :slot="slot"
+                :sse-connected="sseConnected"
+                :already-booked="bookedSlotIds.has(slot.id)"
+                @reserve="() => handleReserve(slot.id, slot.cinemaSlug)"
+              />
+            </div>
           </div>
 
           <!-- Empty State Séances -->
@@ -253,6 +264,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { currentHostContext, isValidSlug, tenantUrl } from '../services/tenant';
 import { useMovies } from '../composables/useMovies';
 import { useSlots } from '../composables/useSlots';
 import { useReservations } from '../composables/useReservations';
@@ -326,7 +338,11 @@ const loadMovie = async () => {
   }
 };
 
-const handleReserve = (slotId: string) => {
+const handleReserve = (slotId: string, cinemaSlug?: string) => {
+  if (cinemaSlug && isValidSlug(cinemaSlug) && currentHostContext().plane === 'public') {
+    window.location.href = tenantUrl(cinemaSlug, `/slots/${slotId}/book`);
+    return;
+  }
   router.push(`/slots/${slotId}/book`);
 };
 
