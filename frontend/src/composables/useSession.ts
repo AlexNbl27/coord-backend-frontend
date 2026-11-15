@@ -42,11 +42,12 @@ export function useSession() {
   const initSession = () => {
     const endpoint = adminPlane ? '/api/admin/session' : '/api/session';
     initPromise ??= apiClient
-      .get<{ authenticated: boolean; user: SpectatorUser | null; googleEnabled?: boolean; mfaVerifiedAt?: number | null }>(endpoint, REQUEST_OPTIONS)
+      .get<{ authenticated: boolean; user: SpectatorUser | null; googleEnabled?: boolean; mfaEnabled?: boolean; mfaVerifiedAt?: number | null }>(endpoint, REQUEST_OPTIONS)
       .then((response) => {
         currentUser.value = response.data.authenticated ? response.data.user : null;
         googleEnabled.value = adminPlane ? false : Boolean(response.data.googleEnabled);
         mfaVerifiedAt.value = adminPlane ? (response.data.mfaVerifiedAt ?? null) : null;
+        mfaEnabled.value = adminPlane && Boolean(response.data.mfaEnabled);
       })
       .catch(() => {
         // Hors-ligne ou tests unitaires : on reste anonyme

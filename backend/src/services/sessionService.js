@@ -282,7 +282,7 @@ export function createAttachSession(users = User) {
       }
       try {
         const { ver, iat, absExp, mfaVerifiedAt, ...user } = adminClaims;
-        const query = users.findOne({ _id: user.id }, 'role cinemaSlugs sessionVersion');
+        const query = users.findOne({ _id: user.id }, 'role cinemaSlugs sessionVersion totpEnabled');
         const dbUser = typeof query?.lean === 'function' ? await query.lean() : await query;
         if (dbUser && (dbUser.sessionVersion ?? 0) === ver) {
           req.sessionUser = {
@@ -290,7 +290,7 @@ export function createAttachSession(users = User) {
             role: dbUser.role ?? 'SPECTATOR',
             cinemaSlugs: Array.isArray(dbUser.cinemaSlugs) ? dbUser.cinemaSlugs : []
           };
-          req.adminSession = { iat, absExp, mfaVerifiedAt };
+          req.adminSession = { iat, absExp, mfaVerifiedAt, mfaEnabled: Boolean(dbUser.totpEnabled) };
           const now = Date.now();
           if (now < absExp && typeof res.cookie === 'function') {
             const refreshed = signAdminSessionToken(

@@ -472,6 +472,14 @@ test('admin session TTL (30m sliding, 8h absolute), TOTP encryption/verify, and 
     const verifyBody = await verifyRes.json();
     assert.equal(typeof verifyBody.mfaVerifiedAt, 'number');
 
+    // After a reload the front reads the session: it must know TOTP is enabled to ask only for the code
+    // the sliding refresh and the verified cookie are both sent; the browser keeps the last one
+    const verifiedCookie = verifyRes.headers.getSetCookie().at(-1).split(';')[0];
+    const sessionRes = await fetch(`${base}/api/admin/session`, { headers: { Cookie: verifiedCookie } });
+    const sessionBody = await sessionRes.json();
+    assert.equal(sessionBody.mfaEnabled, true);
+    assert.equal(typeof sessionBody.mfaVerifiedAt, 'number');
+
     const resetWithoutMfa = await fetch(`${base}/api/admin/session/mfa/setup`, {
       method: 'POST',
       headers: { Cookie: cookiePair }

@@ -2,6 +2,9 @@ import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vu
 import { useSession } from './composables/useSession';
 import { currentHostContext, planeRedirect } from './services/tenant';
 
+// Mirrors MFA_STEP_UP_TTL_MS in backend/src/services/sessionService.js
+const MFA_STEP_UP_MS = 5 * 60 * 1000;
+
 const routes = [
   {
     path: '/',
@@ -132,6 +135,8 @@ const routes = [
       description: 'Gestion des cinémas',
       requiresAuth: true,
       requiresRole: ['SUPER_ADMIN'],
+      // the cinemas API asks for a TOTP checked less than 5 min ago (requireRecentMfa)
+      requiresRecentMfa: true,
     },
   },
   {
@@ -185,8 +190,11 @@ router.beforeEach(async (to) => {
       }
     }
     if (hostCtx.plane === 'admin' && requiredRoles && requiredRoles.length > 0) {
-      const mfaAge = typeof mfaVerifiedAt.value === 'number' ? Date.now() - mfaVerifiedAt.value : Infinity;
-      if (mfaAge > 5 * 60 * 1000) {
+      // Same rule as the backend: TOTP once per admin session, step-up (< 5 min) only where requireRecentMfa applies.
+      const verifiedAt = mfaVerifiedAt.value;
+      const needsMfa = typeof verifiedAt !== 'number'
+        || (to.meta.requiresRecentMfa === true && Date.now() - verifiedAt > MFA_STEP_UP_MS);
+      if (needsMfa) {
         return { name: 'login', query: { redirect: to.fullPath, mfa: '1' } };
       }
     }

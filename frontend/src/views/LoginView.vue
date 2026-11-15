@@ -181,17 +181,7 @@ const submit = async () => {
       return;
     }
     if (isAdminPlane && !mfaVerifiedAt.value) {
-      if (!mfaEnabled.value) {
-        const setup = await setupMfa();
-        if (typeof setup === 'string') {
-          error.value = setup;
-          return;
-        }
-        totpSecret.value = setup.secret;
-        const { default: QRCode } = await import('qrcode');
-        totpQr.value = await QRCode.toDataURL(setup.otpauthUri, { margin: 1, width: 192 }).catch(() => '');
-      }
-      mode.value = 'mfa';
+      await startMfaStep();
       return;
     }
     await router.replace(redirectTarget());
@@ -200,13 +190,26 @@ const submit = async () => {
   }
 };
 
+// TOTP step only: QR code + secret on first setup, code field once TOTP is enabled.
+async function startMfaStep() {
+  if (!mfaEnabled.value) {
+    const setup = await setupMfa();
+    if (typeof setup === 'string') {
+      error.value = setup;
+      return;
+    }
+    totpSecret.value = setup.secret;
+    const { default: QRCode } = await import('qrcode');
+    totpQr.value = await QRCode.toDataURL(setup.otpauthUri, { margin: 1, width: 192 }).catch(() => '');
+  }
+  mode.value = 'mfa';
+}
+
+// Already signed in on the admin portal (reload, or step-up asked by the router): only the TOTP is missing.
 onMounted(async () => {
   await initSession();
-  if (isAdminPlane && currentUser?.value) {
-    const mfaAge = typeof mfaVerifiedAt?.value === 'number' ? Date.now() - mfaVerifiedAt.value : Infinity;
-    if (mfaAge > 5 * 60 * 1000) {
-      mode.value = 'mfa';
-    }
+  if (isAdminPlane && currentUser.value && (mfaVerifiedAt.value === null || route.query.mfa === '1')) {
+    await startMfaStep();
   }
 });
 

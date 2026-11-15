@@ -48,6 +48,8 @@ export function createAdminSessionRouter(deps = {}) {
     res.json({
       authenticated: Boolean(req.sessionUser),
       user: req.sessionUser ?? null,
+      // lets the login page ask only for the TOTP code after a reload (setup vs. verify)
+      mfaEnabled: req.adminSession?.mfaEnabled ?? false,
       mfaVerifiedAt: req.adminSession?.mfaVerifiedAt ?? null
     });
   });
