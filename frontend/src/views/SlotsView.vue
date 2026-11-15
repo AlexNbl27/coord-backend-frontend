@@ -26,6 +26,7 @@
 
           <!-- Pastille de statut SSE -->
           <div
+            v-if="!isPublicPlane"
             role="status"
             :aria-label="sseConnected ? 'Statut : Synchronisation active en direct' : 'Statut : Hors ligne'"
             class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border/60 text-xs"
@@ -274,7 +275,6 @@ import SlotCard from '../components/SlotCard.vue';
 
 const router = useRouter();
 const slotsStore = useSlotsStore();
-const moviesStore = useMoviesStore();
 const { fetchMovies } = useMovies();
 const { fetchSlots, connectSse, resetSlots, sseConnected, cinemaDisabled, cinemaGroups } = useSlots();
 const { bookings } = useReservations();
@@ -326,21 +326,17 @@ const uniqueMovieTitles = computed(() => {
 
 const displayedSlots = computed(() => {
   return allSlots.value.filter(slot => {
-    // Filtre statut
     if (selectedFilter.value === 'AVAILABLE' && slot.status !== 'AVAILABLE') return false;
     if (selectedFilter.value === 'BOOKED' && slot.status !== 'BOOKED') return false;
 
-    // Filtre film
     if (selectedMovieTitle.value && slot.movieTitle !== selectedMovieTitle.value) return false;
 
-    // Filtre technologie
     if (techFilter.value !== 'ALL') {
       if (!slot.hall || !slot.hall.toLowerCase().includes(techFilter.value.toLowerCase())) {
         return false;
       }
     }
 
-    // Filtre recherche textuelle
     if (searchFilter.value) {
       const q = searchFilter.value.toLowerCase();
       const matchTitle = slot.movieTitle?.toLowerCase().includes(q);
