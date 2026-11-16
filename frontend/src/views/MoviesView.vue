@@ -122,10 +122,10 @@
       </div>
     </div>
 
-    <!-- Modal de détails enrichie -->
-    <transition name="modal">
-      <div
-        v-if="selectedMovie"
+    <Teleport to="body">
+      <transition name="modal">
+        <div
+          v-if="selectedMovie"
         ref="movieModalRef"
         class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
         role="dialog"
@@ -242,12 +242,13 @@
           </div>
         </div>
       </div>
-    </transition>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, inject, onMounted } from 'vue';
+import { ref, computed, inject, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMoviesStore } from '../stores/movies';
 import { useSlotsStore } from '../stores/slots';
@@ -349,30 +350,9 @@ const resetAllFilters = () => {
   onSearch();
 };
 
-const handleReserveFromModal = async (slotId: string) => {
+const handleReserveFromModal = (slotId: string) => {
   selectedMovie.value = null;
-  const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
-  try {
-    const result = await reserveSlot(slotId, customerId);
-    const slot = slotsStore.availableSlots.find(s => s.id === slotId);
-    if (slot) {
-      const movie = moviesStore.movies.find(m => m.title.toLowerCase() === slot.movieTitle.toLowerCase());
-      saveBooking({
-        bookingId: result.bookingId,
-        slotId: slot.id,
-        movieTitle: slot.movieTitle,
-        startsAt: slot.startsAt,
-        hall: slot.hall,
-        poster: movie?.poster
-      });
-
-      if (openReservationModal) {
-        openReservationModal(result.bookingId, slot.movieTitle, slot.startsAt, slot.hall);
-      }
-    }
-  } catch (err) {
-    console.error('Reservation error:', err);
-  }
+  router.push(`/slots/${slotId}/book`);
 };
 
 // Gérer la recherche à partir de la SearchBar

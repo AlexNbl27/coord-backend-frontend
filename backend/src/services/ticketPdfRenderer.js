@@ -178,7 +178,7 @@ export async function renderTicketPdf(view, options = {}) {
         doc.font('DejaVu-Bold').fontSize(8.5).fillColor('#475569').text('FILM & SÉANCE', left, 148);
 
         const cardY = 164;
-        const cardH = 128;
+        const cardH = 134;
         doc.save();
         doc.roundedRect(left, cardY, contentWidth, cardH, 5).fillAndStroke('#F8FAFC', '#CBD5E1');
         doc.rect(left, cardY, 5, cardH).fill('#D97706');
@@ -190,22 +190,35 @@ export async function renderTicketPdf(view, options = {}) {
         doc.moveTo(left + 18, cardY + 56).lineTo(left + contentWidth - 16, cardY + 56).stroke('#E2E8F0');
 
         const halfW = (contentWidth - 36) / 2;
-        doc.font('DejaVu').fontSize(8).fillColor('#475569').text('JOUR DE LA SÉANCE', left + 18, cardY + 68);
-        doc.font('DejaVu-Bold').fontSize(11.5).fillColor('#0F172A').text(view.day, left + 18, cardY + 84, {
+        doc.font('DejaVu').fontSize(8).fillColor('#475569').text('JOUR DE LA SÉANCE', left + 18, cardY + 66);
+        doc.font('DejaVu-Bold').fontSize(11.5).fillColor('#0F172A').text(view.day, left + 18, cardY + 82, {
           width: halfW - 10
         });
 
         doc.font('DejaVu').fontSize(8).fillColor('#475569').text(
           'HORAIRE D\'ACCÈS',
           left + 18 + halfW,
-          cardY + 68
+          cardY + 66
         );
         doc.font('DejaVu-Bold').fontSize(12.5).fillColor('#B45309').text(
           `${view.time} (heure de Paris)`,
           left + 18 + halfW,
-          cardY + 84,
+          cardY + 82,
           { width: halfW }
         );
+
+        if (view.totalQuantity) {
+          const placeWord = view.totalQuantity > 1 ? 'places' : 'place';
+          const orderParts = [`Commande : ${view.totalQuantity} ${placeWord}`];
+          if (view.tariffsSummary) orderParts.push(view.tariffsSummary);
+          if (view.totalAmount) orderParts.push(`Total : ${view.totalAmount}`);
+          doc.font('DejaVu').fontSize(8.5).fillColor('#334155').text(
+            orderParts.join(' · '),
+            left + 18,
+            cardY + 110,
+            { width: contentWidth - 34 }
+          );
+        }
         doc.restore();
       });
       rootStruct.add(movieSection);
@@ -243,7 +256,7 @@ export async function renderTicketPdf(view, options = {}) {
           y: 330 + boxH + gap,
           width: boxW,
           height: boxH,
-          label: 'PLACE ATTRIBUÉE',
+          label: view.seatLabel || 'PLACE ATTRIBUÉE',
           value: view.seat
         });
         drawInfoCard(doc, {

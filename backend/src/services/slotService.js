@@ -8,17 +8,83 @@ import { DEFAULT_CINEMA_ADDRESS, generateSeatLabel } from '../utils/ticketFormat
 const tracer = trace.getTracer('cineslot-api');
 const SMS_GATEWAY_URL = process.env.SMS_GATEWAY_URL || '';
 const MAX_SSE_CLIENTS = 200;
+const DEFAULT_CAPACITY = 40;
+const MAX_TICKETS_PER_BOOKING = 10;
+
+const TICKET_TARIFFS = new Map([
+  ['ADULT', { category: 'ADULT', label: 'Adulte', unitPrice: 11.5 }],
+  ['YOUTH', { category: 'YOUTH', label: 'Jeune (-26 ans)', unitPrice: 8.0 }],
+  ['SENIOR', { category: 'SENIOR', label: 'Senior (65+)', unitPrice: 8.5 }],
+  ['CHILD', { category: 'CHILD', label: 'Enfant (-14 ans)', unitPrice: 6.0 }]
+]);
 
 const sseClients = new Set();
 
 const MOVIES_CATALOG = [
-  { movieTitle: 'Interstellar', hall: 'Salle 1 · IMAX Laser' },
-  { movieTitle: 'Inception', hall: 'Salle 2 · Dolby Atmos' },
-  { movieTitle: 'Dune : Deuxième Partie', hall: 'Salle 1 · IMAX Laser' },
-  { movieTitle: 'Oppenheimer', hall: 'Salle 3 · 70mm Grand Large' },
-  { movieTitle: 'Blade Runner 2049', hall: 'Salle 4 · 4DX Immersion' },
-  { movieTitle: 'The Matrix', hall: 'Salle 5 · Rétro Culte' }
+  { movieTitle: 'Interstellar', hall: 'Salle 1 · IMAX Laser', capacity: 40 },
+  { movieTitle: 'Inception', hall: 'Salle 2 · Dolby Atmos', capacity: 36 },
+  { movieTitle: 'Dune : Deuxième Partie', hall: 'Salle 1 · IMAX Laser', capacity: 40 },
+  { movieTitle: 'Oppenheimer', hall: 'Salle 3 · 70mm Grand Large', capacity: 30 },
+  { movieTitle: 'Blade Runner 2049', hall: 'Salle 4 · 4DX Immersion', capacity: 24 },
+  { movieTitle: 'The Matrix', hall: 'Salle 5 · Rétro Culte', capacity: 28 }
 ];
+
+function normalizeTickets(rawTickets) {
+  if (!rawTickets || rawTickets.length === 0) {
+    const adult = TICKET_TARIFFS.get('ADULT');
+    return {
+      lines: [{ ...adult, quantity: 1 }],
+      totalQuantity: 1,
+      totalAmount: adult.unitPrice
+    };
+  }
+
+  const aggregated = new Map();
+  for (const item of rawTickets) {
+    if (!item || typeof item !== 'object') {
+      const error = new Error('Format de billet invalide');
+      error.status = 400;
+      throw error;
+    }
+    const tariff = TICKET_TARIFFS.get(String(item.category || '').toUpperCase());
+    if (!tariff) {
+      const error = new Error('Catégorie de tarif inconnue');
+      error.status = 400;
+      throw error;
+    }
+    const qty = Number(item.quantity);
+    if (!Number.isInteger(qty) || qty < 0 || qty > MAX_TICKETS_PER_BOOKING) {
+      const error = new Error(`La quantité doit être comprise entre 0 et ${MAX_TICKETS_PER_BOOKING}`);
+      error.status = 400;
+      throw error;
+    }
+    if (qty > 0) {
+      aggregated.set(tariff.category, (aggregated.get(tariff.category) || 0) + qty);
+    }
+  }
+
+  const lines = [];
+  let totalQuantity = 0;
+  let totalAmount = 0;
+  for (const [category, quantity] of aggregated.entries()) {
+    const tariff = TICKET_TARIFFS.get(category);
+    lines.push({ ...tariff, quantity });
+    totalQuantity += quantity;
+    totalAmount += tariff.unitPrice * quantity;
+  }
+
+  if (totalQuantity < 1 || totalQuantity > MAX_TICKETS_PER_BOOKING) {
+    const error = new Error(`Vous devez sélectionner entre 1 et ${MAX_TICKETS_PER_BOOKING} places par réservation`);
+    error.status = 400;
+    throw error;
+  }
+
+  return {
+    lines,
+    totalQuantity,
+    totalAmount: Math.round(totalAmount * 100) / 100
+  };
+}
 
 function sendSseEvent(res, eventName, data) {
   res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -58,10 +124,14 @@ function sendToLocalClients(eventName, data) {
 }
 
 export function broadcastSlotChange(slot) {
+  const capacity = slot.capacity ?? DEFAULT_CAPACITY;
+  const availableSeats = slot.availableSeats ?? (slot.status === 'BOOKED' ? 0 : capacity);
   const payload = {
     slotId: slot._id,
     status: slot.status,
-    version: slot.version
+    version: slot.version,
+    capacity,
+    availableSeats
   };
 
   sendToLocalClients('slot-updated', payload);
@@ -95,13 +165,17 @@ setInterval(() => {
 }, 15000).unref?.();
 
 export function toSlotView(slot) {
+  const capacity = slot.capacity ?? DEFAULT_CAPACITY;
+  const availableSeats = slot.availableSeats ?? (slot.status === 'BOOKED' ? 0 : capacity);
   return {
     id: slot._id,
     startsAt: slot.startsAt,
-    status: slot.status,
+    status: availableSeats <= 0 ? 'BOOKED' : slot.status,
     version: slot.version,
     movieTitle: slot.movieTitle || 'Séance Cinéma',
-    hall: slot.hall || 'Salle Principale'
+    hall: slot.hall || 'Salle Principale',
+    capacity,
+    availableSeats
   };
 }
 
@@ -117,6 +191,8 @@ export async function seedInitialSlotsIfEmpty() {
         status: 'AVAILABLE',
         movieTitle: m.movieTitle,
         hall: m.hall,
+        capacity: m.capacity,
+        availableSeats: m.capacity,
         version: 0,
         claimCount: 0
       };
@@ -143,13 +219,29 @@ function dispatchSmsConfirmation(bookingId, slotId) {
   });
 }
 
-export async function reserveSlot(slotId, customerId, visitorId, isMeasured, sessionUser = null) {
+export async function reserveSlot(slotId, customerId, visitorId, isMeasured, sessionUser = null, rawTickets = null) {
   return tracer.startActiveSpan('cineslot.reservation', async (span) => {
     span.setAttribute('cineslot.slot.id', String(slotId));
     try {
+      const { lines, totalQuantity, totalAmount } = normalizeTickets(rawTickets);
+
+      const ownerId = sessionUser?.id || 'spectator-1';
+      const safeCustomer = typeof customerId === 'string' ? customerId.trim().slice(0, 80) : '';
+      const ownerName = sessionUser?.name || safeCustomer || 'Hélène Durand';
+
+      const existingBooking = await Booking.findOne({
+        slotId: String(slotId),
+        ownerId,
+        status: 'CONFIRMED'
+      }).lean();
+      if (existingBooking) {
+        const error = new Error('Vous avez déjà une réservation active pour cette séance');
+        error.status = 409;
+        throw error;
+      }
+
       let experimentId = null;
       let subjectId = null;
-
       if (isMeasured && visitorId) {
         const subject = await attribution(visitorId);
         if (subject) {
@@ -158,34 +250,75 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
         }
       }
 
-      const ownerId = sessionUser?.id || 'spectator-1';
-      const safeCustomer = typeof customerId === 'string' ? customerId.trim().slice(0, 80) : '';
-      const ownerName = sessionUser?.name || safeCustomer || 'Hélène Durand';
       const bookingId = crypto.randomUUID();
       const bookedAt = new Date();
 
-      const filter = { _id: String(slotId), status: 'AVAILABLE' };
-      const update = {
-        $set: {
-          status: 'BOOKED',
-          bookedBy: ownerName,
-          bookingId,
-          bookedAt,
-          experimentId,
-          subjectId
+      const winner = await Slot.findOneAndUpdate(
+        {
+          _id: String(slotId),
+          status: 'AVAILABLE',
+          $expr: {
+            $gte: [{ $ifNull: ['$availableSeats', { $ifNull: ['$capacity', DEFAULT_CAPACITY] }] }, totalQuantity]
+          }
         },
-        $inc: { version: 1, claimCount: 1 }
-      };
+        [
+          {
+            $set: {
+              capacity: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+              availableSeats: {
+                $subtract: [
+                  { $ifNull: ['$availableSeats', { $ifNull: ['$capacity', DEFAULT_CAPACITY] }] },
+                  totalQuantity
+                ]
+              },
+              bookedBy: ownerName,
+              bookingId,
+              bookedAt,
+              experimentId,
+              subjectId,
+              version: { $add: ['$version', 1] },
+              claimCount: { $add: ['$claimCount', 1] },
+              status: {
+                $cond: [
+                  {
+                    $lte: [
+                      {
+                        $subtract: [
+                          { $ifNull: ['$availableSeats', { $ifNull: ['$capacity', DEFAULT_CAPACITY] }] },
+                          totalQuantity
+                        ]
+                      },
+                      0
+                    ]
+                  },
+                  'BOOKED',
+                  'AVAILABLE'
+                ]
+              }
+            }
+          }
+        ],
+        { new: true }
+      );
 
-      const winner = await Slot.findOneAndUpdate(filter, update, { new: true });
       if (!winner) {
-        const exists = await Slot.exists({ _id: String(slotId) });
-        const error = new Error(exists ? 'Créneau déjà réservé' : 'Créneau inconnu');
-        error.status = exists ? 409 : 404;
+        const current = await Slot.findById(String(slotId)).lean();
+        if (!current) {
+          const error = new Error('Créneau inconnu');
+          error.status = 404;
+          throw error;
+        }
+        const remaining = current.availableSeats ?? (current.status === 'BOOKED' ? 0 : DEFAULT_CAPACITY);
+        const error = new Error(
+          remaining <= 0 || current.status === 'BOOKED'
+            ? 'Créneau déjà complet'
+            : `Il ne reste que ${remaining} place(s) disponible(s) pour cette séance`
+        );
+        error.status = 409;
         throw error;
       }
 
-      const seat = generateSeatLabel(winner._id, bookingId);
+      const seat = generateSeatLabel(winner._id, bookingId, totalQuantity);
       await Booking.create({
         _id: bookingId,
         slotId: winner._id,
@@ -196,21 +329,29 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
         address: DEFAULT_CINEMA_ADDRESS,
         startsAt: winner.startsAt,
         seat,
+        tickets: lines,
+        totalQuantity,
+        totalAmount,
         status: 'CONFIRMED',
         bookedAt
       });
 
-      dispatchSmsConfirmation(winner.bookingId, winner._id);
+      dispatchSmsConfirmation(bookingId, winner._id);
 
-      span.setAttribute('cineslot.reservation.id', String(winner.bookingId));
+      span.setAttribute('cineslot.reservation.id', String(bookingId));
       span.setAttribute('cineslot.status', String(winner.status));
 
       broadcastSlotChange(winner);
       return {
-        bookingId: winner.bookingId,
+        bookingId,
         slotId: winner._id,
         status: winner.status,
-        seat
+        seat,
+        tickets: lines,
+        totalQuantity,
+        totalAmount,
+        availableSeats: winner.availableSeats,
+        capacity: winner.capacity
       };
     } catch (err) {
       span.setStatus({ code: SpanStatusCode.ERROR, message: err.name || 'ReservationError' });
@@ -223,33 +364,59 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
 
 export async function cancelSlot(slotId, sessionUser = null) {
   const safeSlotId = String(slotId);
-  if (sessionUser) {
-    const activeBooking = await Booking.findOne({ slotId: safeSlotId, status: 'CONFIRMED' }).lean();
-    if (activeBooking && activeBooking.ownerId !== sessionUser.id) {
+  const bookingFilter = sessionUser
+    ? { slotId: safeSlotId, ownerId: sessionUser.id, status: 'CONFIRMED' }
+    : { slotId: safeSlotId, status: 'CONFIRMED' };
+
+  const activeBooking = await Booking.findOne(bookingFilter).lean();
+  if (!activeBooking) {
+    const anyBooking = await Booking.findOne({ slotId: safeSlotId, status: 'CONFIRMED' }).lean();
+    if (anyBooking && sessionUser && anyBooking.ownerId !== sessionUser.id) {
       const error = new Error('Vous ne pouvez pas annuler la réservation d\'un autre spectateur');
       error.status = 403;
       throw error;
     }
-  }
-
-  const filter = { _id: safeSlotId, status: 'BOOKED' };
-  const update = {
-    $set: { status: 'AVAILABLE' },
-    $unset: { bookedBy: 1, bookingId: 1, bookedAt: 1, experimentId: 1, subjectId: 1 },
-    $inc: { version: 1 }
-  };
-
-  const updated = await Slot.findOneAndUpdate(filter, update, { new: true });
-  if (!updated) {
     const exists = await Slot.exists({ _id: safeSlotId });
-    const error = new Error(exists ? 'Créneau non réservé ou déjà annulé' : 'Créneau inconnu');
+    const error = new Error(exists ? 'Aucune réservation active à annuler' : 'Créneau inconnu');
     error.status = exists ? 400 : 404;
     throw error;
   }
 
-  await Booking.updateMany(
-    { slotId: safeSlotId, status: 'CONFIRMED' },
+  const restoreQty = activeBooking.totalQuantity || 1;
+  await Booking.updateOne(
+    { _id: activeBooking._id },
     { $set: { status: 'CANCELLED', cancelledAt: new Date() } }
+  );
+  const remainingActive = await Booking.countDocuments({ slotId: safeSlotId, status: 'CONFIRMED' });
+
+  const pipeline = [
+    {
+      $set: {
+        status: 'AVAILABLE',
+        capacity: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+        availableSeats: {
+          $min: [
+            { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+            {
+              $add: [
+                { $ifNull: ['$availableSeats', 0] },
+                restoreQty
+              ]
+            }
+          ]
+        },
+        version: { $add: ['$version', 1] }
+      }
+    }
+  ];
+  if (remainingActive === 0) {
+    pipeline.push({ $unset: ['bookedBy', 'bookingId', 'bookedAt', 'experimentId', 'subjectId'] });
+  }
+
+  const updated = await Slot.findOneAndUpdate(
+    { _id: safeSlotId },
+    pipeline,
+    { new: true }
   );
 
   broadcastSlotChange(updated);
@@ -265,6 +432,8 @@ export async function createDemoSlot() {
     status: 'AVAILABLE',
     movieTitle: randomMovie.movieTitle,
     hall: randomMovie.hall,
+    capacity: randomMovie.capacity,
+    availableSeats: randomMovie.capacity,
     version: 0,
     claimCount: 0
   });
@@ -285,6 +454,8 @@ export async function getSlotProof(slotId) {
     id: slot._id,
     hall: slot.hall || 'Salle Principale',
     status: slot.status,
+    capacity: slot.capacity ?? DEFAULT_CAPACITY,
+    availableSeats: slot.availableSeats ?? (slot.status === 'BOOKED' ? 0 : DEFAULT_CAPACITY),
     claimCount: slot.claimCount,
     version: slot.version,
     experimentId: slot.experimentId || null,
@@ -293,11 +464,17 @@ export async function getSlotProof(slotId) {
 }
 
 export async function resetAllSlots() {
-  await Slot.updateMany({}, {
-    $set: { status: 'AVAILABLE' },
-    $unset: { bookedBy: 1, bookingId: 1, bookedAt: 1, experimentId: 1, subjectId: 1 },
-    $inc: { version: 1 }
-  });
+  await Slot.updateMany({}, [
+    {
+      $set: {
+        status: 'AVAILABLE',
+        capacity: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+        availableSeats: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+        version: { $add: ['$version', 1] }
+      }
+    },
+    { $unset: ['bookedBy', 'bookingId', 'bookedAt', 'experimentId', 'subjectId'] }
+  ]);
 
   await Booking.updateMany(
     { status: 'CONFIRMED' },

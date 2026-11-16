@@ -1,5 +1,12 @@
 import mongoose from 'mongoose';
 
+const ticketLineSchema = new mongoose.Schema({
+  category: { type: String, required: true },
+  label: { type: String, required: true },
+  unitPrice: { type: Number, required: true },
+  quantity: { type: Number, required: true, min: 1 }
+}, { _id: false });
+
 const bookingSchema = new mongoose.Schema({
   _id: { type: String, required: true },
   slotId: { type: String, required: true, index: true },
@@ -10,6 +17,9 @@ const bookingSchema = new mongoose.Schema({
   address: { type: String, default: '14 rue de la Cinémathèque, 69002 Lyon' },
   startsAt: { type: String, required: true },
   seat: { type: String, required: true },
+  tickets: { type: [ticketLineSchema], default: [] },
+  totalQuantity: { type: Number, default: 1 },
+  totalAmount: { type: Number, default: 11.5 },
   status: {
     type: String,
     enum: ['CONFIRMED', 'CANCELLED'],

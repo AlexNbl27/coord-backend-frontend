@@ -160,6 +160,23 @@
             >
               À propos
             </router-link>
+            <div class="pt-3 border-t border-cinema-border/30">
+              <select
+                :value="currentUser ? currentUser.id : 'anonymous'"
+                @change="handleSessionChange"
+                aria-label="Compte spectateur mobile"
+                class="w-full px-3 py-2 rounded-lg bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium"
+              >
+                <option
+                  v-for="user in demoUsers"
+                  :key="user.id"
+                  :value="user.id"
+                >
+                  {{ user.name }}
+                </option>
+                <option value="anonymous">Déconnecté (401)</option>
+              </select>
+            </div>
             <router-link
               to="/reservations"
               class="text-accent-gold hover:text-white transition-colors duration-200 font-medium py-2 flex items-center justify-between border-t border-cinema-border/30 pt-3"
@@ -215,11 +232,6 @@ const mobileMenuOpen = ref(false);
 
 const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value;
-};
-
-// Fermer le menu mobile lorsqu'on clique à l'extérieur
-const closeMobileMenu = () => {
-  mobileMenuOpen.value = false;
 };
 
 onMounted(() => {
