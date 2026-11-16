@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-5xl mx-auto space-y-6">
+    <div class="max-w-7xl mx-auto space-y-6">
       <div>
         <h1 class="font-display text-3xl font-bold text-white tracking-tight">Cinémas autour de moi</h1>
         <p class="text-cinema-textMuted text-sm mt-1">
@@ -42,16 +42,24 @@
 
       <NearbyMap v-if="showMap && center" :center="center" :radius-km="5" :cinemas="cinemas" />
 
-      <p role="status" class="text-sm text-cinema-text">{{ summary }}</p>
+      <p role="status" class="text-sm text-cinema-text">{{ loading ? 'Chargement des cinémas…' : summary }}</p>
       <p v-if="error" role="alert" class="text-sm text-red-300">{{ error }}</p>
 
-      <ul class="space-y-3">
+      <div v-if="loading && cinemas.length === 0" class="space-y-3">
+        <div v-for="n in 3" :key="n" class="h-24 rounded-xl bg-cinema-card/70 border border-cinema-border/40 animate-pulse"></div>
+      </div>
+
+      <p v-else-if="!loading && !error && cinemas.length === 0" class="p-8 rounded-xl bg-cinema-card/60 border border-cinema-border/50 text-center text-sm text-cinema-textMuted">
+        Aucun cinéma trouvé pour cette recherche.
+      </p>
+
+      <ul v-else class="space-y-3">
         <li
           v-for="c in cinemas"
           :key="c.slug"
           class="flex items-center justify-between gap-4 p-4 rounded-xl bg-cinema-card border border-cinema-border/60"
         >
-          <div>
+          <div class="min-w-0 flex-1">
             <p class="font-semibold text-white">{{ c.name }}</p>
             <p class="text-sm text-cinema-textMuted">{{ c.address }}, {{ c.city }}</p>
             <p v-if="c.features?.length" class="text-xs text-cinema-textMuted mt-1">{{ c.features.join(', ').toUpperCase() }}</p>
@@ -111,6 +119,7 @@ const feature = ref('');
 const page = ref(1);
 const cinemas = ref<Cinema[]>([]);
 const total = ref(0);
+const loading = ref(false);
 const error = ref('');
 const showMap = ref(false);
 
@@ -120,6 +129,7 @@ const summary = computed(() =>
 );
 
 const load = async () => {
+  loading.value = true;
   error.value = '';
   const params = center.value
     ? nearbyParams(center.value, 5, feature.value, page.value)
@@ -132,6 +142,8 @@ const load = async () => {
     cinemas.value = [];
     total.value = 0;
     error.value = err.response?.data?.detail || 'La recherche a échoué, réessayez.';
+  } finally {
+    loading.value = false;
   }
 };
 

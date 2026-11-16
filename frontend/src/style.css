@@ -148,37 +148,12 @@
            transform transition-all duration-300 scale-100;
   }
 
-  .tooltip {
-    @apply relative inline-block;
-  }
-
-  .tooltip-text {
-    @apply absolute z-10 invisible w-max px-3 py-2 text-sm
-           bg-cinema-card border border-cinema-border rounded-lg
-           text-cinema-text whitespace-nowrap
-           bottom-full left-1/2 transform -translate-x-1/2 mb-2
-           transition-opacity duration-200;
-  }
-
-  .tooltip:hover .tooltip-text {
-    @apply visible;
-  }
-
   .skeleton {
     @apply animate-pulse bg-cinema-border/20 rounded-lg;
   }
 }
 
 @layer utilities {
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-
   .line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;

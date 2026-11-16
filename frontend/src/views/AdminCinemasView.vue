@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-6xl mx-auto space-y-8">
+    <div class="max-w-7xl mx-auto space-y-8">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 class="font-display text-3xl font-bold text-white tracking-tight">Administration des cinémas</h1>
@@ -114,7 +114,7 @@
             class="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
             <div>
-              <div class="flex items-center gap-3">
+              <div class="flex flex-wrap items-center gap-3">
                 <span class="font-semibold text-white">{{ cinema.name }}</span>
                 <span class="text-xs px-2 py-0.5 rounded-full bg-cinema-darker text-cinema-textMuted border border-cinema-border/50">
                   {{ cinema.slug }}
@@ -169,15 +169,24 @@
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-desc"
           tabindex="-1"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
           @click.self="closeDeleteModal"
         >
-          <div class="w-full max-w-md rounded-2xl bg-cinema-card border border-cinema-border p-6 space-y-4">
-            <h3 id="delete-dialog-title" class="text-lg font-semibold text-white">
+          <div class="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-cinema-card border border-cinema-border p-6 space-y-4">
+            <button
+              type="button"
+              class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-cinema-textMuted hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label="Fermer la fenêtre de confirmation"
+              @click="closeDeleteModal"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+            <h3 id="delete-dialog-title" class="text-lg font-semibold text-white pr-8">
               Confirmer la suppression de {{ deleteTarget }}
             </h3>
-            <p class="text-sm text-cinema-textMuted">
+            <p id="delete-dialog-desc" class="text-sm text-cinema-textMuted">
               Les réservations futures seront annulées. Saisissez le slug
               <strong class="text-white">{{ deleteTarget }}</strong> pour confirmer.
             </p>
@@ -196,7 +205,7 @@
               <button
                 type="button"
                 @click="closeDeleteModal"
-                class="px-4 py-2 rounded-xl border border-cinema-border text-sm text-cinema-text"
+                class="px-4 py-2 rounded-xl border border-cinema-border text-sm text-cinema-text cursor-pointer"
               >
                 Annuler
               </button>
@@ -204,7 +213,7 @@
                 type="button"
                 :disabled="deleteConfirmInput !== deleteTarget || submitting"
                 @click="confirmDelete"
-                class="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold disabled:opacity-40"
+                class="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
               >
                 Confirmer la suppression
               </button>

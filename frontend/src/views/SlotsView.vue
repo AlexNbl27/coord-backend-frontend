@@ -8,7 +8,7 @@
             <h1 class="font-display text-3xl font-bold text-white tracking-tight">Séances de cinéma</h1>
           </div>
           <p class="text-cinema-textMuted text-sm mt-1">
-            Réservation instantanée de places avec synchronisation temps réel
+            {{ isPublicPlane ? 'Consultez les séances disponibles dans tous nos cinémas partenaires' : 'Réservation instantanée de places avec synchronisation temps réel' }}
           </p>
         </div>
 
@@ -28,18 +28,18 @@
           <div
             v-if="!isPublicPlane"
             role="status"
-            :aria-label="sseConnected ? 'Statut : Synchronisation active en direct' : 'Statut : Hors ligne'"
+            :aria-label="sseConnected ? 'Statut : Synchronisation active en direct' : isOffline ? 'Statut : Hors ligne' : 'Statut : Connexion temps réel en attente'"
             class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border/60 text-xs"
           >
             <span
               class="w-3 h-3 rounded-full flex items-center justify-center text-[8px] font-black"
-              :class="sseConnected ? 'bg-emerald-500 text-cinema-dark' : 'bg-red-500 text-white animate-pulse'"
+              :class="sseConnected ? 'bg-emerald-500 text-cinema-dark' : isOffline ? 'bg-red-500 text-white animate-pulse' : 'bg-amber-500 text-cinema-dark'"
               aria-hidden="true"
             >
               {{ sseConnected ? '✓' : '!' }}
             </span>
             <span class="text-cinema-text font-medium">
-              {{ sseConnected ? 'Synchronisation active' : 'Hors ligne' }}
+              {{ sseConnected ? 'Synchronisation active' : isOffline ? 'Hors ligne' : 'Temps réel en attente' }}
             </span>
           </div>
         </div>
@@ -135,7 +135,7 @@
           </div>
 
           <!-- Filtre Statut Disponibilité -->
-          <div class="flex items-center gap-2 self-start sm:self-auto" role="group" aria-label="Filtrer les séances par disponibilité">
+          <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto" role="group" aria-label="Filtrer les séances par disponibilité">
             <button
               @click="selectedFilter = 'ALL'"
               :aria-pressed="selectedFilter === 'ALL' ? 'true' : 'false'"
@@ -227,7 +227,7 @@
           </div>
 
           <div
-            :class="['grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4', group.status === 'DISABLED' ? 'opacity-50 grayscale pointer-events-none select-none' : '']"
+            :class="['grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4', group.status === 'DISABLED' ? 'opacity-50 grayscale select-none' : '']"
             :aria-disabled="group.status === 'DISABLED' ? 'true' : undefined"
           >
             <SlotCard
@@ -235,6 +235,9 @@
               :key="`${group.slug}-${slot.id}`"
               :slot="slot"
               :sse-connected="false"
+              :is-public-plane="true"
+              :is-offline="isOffline"
+              :disabled="group.status === 'DISABLED'"
               :already-booked="bookedSlotIds.has(slot.id)"
               @reserve="handleReserve"
             />
@@ -244,7 +247,7 @@
 
       <div
         v-else
-        :class="['grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4', cinemaDisabled ? 'opacity-50 grayscale pointer-events-none select-none' : '']"
+        :class="['grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4', cinemaDisabled ? 'opacity-50 grayscale select-none' : '']"
         :aria-disabled="cinemaDisabled ? 'true' : undefined"
       >
         <SlotCard
@@ -252,6 +255,9 @@
           :key="slot.id"
           :slot="slot"
           :sse-connected="sseConnected"
+          :is-public-plane="isPublicPlane"
+          :is-offline="isOffline"
+          :disabled="cinemaDisabled"
           :already-booked="bookedSlotIds.has(slot.id)"
           @reserve="handleReserve"
         />
@@ -268,6 +274,7 @@ import { useMoviesStore } from '../stores/movies';
 import { useSlots } from '../composables/useSlots';
 import { useMovies } from '../composables/useMovies';
 import { useReservations } from '../composables/useReservations';
+import { useConnection } from '../composables/useConnection';
 import { useAbTest } from '../composables/useAbTest';
 import { useSession } from '../composables/useSession';
 import { currentHostContext, isValidSlug, tenantUrl } from '../services/tenant';
@@ -278,6 +285,7 @@ const slotsStore = useSlotsStore();
 const { fetchMovies } = useMovies();
 const { fetchSlots, connectSse, resetSlots, sseConnected, cinemaDisabled, cinemaGroups } = useSlots();
 const { bookings } = useReservations();
+const { isOffline } = useConnection();
 const { exposeIfAvailable } = useAbTest();
 const { isSuperAdmin } = useSession();
 

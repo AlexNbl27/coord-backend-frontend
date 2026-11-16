@@ -11,8 +11,7 @@
       @click.self="close"
     >
       <div
-        ref="modalContentRef"
-        class="modal-content relative max-w-md w-full mx-4 shadow-2xl focus:outline-none"
+        class="modal-content relative max-w-lg w-full max-h-[90vh] overflow-y-auto !p-6 sm:!p-8 shadow-2xl focus:outline-none"
         tabindex="-1"
       >
         <!-- Annonce vocale dynamique pour VoiceOver lors de l'ouverture -->
@@ -178,7 +177,6 @@ const router = useRouter();
 const { bookings, downloadCalendarFile } = useReservations();
 
 const dialogOverlayRef = ref<HTMLElement | null>(null);
-const modalContentRef = ref<HTMLElement | null>(null);
 const closeButtonRef = ref<HTMLButtonElement | null>(null);
 
 const close = () => {

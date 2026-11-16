@@ -1,6 +1,6 @@
-# Livrable CONVOCATION.md — CinéSlot (Billet PDF de séance)
+# Billet PDF de séance (CinéSlot)
 
-## 1 · Le contrat du téléchargement
+## 1. Contrat du téléchargement
 
 - **Requête** : `GET /api/bookings/{id}/ticket.pdf` (option `?download=true` pour forcer le téléchargement au lieu de l'ouverture dans l'onglet).
   - L'URL ne contient que l'identifiant technique de la réservation (aucun nom de spectateur, ni titre de film, ni date).

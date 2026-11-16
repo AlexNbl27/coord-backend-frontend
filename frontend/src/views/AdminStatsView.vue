@@ -1,13 +1,13 @@
 <template>
-  <div class="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-5xl mx-auto">
+  <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
       <h1 class="font-display text-3xl font-bold text-white tracking-tight">Statistiques de réservation</h1>
       <p class="text-cinema-textMuted text-sm mt-1 mb-6">Réservations, places vendues et annulations par cinéma, film et jour</p>
 
-      <form class="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8 items-end" @submit.prevent="load">
+      <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-8 items-end" @submit.prevent="load">
         <fieldset class="sm:col-span-2">
           <legend class="text-xs font-semibold text-cinema-textMuted mb-1">Regrouper par</legend>
-          <div class="flex gap-2" role="group">
+          <div class="flex flex-wrap gap-2" role="group">
             <button
               v-for="option in GROUP_OPTIONS"
               :key="option.value"
@@ -33,7 +33,7 @@
           Au
           <input v-model="to" type="date" class="mt-1 w-full rounded-md bg-cinema-card border border-cinema-border px-2 py-1.5 text-sm text-white" />
         </label>
-        <button type="submit" class="sm:col-start-5 px-4 py-2 rounded-md bg-accent-gold text-cinema-dark font-bold text-sm cursor-pointer">Actualiser</button>
+        <button type="submit" class="px-4 py-2 rounded-md bg-accent-gold text-cinema-dark font-bold text-sm cursor-pointer">Actualiser</button>
       </form>
 
       <p v-if="error" role="alert" class="mb-6 p-4 rounded-xl bg-red-950/80 border border-red-500/50 text-red-200 text-sm">{{ error }}</p>
@@ -61,25 +61,25 @@
               </li>
             </ul>
             <figcaption class="sr-only">Graphique en barres des places vendues, détaillé dans le tableau suivant.</figcaption>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto rounded-xl border border-cinema-border/60">
               <table class="w-full text-sm text-left text-white">
-              <caption class="text-left text-cinema-textMuted text-xs mb-2">Données du classement {{ groupBy === 'movie' ? 'par film' : 'par cinéma' }}</caption>
-              <thead>
+              <caption class="text-left text-cinema-textMuted text-xs px-3 py-2">Données du classement {{ groupBy === 'movie' ? 'par film' : 'par cinéma' }}</caption>
+              <thead class="bg-cinema-darker text-xs uppercase text-cinema-textMuted">
                 <tr>
-                  <th scope="col">{{ groupBy === 'movie' ? 'Film' : 'Cinéma' }}</th>
-                  <th scope="col" class="text-right">Réservations</th>
-                  <th scope="col" class="text-right">Annulations</th>
-                  <th scope="col" class="text-right">Places</th>
-                  <th scope="col" class="text-right">Taux d'annulation</th>
+                  <th scope="col" class="px-3 py-2.5">{{ groupBy === 'movie' ? 'Film' : 'Cinéma' }}</th>
+                  <th scope="col" class="px-3 py-2.5 text-right">Réservations</th>
+                  <th scope="col" class="px-3 py-2.5 text-right">Annulations</th>
+                  <th scope="col" class="px-3 py-2.5 text-right">Places</th>
+                  <th scope="col" class="px-3 py-2.5 text-right">Taux d'annulation</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="divide-y divide-cinema-border/40">
                 <tr v-for="row in rows" :key="row.key">
-                  <th scope="row" class="font-normal">{{ row.label }}</th>
-                  <td class="text-right">{{ row.booked }}</td>
-                  <td class="text-right">{{ row.cancelled }}</td>
-                  <td class="text-right">{{ row.seats }}</td>
-                  <td class="text-right">{{ percent(row.cancellationRate) }}</td>
+                  <th scope="row" class="px-3 py-2 font-normal">{{ row.label }}</th>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ row.booked }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ row.cancelled }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ row.seats }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ percent(row.cancellationRate) }}</td>
                 </tr>
               </tbody>
               </table>
@@ -91,7 +91,7 @@
           <h2 id="days-title" class="text-xl font-bold text-white mb-3">Évolution par jour</h2>
           <p v-if="days.length === 0" class="text-cinema-textMuted text-sm">Aucune donnée sur la période.</p>
           <figure v-else>
-            <svg aria-hidden="true" :viewBox="`0 0 ${days.length * 24} 100`" preserveAspectRatio="none" class="w-full h-40 mb-4">
+            <svg aria-hidden="true" :viewBox="`0 0 ${Math.max(days.length * 24, 120)} 100`" preserveAspectRatio="none" class="w-full h-40 mb-4">
               <rect
                 v-for="(day, i) in days"
                 :key="day.day"
@@ -103,25 +103,25 @@
               />
             </svg>
             <figcaption class="sr-only">Histogramme des places vendues par jour, détaillé dans le tableau suivant.</figcaption>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto rounded-xl border border-cinema-border/60">
               <table class="w-full text-sm text-left text-white">
-              <caption class="text-left text-cinema-textMuted text-xs mb-2">Données quotidiennes (heure de Paris)</caption>
-              <thead>
+              <caption class="text-left text-cinema-textMuted text-xs px-3 py-2">Données quotidiennes (heure de Paris)</caption>
+              <thead class="bg-cinema-darker text-xs uppercase text-cinema-textMuted">
                 <tr>
-                  <th scope="col">Jour</th>
-                  <th scope="col" class="text-right">Réservations</th>
-                  <th scope="col" class="text-right">Annulations</th>
-                  <th scope="col" class="text-right">Places</th>
-                  <th scope="col" class="text-right">Taux d'annulation</th>
+                  <th scope="col" class="px-3 py-2.5">Jour</th>
+                  <th scope="col" class="px-3 py-2.5 text-right">Réservations</th>
+                  <th scope="col" class="px-3 py-2.5 text-right">Annulations</th>
+                  <th scope="col" class="px-3 py-2.5 text-right">Places</th>
+                  <th scope="col" class="px-3 py-2.5 text-right">Taux d'annulation</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="divide-y divide-cinema-border/40">
                 <tr v-for="day in days" :key="day.day">
-                  <th scope="row" class="font-normal">{{ day.day }}</th>
-                  <td class="text-right">{{ day.booked }}</td>
-                  <td class="text-right">{{ day.cancelled }}</td>
-                  <td class="text-right">{{ day.seats }}</td>
-                  <td class="text-right">{{ percent(day.cancellationRate) }}</td>
+                  <th scope="row" class="px-3 py-2 font-normal">{{ day.day }}</th>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ day.booked }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ day.cancelled }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ day.seats }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">{{ percent(day.cancellationRate) }}</td>
                 </tr>
               </tbody>
               </table>

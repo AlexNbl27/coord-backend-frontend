@@ -155,7 +155,6 @@ export function useReservations() {
       status: effectiveStatus,
     };
 
-    // Évite les doublons
     const existingIndex = bookings.value.findIndex(
       (b) => b.slotId === item.slotId,
     );
@@ -184,7 +183,6 @@ export function useReservations() {
       }
       return true;
     } catch (err: any) {
-      // Si déjà annulé côté serveur (400 ou 404), on synchronise l'état local
       if (
         err.response &&
         (err.response.status === 400 || err.response.status === 404)
@@ -197,13 +195,12 @@ export function useReservations() {
         return true;
       }
 
-      // Si erreur réseau / backend inaccessible : mise en file d'attente hors-ligne & mise à jour optimiste
       const isNetworkOrServer = !err.response || err.response.status >= 500;
       if (isNetworkOrServer) {
         console.warn(
           `[useReservations] Backend indisponible. Mise en file d'attente de l'annulation pour ${slotId}.`,
         );
-        offlineQueue.enqueue("CANCEL_SLOT", { slotId });
+        offlineQueue.enqueue("CANCEL_SLOT", { slotId, cinemaSlug });
         const target = bookings.value.find((b) => b.slotId === slotId);
         if (target) {
           target.status = "CANCELLED_PENDING_SYNC";

@@ -10,7 +10,7 @@
         {{ loading ? 'Recherche...' : 'Autour de moi (5 km)' }}
       </button>
 
-      <form class="flex flex-1 gap-2" @submit.prevent="handleAddress">
+      <form class="flex flex-col sm:flex-row flex-1 gap-2 min-w-0" @submit.prevent="handleAddress">
         <label for="nearby-address" class="sr-only">Adresse ou code postal</label>
         <input
           id="nearby-address"
@@ -19,7 +19,7 @@
           type="text"
           autocomplete="postal-code"
           placeholder="ou une adresse, un code postal"
-          class="flex-1 h-11 px-4 rounded-full bg-cinema-darker border border-cinema-border text-cinema-text text-sm focus:border-accent-gold focus:outline-none"
+          class="flex-1 min-w-0 h-11 px-4 rounded-full bg-cinema-darker border border-cinema-border text-cinema-text text-sm focus:border-accent-gold focus:outline-none"
           :aria-describedby="error ? 'nearby-error' : undefined"
         />
         <button

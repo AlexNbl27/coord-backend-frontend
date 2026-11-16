@@ -1,6 +1,14 @@
 <template>
-  <div class="min-h-screen flex items-start justify-center py-16 px-4">
+  <div class="min-h-[calc(100vh-14rem)] flex items-start justify-center py-16 px-4 sm:px-6 lg:px-8">
     <div class="w-full max-w-md bg-cinema-card/80 border border-cinema-border/50 rounded-2xl p-8 backdrop-blur-sm">
+      <div
+        v-if="currentUser && mode !== 'mfa'"
+        role="status"
+        class="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center justify-between gap-2"
+      >
+        <span>Connecté en tant que <strong>{{ currentUser.name || currentUser.email }}</strong></span>
+        <router-link to="/reservations" class="text-accent-gold font-semibold hover:underline shrink-0">Mes billets →</router-link>
+      </div>
       <h1 class="font-display text-3xl font-bold text-white mb-6">{{ TITLES[mode] }}</h1>
 
       <p v-if="notice" role="status" class="success-message mb-4">{{ notice }}</p>

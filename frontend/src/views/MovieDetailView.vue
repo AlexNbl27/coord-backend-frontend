@@ -185,7 +185,7 @@
                   {{ booking.seat }}
                 </p>
                 <p class="text-xs text-cinema-textMuted">
-                  {{ new Date(booking.startsAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) }}
+                  {{ formatBookingDate(booking.startsAt) }}
                 </p>
               </div>
               <div class="flex items-center gap-2 shrink-0">
@@ -193,6 +193,7 @@
                   v-if="booking.status === 'ACTIVE'"
                   :booking-id="booking.bookingId"
                   :movie-title="booking.movieTitle"
+                  :cinema-slug="booking.cinemaSlug"
                   @unavailable="markBookingCancelled(booking.bookingId)"
                 />
               </div>
@@ -208,7 +209,7 @@
                 <h2 class="font-display text-2xl font-bold text-white">Séances programmées</h2>
               </div>
               <p class="text-sm text-cinema-textMuted mt-1">
-                Choisissez votre séance ci-dessous pour réserver immédiatement vos fauteuils en temps réel.
+                {{ isPublicPlane ? 'Choisissez votre cinéma et votre séance ci-dessous pour réserver vos fauteuils.' : 'Choisissez votre séance ci-dessous pour réserver immédiatement vos fauteuils en temps réel.' }}
               </p>
             </div>
             <span
@@ -235,6 +236,8 @@
               <SlotCard
                 :slot="slot"
                 :sse-connected="sseConnected"
+                :is-public-plane="isPublicPlane"
+                :is-offline="isOffline"
                 :already-booked="bookedSlotIds.has(slot.id)"
                 @reserve="() => handleReserve(slot.id, slot.cinemaSlug)"
               />
@@ -268,6 +271,7 @@ import { currentHostContext, isValidSlug, tenantUrl } from '../services/tenant';
 import { useMovies } from '../composables/useMovies';
 import { useSlots } from '../composables/useSlots';
 import { useReservations } from '../composables/useReservations';
+import { useConnection } from '../composables/useConnection';
 import SlotCard from '../components/SlotCard.vue';
 import TicketPdfButton from '../components/TicketPdfButton.vue';
 import type { Movie } from '../composables/useMovies';
@@ -277,7 +281,29 @@ const route = useRoute();
 const router = useRouter();
 const { fetchMovieById } = useMovies();
 const { fetchSlots, connectSse, sseConnected, slots: allSlots } = useSlots();
-const { bookings, markBookingCancelled, syncBookingsWithServer } = useReservations();
+const { bookings, markBookingCancelled, syncBookingsWithServer, fetchAllCinemasBookings } = useReservations();
+const { isOffline } = useConnection();
+
+const isPublicPlane = computed(() => {
+  try {
+    return currentHostContext().plane === 'public';
+  } catch {
+    return false;
+  }
+});
+
+const formatBookingDate = (iso: string) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Date à confirmer';
+  return d.toLocaleString('fr-FR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Paris',
+  });
+};
 
 const movie = ref<Movie | null>(null);
 const loading = ref(true);
@@ -361,10 +387,12 @@ watch(() => route.params.id, (newId) => {
 });
 
 onMounted(async () => {
-  connectSse();
+  if (!isPublicPlane.value) {
+    connectSse();
+  }
   await Promise.all([
     loadMovie(),
-    syncBookingsWithServer(),
+    isPublicPlane.value ? fetchAllCinemasBookings() : syncBookingsWithServer(),
     fetchSlots()
   ]);
 });

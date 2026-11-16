@@ -25,10 +25,6 @@ const ISSUED_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   timeZone: PARIS_TIME_ZONE
 });
 
-/**
- * Formats an ISO instant as a French weekday + day + month + year in Europe/Paris.
- * Example: "mardi 24 novembre 2026"
- */
 export function formatTicketDay(isoDate) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) {
@@ -37,9 +33,6 @@ export function formatTicketDay(isoDate) {
   return DAY_FORMATTER.format(date);
 }
 
-/**
- * Formats an ISO instant as French time in Europe/Paris ("9 h 30", "20 h 00").
- */
 export function formatTicketTime(isoDate) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) {
@@ -51,9 +44,6 @@ export function formatTicketTime(isoDate) {
   return `${Number.parseInt(hour, 10)} h ${minute}`;
 }
 
-/**
- * Formats the document issuance timestamp in Europe/Paris.
- */
 export function formatIssuedOn(dateInput = new Date()) {
   const date = new Date(dateInput);
   if (Number.isNaN(date.getTime())) {
@@ -62,18 +52,12 @@ export function formatIssuedOn(dateInput = new Date()) {
   return ISSUED_FORMATTER.format(date).replace(':', ' h ');
 }
 
-/**
- * Builds a short, neutral reference from a booking UUID.
- */
 export function buildTicketReference(bookingId) {
   const clean = String(bookingId ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const suffix = clean.slice(0, 8) || 'TICKET';
   return `BK-${suffix}`;
 }
 
-/**
- * Builds a deterministic seat label for a slot, booking ID, and seat count.
- */
 export function generateSeatLabel(slotId, bookingId, quantity = 1) {
   const rows = ['D', 'E', 'F', 'G', 'H', 'J', 'K'];
   const combined = `${slotId}:${bookingId}`;

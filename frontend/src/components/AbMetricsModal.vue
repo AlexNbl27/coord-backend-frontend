@@ -3,13 +3,14 @@
     <div
       v-if="show"
     ref="modalRef"
+    tabindex="-1"
     role="dialog"
     aria-modal="true"
     aria-labelledby="ab-metrics-modal-title"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in focus:outline-none"
     @click.self="$emit('close')"
   >
-    <div class="relative w-full max-w-4xl bg-cinema-card border border-cinema-border rounded-lg shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] overflow-y-auto focus:outline-none" tabindex="-1">
+    <div class="relative w-full max-w-4xl bg-cinema-card border border-cinema-border rounded-lg shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto overflow-x-hidden focus:outline-none" tabindex="-1">
       <div class="flex items-center justify-between pb-4 border-b border-cinema-border/50">
         <div>
           <h2 id="ab-metrics-modal-title" class="font-display text-xl font-bold text-white tracking-tight flex items-center gap-2">
@@ -186,7 +187,7 @@
               :class="summary?.srm?.hasMismatch ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'"
             >
               <span>{{ summary?.srm?.hasMismatch ? '! SRM Détecté' : '✓ Équilibre 50/50 validé' }}</span>
-              <span class="text-[10px] opacity-75 font-mono">(p={{ summary?.srm?.pValue ?? '1.0' }})</span>
+              <span class="text-[10px] opacity-75 font-mono">(p={{ summary?.srm?.pValue !== undefined ? Number(summary.srm.pValue).toFixed(4) : '1.0000' }})</span>
             </div>
           </div>
 

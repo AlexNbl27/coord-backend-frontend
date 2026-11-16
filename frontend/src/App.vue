@@ -36,6 +36,28 @@
       :show="showAbMetricsModal"
       @close="showAbMetricsModal = false"
     />
+    <div
+      v-if="activeToast"
+      role="alert"
+      aria-live="assertive"
+      class="fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-md flex items-start gap-3 text-xs"
+      :class="{
+        'bg-red-950/90 border-red-500/40 text-red-200': activeToast.type === 'error',
+        'bg-amber-950/90 border-amber-500/40 text-amber-200': activeToast.type === 'warning',
+        'bg-emerald-950/90 border-emerald-500/40 text-emerald-200': activeToast.type === 'success',
+        'bg-cinema-card/95 border-cinema-border text-cinema-text': activeToast.type === 'info',
+      }"
+    >
+      <p class="flex-1 leading-relaxed">{{ activeToast.message }}</p>
+      <button
+        type="button"
+        @click="clearToast"
+        class="text-current opacity-70 hover:opacity-100 cursor-pointer shrink-0 font-bold"
+        aria-label="Fermer la notification"
+      >
+        ✕
+      </button>
+    </div>
   </div>
 </template>
 
@@ -48,10 +70,11 @@ import AbMetricsModal from './components/AbMetricsModal.vue';
 import { useAbTest } from './composables/useAbTest';
 import { useSlots } from './composables/useSlots';
 import { useConnection } from './composables/useConnection';
+import { currentHostContext } from './services/tenant';
 
 const { initAssignment } = useAbTest();
 const { connectSse } = useSlots();
-const { initConnectionWatcher } = useConnection();
+const { initConnectionWatcher, activeToast, clearToast } = useConnection();
 
 const showReservationModal = ref(false);
 const currentBookingId = ref('');
@@ -88,7 +111,12 @@ provide('openAbMetricsModal', openAbMetricsModal);
 
 onMounted(() => {
   initConnectionWatcher();
-  initAssignment();
-  connectSse();
+  const { plane } = currentHostContext();
+  if (plane !== 'admin') {
+    initAssignment();
+  }
+  if (plane === 'tenant') {
+    connectSse();
+  }
 });
 </script>

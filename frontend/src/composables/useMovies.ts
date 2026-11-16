@@ -6,7 +6,6 @@ import { useMoviesStore } from '../stores/movies';
 import { useConnectionStore } from '../stores/connection';
 import { useConnection } from './useConnection';
 
-// Interface pour un film
 export interface Movie {
   _id: string;
   title: string;
@@ -33,7 +32,6 @@ export interface Movie {
   }>;
 }
 
-// Interface pour la réponse de l'API avec pagination
 export interface MoviesResponse {
   count: number;
   total?: number;
@@ -42,7 +40,6 @@ export interface MoviesResponse {
   data: Movie[];
 }
 
-// Interface pour les filtres
 export interface MovieFilters {
   search?: string;
   genre?: string;
@@ -52,21 +49,16 @@ export interface MovieFilters {
   limit?: number;
 }
 
-// URL de base de l'API (utilise le proxy Vite en développement)
 const API_BASE_URL = '/api/movies';
 
-// Cache mémoire LRU (max 25 entrées)
 const MAX_CACHE_ENTRIES = 25;
 const moviesCache = ref<Map<string, MoviesResponse & { timestamp: number }>>(new Map());
 const CACHE_TTL_MS = 15000; // 15 secondes en mémoire
 
-// Cache mémoire pour les détails d'un film
 const movieDetailsCache = ref<Map<string, Movie>>(new Map());
 
-// Chargement initial depuis le cache persistant si existant
 const initialCachedMovies = cacheManager.get<MoviesResponse>(CacheKeys.MOVIES);
 
-// Helper de filtrage local en mode hors-ligne
 function applyClientFilters(data: Movie[], filters: MovieFilters): Movie[] {
   let list = [...data];
   if (filters.search) {
@@ -101,21 +93,16 @@ export function useMovies() {
   const hasMore = ref(false);
   const isFromCache = ref(false);
 
-  // Initialise le store avec le cache persistant s'il est vide
   if (initialCachedMovies?.data && moviesStore.movies.length === 0) {
     moviesStore.setMovies(initialCachedMovies.data);
   }
   
-  // Gestion standard de l'annulation des requêtes réseau
   let activeAbortController: AbortController | null = null;
   
-  // Identifiant de recherche pour éviter les réponses obsolètes
   const searchId = ref(0);
 
-  // Filtres courants (réactifs)
   const currentFilters = ref<MovieFilters>({});
 
-  // Enregistrement de la resynchronisation automatique au retour du backend
   try {
     const { onReconnectSync } = useConnection();
     onReconnectSync(async () => {
@@ -123,14 +110,11 @@ export function useMovies() {
       await fetchMovies(currentFilters.value, true);
     });
   } catch {
-    // Si hors contexte Vue
   }
 
-  // Récupérer tous les films avec Stale-While-Revalidate (0ms si en cache)
   const fetchMovies = async (filters: MovieFilters = {}, resetCache: boolean = false) => {
     const currentSearchId = ++searchId.value;
     
-    // Annuler la requête précédente si elle est toujours en transit
     if (activeAbortController) {
       activeAbortController.abort();
     }
@@ -174,10 +158,8 @@ export function useMovies() {
       }
       error.value = null;
 
-      // Générer la clé de cache mémoire
       const cacheKey = JSON.stringify(filters);
       
-      // Vérifier le cache mémoire
       if (!resetCache && moviesCache.value.has(cacheKey)) {
         const cached = moviesCache.value.get(cacheKey)!;
         if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
@@ -193,7 +175,6 @@ export function useMovies() {
         }
       }
 
-      // Construire la query string
       const params = new URLSearchParams();
       if (filters.search) params.set('search', filters.search);
       if (filters.genre) params.set('genre', filters.genre);
@@ -209,25 +190,21 @@ export function useMovies() {
         signal: activeAbortController.signal,
       });
       
-      // Vérifier que cette réponse correspond bien à la dernière recherche demandée
       if (currentSearchId !== searchId.value) {
         return;
       }
       
-      // Éviction LRU en mémoire
       if (moviesCache.value.size >= MAX_CACHE_ENTRIES) {
         const oldestKey = moviesCache.value.keys().next().value;
         if (oldestKey) moviesCache.value.delete(oldestKey);
       }
 
-      // Mettre en cache mémoire avec timestamp
       const responseWithTimestamp = {
         ...response.data,
         timestamp: Date.now(),
       };
       moviesCache.value.set(cacheKey, responseWithTimestamp);
 
-      // Persistance dans le cache local (valide 10 minutes)
       cacheManager.set(CacheKeys.MOVIES, response.data, 10 * 60 * 1000);
 
       const effectiveTotal = response.data.total ?? response.data.count;
@@ -248,7 +225,6 @@ export function useMovies() {
         return;
       }
 
-      // Repli fluide sur le cache persistant avec application des filtres
       const persistentCache = cacheManager.get<MoviesResponse>(CacheKeys.MOVIES);
       if (persistentCache && persistentCache.data.data?.length > 0) {
         console.warn('[useMovies] Backend indisponible. Utilisation fluide du cache persistant local.');
@@ -264,7 +240,6 @@ export function useMovies() {
           data: filtered,
           total: filtered.length,
         });
-        // On n'affiche pas d'erreur rouge bloquante, le mode dégradé prend le relais
         error.value = null;
         return;
       }
@@ -278,7 +253,6 @@ export function useMovies() {
     }
   };
 
-  // Charger plus de films (pagination infinie)
   const loadMore = async () => {
     if (loading.value || !hasMore.value) return;
     
@@ -292,7 +266,6 @@ export function useMovies() {
     });
   };
 
-  // Récupérer un film par ID avec résilience
   const fetchMovieById = async (id: string) => {
     try {
       if (movieDetailsCache.value.has(id)) {
@@ -312,14 +285,12 @@ export function useMovies() {
       
       return response.data;
     } catch (err) {
-      // Repli 1 : Cache persistant même si stale
       const staleDetail = cacheManager.get<Movie>(`${CacheKeys.MOVIE_DETAIL_PREFIX}${id}`);
       if (staleDetail) {
         console.warn(`[useMovies] Utilisation du cache hors-ligne pour le film ${id}`);
         return staleDetail.data;
       }
 
-      // Repli 2 : Recherche dans le catalogue de films déjà en mémoire ou en cache persistant
       const inStore = moviesStore.movies.find(m => m._id === id);
       if (inStore) {
         console.warn(`[useMovies] Détail retrouvé dans le store pour le film ${id}`);
@@ -339,12 +310,10 @@ export function useMovies() {
     }
   };
 
-  // Créer un nouveau film
   const createMovie = async (movieData: Omit<Movie, '_id'>) => {
     try {
       const response = await apiClient.post<Movie>(API_BASE_URL, movieData);
       
-      // Invalider le cache
       moviesCache.value.clear();
       movieDetailsCache.value.clear();
       cacheManager.remove(CacheKeys.MOVIES);
@@ -357,34 +326,29 @@ export function useMovies() {
     }
   };
 
-  // Filtrer les films par genre
   const filterByGenre = (genre: string | undefined) => {
     currentFilters.value.genre = genre;
     currentFilters.value.page = 1;
     fetchMovies(currentFilters.value, true);
   };
 
-  // Filtrer par note minimale
   const filterByRating = (minRating: number | undefined) => {
     currentFilters.value.minRating = minRating;
     currentFilters.value.page = 1;
     fetchMovies(currentFilters.value, true);
   };
 
-  // Recherche textuelle
   const searchMovies = (searchTerm: string | undefined) => {
     currentFilters.value.search = searchTerm;
     currentFilters.value.page = 1;
     fetchMovies(currentFilters.value, true);
   };
 
-  // Réinitialiser les filtres
   const resetFilters = () => {
     currentFilters.value = {};
     fetchMovies({}, true);
   };
 
-  // Filtres disponibles (extrait des films)
   const getAvailableGenres = computed(() => {
     const genresSet = new Set<string>();
     movies.value.forEach(movie => {

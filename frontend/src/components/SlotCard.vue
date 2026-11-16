@@ -96,9 +96,9 @@
       <button
         v-if="slot.status === 'AVAILABLE' && !alreadyBooked"
         @click.stop="handleReserve"
-        class="w-full btn btn-primary text-xs py-2.5 cursor-pointer"
-        :aria-label="`Réserver une place pour ${slot.movieTitle} à ${formattedStartsAt} en salle ${slot.hall}${!sseConnected ? ' (réservation hors-ligne, synchronisation différée)' : ''}`"
-        :disabled="isReserving"
+        class="w-full btn btn-primary text-xs py-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        :aria-label="`Réserver une place pour ${slot.movieTitle} à ${formattedStartsAt} en salle ${slot.hall}${showDeferred ? ' (réservation hors-ligne, synchronisation différée)' : ''}`"
+        :disabled="isReserving || disabled"
         :aria-busy="isReserving ? 'true' : 'false'"
       >
         <span
@@ -107,7 +107,7 @@
         >
           <span>{{ bookingButtonLabel }}</span>
           <span
-            v-if="!sseConnected"
+            v-if="showDeferred"
             class="text-[10px] text-amber-200 opacity-80"
             >(différé)</span
           >
@@ -157,7 +157,12 @@ const props = defineProps<{
   sseConnected: boolean;
   index?: number;
   alreadyBooked?: boolean;
+  isOffline?: boolean;
+  isPublicPlane?: boolean;
+  disabled?: boolean;
 }>();
+
+const showDeferred = computed(() => !props.isPublicPlane && Boolean(props.isOffline));
 
 const emit = defineEmits(["reserve", "click"]);
 

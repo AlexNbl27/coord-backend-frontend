@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-7xl mx-auto">
       <div class="mb-8">
         <h1 class="font-display text-3xl font-bold text-white tracking-tight">À propos de CinéSlot</h1>
         <p class="text-cinema-textMuted text-sm mt-1">Plateforme de réservation de cinéma en temps réel</p>

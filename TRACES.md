@@ -1,6 +1,6 @@
-# Livrable TRACES.md — CinéSlot
+# Traces OpenTelemetry (CinéSlot)
 
-## 1 · L'instrumentation en place
+## 1. Instrumentation en place
 
 | Maillon | Technologie | Configuration mise en place |
 |---|---|---|

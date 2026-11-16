@@ -16,8 +16,14 @@
 
         <div>
           <h4 class="text-xs font-bold uppercase tracking-wider text-accent-gold mb-3">Navigation</h4>
-          <ul class="space-y-2 text-xs text-cinema-textMuted">
-            <li><router-link to="/" class="hover:text-white transition-colors">Accueil</router-link></li>
+          <ul v-if="isAdminPlane" class="space-y-2 text-xs text-cinema-textMuted">
+            <li><router-link to="/admin/cinemas" class="hover:text-white transition-colors">Cinémas</router-link></li>
+            <li><router-link to="/admin/stats" class="hover:text-white transition-colors">Statistiques</router-link></li>
+            <li><router-link to="/admin/logs" class="hover:text-white transition-colors">Journaux</router-link></li>
+          </ul>
+          <ul v-else class="space-y-2 text-xs text-cinema-textMuted">
+            <li v-if="!isPublicPlane"><router-link to="/" class="hover:text-white transition-colors">Accueil</router-link></li>
+            <li v-else><router-link to="/cinemas" class="hover:text-white transition-colors">Cinémas</router-link></li>
             <li><router-link to="/movies" class="hover:text-white transition-colors">Catalogue des films</router-link></li>
             <li><router-link to="/slots" class="hover:text-white transition-colors">Séances & Réservations</router-link></li>
             <li><router-link to="/reservations" class="hover:text-white transition-colors">Mes Billets (e-Billet)</router-link></li>
@@ -53,4 +59,17 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { currentHostContext } from '../services/tenant';
+
+const plane = computed(() => {
+  try {
+    return currentHostContext().plane;
+  } catch {
+    return 'tenant';
+  }
+});
+
+const isAdminPlane = computed(() => plane.value === 'admin');
+const isPublicPlane = computed(() => plane.value === 'public');
 </script>

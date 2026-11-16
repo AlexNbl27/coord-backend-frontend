@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen">
-    <section class="relative py-16 sm:py-20 px-4 border-b border-cinema-border">
+  <div>
+    <section class="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-cinema-border">
       <div class="relative z-10 text-center max-w-4xl mx-auto">
         <p class="text-xs font-mono uppercase tracking-[0.2em] text-accent-gold mb-3">
           Programmation & Billetterie
@@ -33,7 +33,7 @@
     </section>
 
     <!-- Section Films populaires -->
-    <section class="py-12 px-4">
+    <section class="py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between mb-8">
           <div>
@@ -49,6 +49,9 @@
         <div v-if="loadingPopular && popularMovies.length === 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <div v-for="n in 4" :key="n" class="bg-cinema-card h-96 rounded-lg animate-pulse"></div>
         </div>
+        <div v-else-if="popularMovies.length === 0" class="text-center py-12">
+          <p class="text-gray-400">Aucun film populaire à afficher pour le moment.</p>
+        </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <MovieCard
             v-for="movie in popularMovies"
@@ -61,7 +64,7 @@
     </section>
 
     <!-- Section Séances disponibles -->
-    <section class="py-12 px-4">
+    <section class="py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between mb-8">
           <div>
@@ -98,13 +101,14 @@
         <div
           v-if="selectedMovie"
         ref="movieModalRef"
-        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+        tabindex="-1"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 focus:outline-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="home-preview-title"
         @click.self="selectedMovie = null"
       >
-        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl focus:outline-none" tabindex="-1">
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl focus:outline-none" tabindex="-1">
           <button
             ref="movieModalCloseBtnRef"
             @click="selectedMovie = null"
@@ -115,7 +119,7 @@
           </button>
           
           <div class="flex flex-col md:flex-row gap-6">
-            <div class="w-full md:w-1/3">
+            <div class="w-full md:w-56 shrink-0">
               <div class="aspect-[2/3] bg-gray-800 rounded-xl overflow-hidden">
                 <img
                   v-if="selectedMovie.poster"
@@ -129,13 +133,13 @@
               </div>
             </div>
             
-            <div class="flex-1">
-              <div class="flex items-start justify-between">
-                <div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between gap-3 pr-8">
+                <div class="min-w-0">
                   <h2 id="home-preview-title" class="text-2xl font-bold text-white">{{ selectedMovie.title }}</h2>
                   <p class="text-gray-400 text-sm mt-0.5">{{ selectedMovie.year }} • {{ selectedMovie.duration }} min • Dir. {{ selectedMovie.director }}</p>
                 </div>
-                <div class="flex items-center gap-1 bg-accent-gold/15 px-2.5 py-1 rounded-full border border-accent-gold/30">
+                <div class="flex items-center gap-1 bg-accent-gold/15 px-2.5 py-1 rounded-full border border-accent-gold/30 shrink-0">
                   <span class="text-accent-gold text-sm">★</span>
                   <span class="text-white text-xs font-bold">{{ selectedMovie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
                 </div>
@@ -272,11 +276,14 @@ const selectMovie = (movie: Movie) => {
 const formatSlotTime = (dateStr: string) => {
   try {
     const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
     return d.toLocaleString('fr-FR', {
       weekday: 'short',
       day: 'numeric',
+      month: 'short',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Europe/Paris',
     });
   } catch {
     return dateStr;

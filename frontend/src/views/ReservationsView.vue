@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-5xl mx-auto">
+  <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
@@ -254,7 +254,7 @@
           </div>
 
           <!-- QR Code Section -->
-          <div class="hidden lg:flex flex-col items-center justify-center p-6 bg-cinema-darker/60 border-l border-cinema-border/40 shrink-0 text-center" aria-hidden="true">
+          <div class="flex flex-col items-center justify-center p-4 sm:p-6 bg-cinema-darker/60 border-t lg:border-t-0 lg:border-l border-cinema-border/40 shrink-0 text-center" aria-hidden="true">
             <div class="p-2.5 bg-white rounded-xl shadow-md mb-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -291,14 +291,15 @@
         <div
           v-if="showConfirmModal && selectedForCancel"
         ref="confirmModalRef"
+        tabindex="-1"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-cancel-title"
         aria-describedby="confirm-cancel-desc"
-        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 focus:outline-none"
         @click.self="showConfirmModal = false"
       >
-        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
           <div class="w-12 h-12 mx-auto mb-4 bg-red-950/60 rounded-full flex items-center justify-center border border-red-500/30 text-red-400 text-xl font-bold" aria-hidden="true">
             !
           </div>
@@ -307,7 +308,7 @@
             Êtes-vous sûr de vouloir annuler {{ (selectedForCancel.totalQuantity || 1) > 1 ? `vos ${selectedForCancel.totalQuantity} places` : 'votre place' }} pour <strong class="text-white">{{ selectedForCancel.movieTitle }}</strong> ({{ selectedForCancel.seat }}) ? Le créneau sera immédiatement libéré pour les autres spectateurs.
           </p>
 
-          <div class="flex gap-3">
+          <div class="flex flex-col-reverse sm:flex-row gap-3">
             <button
               ref="keepButtonRef"
               @click="showConfirmModal = false"

@@ -108,6 +108,7 @@ describe('VoiceOver & Lecteurs d\'Écran : Contextualisation des Actions & Annon
         props: {
           slot: mockSlot,
           sseConnected: false,
+          isOffline: true,
         },
       });
 

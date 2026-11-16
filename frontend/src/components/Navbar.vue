@@ -26,7 +26,7 @@
         <!-- Right side: Status + User Tickets -->
         <div class="flex items-center gap-2 sm:gap-3 shrink-0">
           <!-- Indicateur de Connexion & Résilience -->
-          <ConnectionBadge class="hidden xl:inline-flex" />
+          <ConnectionBadge class="hidden sm:inline-flex" />
 
           <!-- User / Mes Billets Quick Action Button -->
           <router-link
@@ -141,6 +141,9 @@
                 Se connecter
               </router-link>
             </div>
+            <div class="pt-2 border-t border-cinema-border/30 flex items-center justify-between gap-2">
+              <ConnectionBadge />
+            </div>
             <router-link
               v-if="!isAdminPlane"
               to="/reservations"
@@ -190,13 +193,20 @@ const navLinks = computed<NavLink[]>(() => (isAdminPlane
       { label: 'Journaux', to: '/admin/logs' },
       { label: 'Statistiques', to: '/admin/stats' },
     ]
-  : [
-      { label: 'Accueil', to: '/' },
-      { label: 'Films', to: '/movies' },
-      { label: 'Séances', to: '/slots' },
-      hostContext.plane === 'tenant' ? { label: 'Cinémas', href: chooseCinemaHref } : { label: 'Cinémas', to: '/cinemas' },
-      { label: 'À propos', to: '/about' },
-    ]));
+  : hostContext.plane === 'public'
+    ? [
+        { label: 'Cinémas', to: '/cinemas' },
+        { label: 'Films', to: '/movies' },
+        { label: 'Séances', to: '/slots' },
+        { label: 'À propos', to: '/about' },
+      ]
+    : [
+        { label: 'Accueil', to: '/' },
+        { label: 'Films', to: '/movies' },
+        { label: 'Séances', to: '/slots' },
+        { label: 'Cinémas', href: chooseCinemaHref },
+        { label: 'À propos', to: '/about' },
+      ]));
 
 const handleLogout = async () => {
   await logout();

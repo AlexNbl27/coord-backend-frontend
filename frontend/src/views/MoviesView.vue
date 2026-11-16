@@ -127,13 +127,14 @@
         <div
           v-if="selectedMovie"
         ref="movieModalRef"
-        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+        tabindex="-1"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 focus:outline-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="movies-preview-title"
         @click.self="selectedMovie = null"
       >
-        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl focus:outline-none" tabindex="-1">
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl focus:outline-none" tabindex="-1">
           <button
             ref="movieModalCloseBtnRef"
             @click="selectedMovie = null"
@@ -145,7 +146,7 @@
           
           <div class="flex flex-col md:flex-row gap-6">
             <!-- Affiche -->
-            <div class="w-full md:w-1/3">
+            <div class="w-full md:w-56 shrink-0">
               <div class="aspect-[2/3] bg-cinema-darker rounded-xl overflow-hidden border border-cinema-border/50">
                 <img
                   v-if="selectedMovie.poster"
@@ -160,13 +161,13 @@
             </div>
             
             <!-- Détails -->
-            <div class="flex-1">
-              <div class="flex items-start justify-between">
-                <div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between gap-3 pr-8">
+                <div class="min-w-0">
                   <h2 id="movies-preview-title" class="text-2xl font-bold text-white">{{ selectedMovie.title }}</h2>
                   <p class="text-gray-400 text-xs mt-0.5">{{ selectedMovie.year }} • {{ selectedMovie.duration }} min • Dir. {{ selectedMovie.director }}</p>
                 </div>
-                <div class="flex items-center gap-1 bg-accent-gold/15 px-2.5 py-1 rounded-full border border-accent-gold/30">
+                <div class="flex items-center gap-1 bg-accent-gold/15 px-2.5 py-1 rounded-full border border-accent-gold/30 shrink-0">
                   <span class="text-accent-gold text-sm">★</span>
                   <span class="text-white text-xs font-bold">{{ selectedMovie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
                 </div>
@@ -193,26 +194,28 @@
                   <span class="text-xs font-bold uppercase tracking-wider text-accent-gold">
                     <span>Séances programmées ({{ movieSlots.length }})</span>
                   </span>
-                  <span v-if="movieSlots.length > 0" class="text-[10px] text-emerald-400 font-medium">Temps réel</span>
+                  <span v-if="movieSlots.length > 0 && !isPublicPlane && sseConnected" class="text-[10px] text-emerald-400 font-medium">Temps réel</span>
                 </div>
 
-                <div v-if="movieSlots.length > 0" class="flex flex-wrap gap-2">
+                <div v-if="movieSlots.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     v-for="slot in movieSlots"
                     :key="`${slot.cinemaSlug || 't'}-${slot.id}`"
                     @click="handleReserveFromModal(slot.id, slot.cinemaSlug)"
                     :aria-label="`Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}${slot.cinemaName ? ` (${slot.cinemaName})` : ''}`"
-                    class="group px-3 py-2 rounded-lg bg-cinema-card hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
+                    class="group px-3 py-2.5 rounded-lg bg-cinema-card hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex flex-col items-start gap-1 text-left cursor-pointer"
                   >
-                    <span v-if="slot.cinemaName" class="text-[11px] font-bold text-accent-gold group-hover:text-cinema-dark">
-                      {{ slot.cinemaName }} ·
+                    <span v-if="slot.cinemaName" class="text-[11px] font-bold text-accent-gold group-hover:text-cinema-dark truncate w-full">
+                      {{ slot.cinemaName }}
                     </span>
-                    <span class="font-mono tabular-nums">
-                      <span>{{ formatSlotTime(slot.startsAt) }}</span>
-                    </span>
-                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 group-hover:bg-black/20 text-cinema-textMuted group-hover:text-cinema-dark">
-                      {{ slot.hall }}
-                    </span>
+                    <div class="flex items-center justify-between gap-2 w-full">
+                      <span class="font-mono tabular-nums">
+                        {{ formatSlotTime(slot.startsAt) }}
+                      </span>
+                      <span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 group-hover:bg-black/20 text-cinema-textMuted group-hover:text-cinema-dark shrink-0">
+                        {{ slot.hall }}
+                      </span>
+                    </div>
                   </button>
                 </div>
                 <div v-else class="text-xs text-cinema-textMuted py-2 flex items-center justify-between">
@@ -267,7 +270,15 @@ const router = useRouter();
 const moviesStore = useMoviesStore();
 const slotsStore = useSlotsStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse } = useSlots();
+const { fetchSlots, connectSse, sseConnected } = useSlots();
+
+const isPublicPlane = computed(() => {
+  try {
+    return currentHostContext().plane === 'public';
+  } catch {
+    return false;
+  }
+});
 
 const loading = ref(false);
 const selectedMovie = ref<Movie | null>(null);
@@ -332,11 +343,14 @@ const goToMovieDetails = (movie: Movie | null) => {
 const formatSlotTime = (dateStr: string) => {
   try {
     const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
     return d.toLocaleString('fr-FR', {
       weekday: 'short',
       day: 'numeric',
+      month: 'short',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Europe/Paris',
     });
   } catch {
     return dateStr;

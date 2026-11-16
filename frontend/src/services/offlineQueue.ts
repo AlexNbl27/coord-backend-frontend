@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { useConnectionStore } from '../stores/connection';
+import { isValidSlug, tenantUrl } from './tenant';
 
 export type MutationType = 'RESERVE_SLOT' | 'CANCEL_SLOT' | 'AB_EXPOSURE';
 
@@ -181,9 +182,14 @@ class OfflineQueueManager {
       }
 
       case 'CANCEL_SLOT': {
-        const { slotId } = item.payload;
-        await apiClient.delete(`/api/slots/${slotId}/reservations`, {
+        const { slotId, cinemaSlug } = item.payload;
+        const cancelUrl =
+          cinemaSlug && isValidSlug(cinemaSlug)
+            ? tenantUrl(cinemaSlug, `/api/slots/${slotId}/reservations`)
+            : `/api/slots/${slotId}/reservations`;
+        await apiClient.delete(cancelUrl, {
           skipOfflineTrigger: true,
+          withCredentials: true,
         });
         break;
       }

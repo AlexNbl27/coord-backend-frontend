@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-6xl mx-auto space-y-12">
+  <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-12">
       <header>
         <h1 class="font-display text-3xl font-bold text-white tracking-tight">Journaux d'activité</h1>
         <p class="text-cinema-textMuted text-sm mt-1">
@@ -131,16 +131,19 @@
           class="flex flex-wrap items-end gap-3 p-4 rounded-xl bg-cinema-card border border-cinema-border/60"
           @submit.prevent="searchAudit"
         >
-          <div>
+          <div class="min-w-[180px] flex-1">
             <label for="audit-action" class="block text-xs font-medium text-cinema-text mb-1">Action</label>
-            <input id="audit-action" v-model="auditFilters.action" type="text" autocomplete="off" placeholder="ACCESS_DENIED" class="log-input" />
+            <input id="audit-action" v-model="auditFilters.action" type="text" autocomplete="off" placeholder="ACCESS_DENIED" class="log-input w-full" />
           </div>
-          <div>
+          <div class="min-w-[180px] flex-1">
             <label for="audit-cinema" class="block text-xs font-medium text-cinema-text mb-1">Cinéma (slug)</label>
-            <input id="audit-cinema" v-model="auditFilters.cinema" type="text" autocomplete="off" class="log-input" />
+            <input id="audit-cinema" v-model="auditFilters.cinema" type="text" autocomplete="off" class="log-input w-full" />
           </div>
           <button type="submit" class="px-4 py-2 rounded-md bg-accent-gold text-cinema-dark text-sm font-semibold cursor-pointer">
             Filtrer l'audit
+          </button>
+          <button type="button" class="px-3 py-2 rounded-md border border-cinema-border text-cinema-textMuted hover:text-white text-sm cursor-pointer" @click="resetAudit">
+            Réinitialiser
           </button>
         </form>
 
@@ -254,6 +257,12 @@ const searchAudit = () => audit.load(auditQuery(), 1);
 const clearReservationFilters = () => {
   Object.assign(reservationFilters, emptyReservationFilters());
   searchReservations();
+};
+
+const resetAudit = () => {
+  auditFilters.action = '';
+  auditFilters.cinema = '';
+  searchAudit();
 };
 
 const formatDate = (iso: string) =>

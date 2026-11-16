@@ -65,6 +65,7 @@
       enter-active-class="transition-all duration-300 ease-out"
       leave-active-class="transition-all duration-200 ease-in"
       enter-from-class="opacity-0 max-h-0 overflow-hidden"
+      enter-to-class="opacity-100 max-h-96"
       leave-to-class="opacity-0 max-h-0 overflow-hidden"
     >
       <div
@@ -169,7 +170,7 @@ const searchQuery = ref(props.search || '');
 const selectedGenre = ref(props.genre || '');
 const minRating = ref(props.minRating?.toString() || '');
 const minYear = ref(props.minYear?.toString() || '');
-const showFilters = ref(false);
+const showFilters = ref(Boolean(props.genre || props.minRating || props.minYear));
 
 const hasCustomFilters = computed(() => {
   return Boolean(selectedGenre.value || minRating.value || minYear.value);

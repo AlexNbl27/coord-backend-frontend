@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-start justify-center py-16 px-4">
+  <div class="min-h-[calc(100vh-14rem)] flex items-start justify-center py-16 px-4 sm:px-6 lg:px-8">
     <div class="w-full max-w-md bg-cinema-card/80 border border-cinema-border/50 rounded-2xl p-8 backdrop-blur-sm">
       <h1 class="font-display text-3xl font-bold text-white mb-6">Nouveau mot de passe</h1>
 

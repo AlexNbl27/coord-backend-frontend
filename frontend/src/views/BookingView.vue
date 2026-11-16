@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-7xl mx-auto">
       <div class="mb-6 flex items-center justify-between">
         <button
           @click="goBack"
@@ -14,6 +14,8 @@
           Mes billets →
         </router-link>
       </div>
+
+      <div class="max-w-3xl mx-auto">
 
       <div v-if="loading && !slot" class="bg-cinema-card border border-cinema-border rounded-lg p-8 animate-pulse space-y-4">
         <div class="h-7 bg-cinema-darker rounded w-1/2"></div>
@@ -111,12 +113,12 @@
               :key="tariff.category"
               class="py-4 flex items-center justify-between gap-4"
             >
-              <div>
+              <div class="min-w-0 flex-1">
                 <div class="text-sm font-semibold text-white">{{ tariff.label }}</div>
                 <div class="text-xs text-cinema-textMuted">{{ tariff.description }}</div>
               </div>
 
-              <div class="flex items-center gap-4 shrink-0">
+              <div class="flex items-center gap-2 sm:gap-4 shrink-0">
                 <span class="text-sm font-mono font-bold text-accent-gold w-16 text-right">
                   {{ formatEuro(tariff.unitPrice) }}
                 </span>
@@ -155,15 +157,15 @@
             {{ errorMessage }}
           </div>
 
+          <div v-if="cinemaDisabled" role="alert" class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            Ce cinéma est temporairement désactivé. Les réservations sont suspendues.
+          </div>
+
           <div class="pt-4 border-t border-cinema-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span class="text-xs text-cinema-textMuted block">Total à régler</span>
               <span class="text-2xl font-mono font-bold text-white">{{ formatEuro(totalAmount) }}</span>
               <span class="text-xs text-cinema-textMuted ml-2">({{ totalQuantity }} billet{{ totalQuantity > 1 ? 's' : '' }})</span>
-            </div>
-
-            <div v-if="cinemaDisabled" role="alert" class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 mb-4">
-              Ce cinéma est temporairement désactivé. Les réservations sont suspendues.
             </div>
 
             <button
@@ -177,6 +179,7 @@
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </template>

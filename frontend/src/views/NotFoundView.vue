@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center px-4">
+  <div class="min-h-[calc(100vh-14rem)] flex items-center justify-center py-16 px-4 sm:px-6 lg:px-8">
     <div class="text-center max-w-md">
       <div class="mb-6">
         <div class="w-28 h-28 mx-auto rounded-full bg-cinema-card border border-cinema-border flex items-center justify-center">
@@ -32,6 +32,10 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 const goBack = () => {
-  router.go(-1);
+  if (window.history.length > 2) {
+    router.go(-1);
+  } else {
+    router.push('/');
+  }
 };
 </script>
