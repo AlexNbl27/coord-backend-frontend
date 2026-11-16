@@ -134,7 +134,7 @@
                   <span class="badge-available">Docker Compose</span>
                   <span class="badge-available">GitHub Actions</span>
                   <span class="badge-available">k6</span>
-                  <span class="badge-available">Grafana</span>
+                  <span class="badge-available">Jaeger</span>
                 </div>
               </div>
             </div>

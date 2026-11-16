@@ -34,6 +34,7 @@ export interface BookingView {
   bookingId: string;
   slotId: string;
   status: string;
+  seat?: string;
 }
 
 // Interface pour l'événement SSE
@@ -200,8 +201,7 @@ export function useSlots() {
     // Si hors contexte Vue
   }
 
-  // Réserver une séance avec résilience, UI optimiste et file d'attente hors-ligne
-  const reserveSlot = async (slotId: string, customerId: string): Promise<BookingView> => {
+  const reserveSlot = async (slotId: string, customerId: string = ''): Promise<BookingView> => {
     const { measured } = useAbTest();
 
     try {
@@ -212,7 +212,6 @@ export function useSlots() {
           headers: {
             'X-AB-Measure': String(measured.value),
           },
-          withCredentials: true,
         }
       );
       
@@ -249,50 +248,20 @@ export function useSlots() {
     }
   };
 
-  // Générer une nouvelle séance de démonstration
-  const generateDemoSlot = async (): Promise<SlotView> => {
-    try {
-      const response = await apiClient.post<SlotView>(`${API_SLOTS_URL}/lab`);
-      return response.data;
-    } catch (err) {
-      console.error('Erreur lors de la génération d\'une séance:', err);
-      throw err;
-    }
-  };
-
-  // Filtrer les séances par film
-  const getSlotsByMovie = (movieTitle: string) => {
-    return slots.value.filter(slot => 
-      slot.movieTitle.toLowerCase().includes(movieTitle.toLowerCase())
-    );
-  };
-
-  // Filtrer les séances par statut
-  const getSlotsByStatus = (status: 'AVAILABLE' | 'BOOKED' | 'ALL' = 'ALL') => {
-    if (status === 'ALL') return slots.value;
-    return slots.value.filter(slot => slot.status === status);
-  };
-
-  // Filtrer les séances disponibles et réservées depuis le store
   const availableSlots = computed(() => slotsStore.availableSlots);
   const bookedSlots = computed(() => slotsStore.bookedSlots);
 
-  // Mettre à jour les listes de séances (compatibilité)
-  const updateSlotLists = () => {};
-
-  // Rafraîchir manuellement les séances
   const refreshSlots = () => {
     fetchSlots();
   };
 
-  // Réinitialiser toutes les séances au statut disponible
   const resetSlots = async () => {
     try {
       loading.value = true;
-      await apiClient.post(`${API_SLOTS_URL}/reset`, {}, { withCredentials: true });
+      await apiClient.post(`${API_SLOTS_URL}/reset`, {});
       await fetchSlots();
     } catch (err) {
-      console.error('Erreur réinitialisation créneaux:', err);
+      console.error('Failed to reset slots:', err);
     } finally {
       loading.value = false;
     }
@@ -310,11 +279,9 @@ export function useSlots() {
     connectSse,
     disconnectSse,
     reserveSlot,
-    generateDemoSlot,
     resetSlots,
     getSlotsByMovie,
     getSlotsByStatus,
     refreshSlots,
-    updateSlotLists,
   };
 }

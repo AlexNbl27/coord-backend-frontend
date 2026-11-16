@@ -111,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
+import { ref, computed } from 'vue';
 import type { Slot } from '../composables/useSlots';
 import { useAbTest } from '../composables/useAbTest';
 import { offlineQueue } from '../services/offlineQueue';
@@ -129,10 +129,6 @@ const emit = defineEmits(['reserve', 'click']);
 const isReserving = ref(false);
 const isPendingSync = computed(() => offlineQueue.isSlotPendingReservation(props.slot.id));
 
-// Injecter la fonction pour ouvrir le modal
-const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
-
-// Formater la date de la séance
 const formattedStartsAt = computed(() => {
   const date = new Date(props.slot.startsAt);
   return date.toLocaleDateString('fr-FR', {
@@ -145,30 +141,11 @@ const formattedStartsAt = computed(() => {
   });
 });
 
-// Gérer la réservation
-const handleReserve = async () => {
+const handleReserve = () => {
+  if (isReserving.value) return;
   isReserving.value = true;
-  emit('reserve', props.slot);
-
-  try {
-    // Si la fonction modal est disponible, l'appeler
-    if (openReservationModal) {
-      setTimeout(() => {
-        openReservationModal(
-          `BK-${props.slot.id}-${Date.now().toString().slice(-4)}`,
-          props.slot.movieTitle,
-          props.slot.startsAt,
-          props.slot.hall
-        );
-        isReserving.value = false;
-      }, 400);
-    } else {
-      isReserving.value = false;
-    }
-  } catch (error) {
-    console.error('Erreur réservation:', error);
-    isReserving.value = false;
-  }
+  emit('reserve', props.slot.id, '');
+  isReserving.value = false;
 };
 
 const handleSlotClick = () => {

@@ -285,7 +285,7 @@ const handleReserveFromModal = async (slotId: string) => {
   await handleReserve(slotId, customerId);
 };
 
-const handleReserve = async (slotId: string, customerId: string) => {
+const handleReserve = async (slotId: string, customerId = '') => {
   try {
     const result = await reserveSlot(slotId, customerId);
     const slot = availableSlots.value.find(s => s.id === slotId);
@@ -297,6 +297,7 @@ const handleReserve = async (slotId: string, customerId: string) => {
         movieTitle: slot.movieTitle,
         startsAt: slot.startsAt,
         hall: slot.hall,
+        seat: result.seat,
         poster: movie?.poster
       });
 
@@ -324,9 +325,3 @@ onMounted(async () => {
   }
 });
 </script>
-
-<style scoped>
-.aspect-\[2\/3\] {
-  aspect-ratio: 2/3;
-}
-</style>

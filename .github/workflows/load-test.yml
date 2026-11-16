@@ -78,32 +78,13 @@ jobs:
             const maxVus = process.env.RUN_MAX_VUS || '50';
             const maxPing = process.env.RUN_MAX_PING || '500';
 
-            const title = `[Rupture de Charge] L API ne répond plus aux exigences de ping (<${maxPing}ms) sur ${branch} (${commitSha})`;
+            const title = `[Load Test] p95 latency exceeded ${maxPing}ms on ${branch} (${commitSha})`;
             const body = [
-              '## Rupture de charge détectée lors des tests par paliers !',
+              `Load test failed on branch \`${branch}\` (commit \`${commitSha}\`).`,
               '',
-              `Le serveur a dépassé la marge de ping tolérée (seuil **p(95) < ${maxPing}ms**) ou le taux d erreurs a excédé 1%.`,
-              '',
-              '### Informations du Run',
-              '| Paramètre | Valeur |',
-              '| :--- | :--- |',
-              `| **Branche** | \`${branch}\` |`,
-              `| **Commit** | [\`${commitSha}\`](${process.env.GITHUB_SERVER_URL || 'https://github.com'}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}) |`,
-              `| **Capacité cible (100%)** | \`${maxVus} VUs simultanés\` |`,
-              `| **Paliers exécutés** | \`10%, 30%, 60%, 100%\` |`,
-              `| **Marge de ping tolérée** | \`${maxPing} ms\` (p95) |`,
-              `| **Déclenché par** | @${context.actor} |`,
-              `| **Logs de la CI** | [Consulter le rapport k6 détaillé](${runUrl}) |`,
-              `| **Date** | ${new Date().toISOString()} |`,
-              '',
-              '---',
-              '',
-              '### Diagnostic recommandé :',
-              '- [ ] Identifier à quel palier (10%, 30%, 60% ou 100%) le ping a franchi la marge tolérée.',
-              '- [ ] Vérifier la saturation de l Event Loop Node.js ou du pool de connexions MongoDB.',
-              '- [ ] Mettre en place un clustering ou un cache Redis pour absorber le pic.',
-              '',
-              '> *Ticket incident ouvert automatiquement par le pipeline CI suite à l échec des tests de performance.*'
+              `- Target VUs: \`${maxVus}\``,
+              `- Threshold: \`p(95) < ${maxPing}ms\`, error rate \`< 1%\``,
+              `- Workflow run: ${runUrl}`,
             ].join('\n');
 
             await github.rest.issues.create({
@@ -111,7 +92,7 @@ jobs:
               repo: context.repo.repo,
               title: title,
               body: body,
-              labels: ['bug', 'performance', 'ci-failure', 'automated-issue']
+              labels: ['performance', 'ci-failure']
             });
 
       - name: Teardown Docker Stack

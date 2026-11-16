@@ -217,11 +217,6 @@ const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value;
 };
 
-// Fermer le menu mobile lorsqu'on clique à l'extérieur
-const closeMobileMenu = () => {
-  mobileMenuOpen.value = false;
-};
-
 onMounted(() => {
   void initSession();
   document.addEventListener('click', (event) => {

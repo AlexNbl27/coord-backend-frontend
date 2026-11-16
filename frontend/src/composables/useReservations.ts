@@ -22,14 +22,14 @@ const bookings = ref<UserBooking[]>(loadInitialBookings());
 
 function generateSeat(slotId: string, bookingId: string): string {
   const rows = ['D', 'E', 'F', 'G', 'H', 'J', 'K'];
+  const combined = `${slotId}:${bookingId}`;
   let hash = 0;
-  const str = slotId + bookingId;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
+  for (let i = 0; i < combined.length; i += 1) {
+    hash = (hash * 31 + combined.charCodeAt(i)) | 0;
   }
-  const row = rows[Math.abs(hash) % rows.length];
-  const seatNum = (Math.abs(hash >> 2) % 20) + 1;
+  const positive = Math.abs(hash);
+  const row = rows[positive % rows.length];
+  const seatNum = ((positive >> 2) % 20) + 1;
   return `Rangée ${row} · Fauteuil ${seatNum}`;
 }
 

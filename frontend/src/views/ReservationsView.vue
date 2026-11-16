@@ -240,26 +240,25 @@
           <!-- QR Code Section -->
           <div class="hidden lg:flex flex-col items-center justify-center p-6 bg-cinema-darker/60 border-l border-cinema-border/40 shrink-0 text-center" aria-hidden="true">
             <div class="p-2.5 bg-white rounded-xl shadow-md mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-black" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
-                <rect x="0" y="0" width="30" height="30" fill="black"/>
-                <rect x="5" y="5" width="20" height="20" fill="white"/>
-                <rect x="10" y="10" width="10" height="10" fill="black"/>
-                <rect x="70" y="0" width="30" height="30" fill="black"/>
-                <rect x="75" y="5" width="20" height="20" fill="white"/>
-                <rect x="80" y="10" width="10" height="10" fill="black"/>
-                <rect x="0" y="70" width="30" height="30" fill="black"/>
-                <rect x="5" y="75" width="20" height="20" fill="white"/>
-                <rect x="10" y="80" width="10" height="10" fill="black"/>
-                <rect x="35" y="5" width="10" height="10" fill="black"/>
-                <rect x="50" y="10" width="10" height="25" fill="black"/>
-                <rect x="35" y="25" width="10" height="10" fill="black"/>
-                <rect x="10" y="45" width="15" height="10" fill="black"/>
-                <rect x="35" y="45" width="30" height="10" fill="black"/>
-                <rect x="75" y="40" width="15" height="15" fill="black"/>
-                <rect x="40" y="65" width="20" height="10" fill="black"/>
-                <rect x="70" y="70" width="10" height="25" fill="black"/>
-                <rect x="85" y="75" width="10" height="10" fill="black"/>
-                <rect x="45" y="85" width="15" height="10" fill="black"/>
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-black" viewBox="0 0 110 110" fill="currentColor" aria-hidden="true">
+                <rect x="0" y="0" width="30" height="30" fill="black" />
+                <rect x="5" y="5" width="20" height="20" fill="white" />
+                <rect x="10" y="10" width="10" height="10" fill="black" />
+                <rect x="80" y="0" width="30" height="30" fill="black" />
+                <rect x="85" y="5" width="20" height="20" fill="white" />
+                <rect x="90" y="10" width="10" height="10" fill="black" />
+                <rect x="0" y="80" width="30" height="30" fill="black" />
+                <rect x="5" y="85" width="20" height="20" fill="white" />
+                <rect x="10" y="90" width="10" height="10" fill="black" />
+                <rect
+                  v-for="(cell, idx) in qrCells(booking.bookingId)"
+                  :key="idx"
+                  :x="cell.x"
+                  :y="cell.y"
+                  width="10"
+                  height="10"
+                  fill="black"
+                />
               </svg>
             </div>
             <span class="text-[10px] font-mono text-cinema-textMuted uppercase tracking-wider">Flash Borne</span>
@@ -415,6 +414,24 @@ const formatDateTime = (dateStr: string) => {
   }
 };
 
+const qrCells = (seed: string) => {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const cells: Array<{ x: number; y: number }> = [];
+  for (let r = 0; r < 11; r += 1) {
+    for (let c = 0; c < 11; c += 1) {
+      const inFinder = (r < 3 && c < 3) || (r < 3 && c >= 8) || (r >= 8 && c < 3);
+      if (!inFinder && (((hash >>> ((r * 11 + c) % 24)) ^ (r * 7 + c * 13)) & 1) === 1) {
+        cells.push({ x: c * 10, y: r * 10 });
+      }
+    }
+  }
+  return cells;
+};
+
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
   try {
@@ -435,10 +452,6 @@ const formatDate = (dateStr: string) => {
 
 <style scoped>
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
-  }
   .print-ticket {
     border: 2px solid #000 !important;
     box-shadow: none !important;
