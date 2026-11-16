@@ -143,7 +143,7 @@ function dispatchSmsConfirmation(bookingId, slotId) {
   });
 }
 
-export async function reserveSlot(slotId, customerId, visitorId, isMeasured, sessionUser = null) {
+export async function reserveSlot(slotId, sessionUser, visitorId, isMeasured) {
   return tracer.startActiveSpan('cineslot.reservation', async (span) => {
     span.setAttribute('cineslot.slot.id', String(slotId));
     try {
@@ -158,9 +158,8 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
         }
       }
 
-      const ownerId = sessionUser?.id || 'spectator-1';
-      const safeCustomer = typeof customerId === 'string' ? customerId.trim().slice(0, 80) : '';
-      const ownerName = sessionUser?.name || safeCustomer || 'Hélène Durand';
+      const ownerId = sessionUser.id;
+      const ownerName = sessionUser.name;
       const bookingId = crypto.randomUUID();
       const bookedAt = new Date();
 
@@ -221,15 +220,13 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
   });
 }
 
-export async function cancelSlot(slotId, sessionUser = null) {
+export async function cancelSlot(slotId, sessionUser) {
   const safeSlotId = String(slotId);
-  if (sessionUser) {
-    const activeBooking = await Booking.findOne({ slotId: safeSlotId, status: 'CONFIRMED' }).lean();
-    if (activeBooking && activeBooking.ownerId !== sessionUser.id) {
-      const error = new Error('Vous ne pouvez pas annuler la réservation d\'un autre spectateur');
-      error.status = 403;
-      throw error;
-    }
+  const activeBooking = await Booking.findOne({ slotId: safeSlotId, status: 'CONFIRMED' }).lean();
+  if (activeBooking && activeBooking.ownerId !== sessionUser.id) {
+    const error = new Error('Vous ne pouvez pas annuler la réservation d\'un autre spectateur');
+    error.status = 403;
+    throw error;
   }
 
   const filter = { _id: safeSlotId, status: 'BOOKED' };

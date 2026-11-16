@@ -122,12 +122,27 @@ npm run build
 - `page` : Numéro de page (défaut: 1)
 - `limit` : Nombre de résultats par page (défaut: 20, max: 100)
 
+### Authentification (`/api/session`)
+
+Comptes email + mot de passe (hash scrypt), session par cookie HttpOnly signé. Il n'y a plus de comptes démo : créez un compte depuis `/login`. Un visiteur anonyme peut consulter films et séances ; réserver, annuler et voir ses billets exige d'être connecté.
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/session` | Utilisateur courant |
+| POST | `/api/session/register` | `{email, name, password}` → crée le compte et connecte |
+| POST | `/api/session/login` | `{email, password}` |
+| POST | `/api/session/logout` | Déconnexion |
+| POST | `/api/session/forgot-password` | `{email}` → toujours 204, envoie un lien valable 30 min si le compte existe |
+| POST | `/api/session/reset-password` | `{token, password}` → lien à usage unique |
+
+Les emails partent via `SMTP_URL`. En Docker, ils sont capturés par **Mailpit** : http://localhost:8025. Sans `SMTP_URL` (dev hors Docker), le lien est affiché dans les logs du backend.
+
 ### Service Billetterie SSE (Spring Boot)
 
 | Méthode | Endpoint | Description | Exemple |
 |---------|----------|-------------|---------|
 | GET | `/api/slots` | Liste des séances | - |
-| POST | `/api/slots/{id}/reservations` | Réserver une place | Body: `{"customerId": "user-123"}` |
+| POST | `/api/slots/{id}/reservations` | Réserver une place (connecté) | Cookie de session requis |
 | GET | `/api/slots/events` | Flux SSE temps réel | `new EventSource(url)` |
 | POST | `/api/lab/slots` | Générer une séance de démo | - |
 

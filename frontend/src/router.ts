@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router';
+import { useSession } from './composables/useSession';
 
 const routes = [
   {
@@ -45,6 +46,25 @@ const routes = [
     meta: {
       title: 'CinéSlot - Mes Réservations',
       description: 'Gérez vos billets et annulez vos réservations',
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('./views/LoginView.vue'),
+    meta: {
+      title: 'CinéSlot - Connexion',
+      description: 'Connectez-vous ou créez votre compte CinéSlot',
+    },
+  },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('./views/ResetPasswordView.vue'),
+    meta: {
+      title: 'CinéSlot - Nouveau mot de passe',
+      description: 'Choisissez un nouveau mot de passe',
     },
   },
   {
@@ -83,7 +103,15 @@ const router = createRouter({
 });
 
 // Navigation guard pour mettre à jour le titre de la page
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
+  if (to.meta.requiresAuth) {
+    const { currentUser, initSession } = useSession();
+    await initSession();
+    if (!currentUser.value) {
+      return { name: 'login', query: { redirect: to.fullPath } };
+    }
+  }
+
   const title = (to.meta.title as string) || 'CinéSlot - Réservation de films en temps réel';
   const description = (to.meta.description as string) || 'Découvrez et réservez vos films préférés en temps réel avec synchronisation SSE';
   
