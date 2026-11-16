@@ -8,17 +8,27 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.ts,.tsx,.js,.jsx --fix",
+    "test": "vitest run src/tests",
     "test:a11y": "vitest run src/tests",
     "test:a11y:watch": "vitest src/tests",
     "test:coverage": "vitest run src/tests --coverage"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/core": "^3.1.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.301.2",
+    "@opentelemetry/instrumentation": "^0.301.2",
+    "@opentelemetry/instrumentation-fetch": "^0.301.2",
+    "@opentelemetry/resources": "^3.1.1",
+    "@opentelemetry/sdk-trace": "^3.1.1",
+    "@opentelemetry/semantic-conventions": "^1.45.0",
     "axios": "^1.7.7",
     "pinia": "^2.2.4",
     "vue": "^3.5.12",
     "vue-router": "^4.4.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@testing-library/user-event": "^14.6.8",
     "@testing-library/vue": "^8.1.0",
     "@types/node": "^22.9.0",

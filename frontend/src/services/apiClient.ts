@@ -16,6 +16,7 @@ declare module 'axios' {
  * - Notification automatique de l'état de connexion (Online / Offline)
  */
 export const apiClient = axios.create({
+  adapter: 'fetch',
   timeout: 2000,
   withCredentials: true,
   headers: {
@@ -79,6 +80,16 @@ apiClient.interceptors.response.use(
       } catch {
         // Pinia pas encore initialisé
       }
+    }
+
+    // 3. Corrélation d'erreur : attacher l'identifiant de trace (X-Trace-Id) au message d'erreur
+    const traceId = error.response?.headers?.['x-trace-id'];
+    if (traceId && typeof error.message === 'string' && !error.message.includes(traceId)) {
+      const data = error.response?.data as { message?: string } | undefined;
+      if (data && typeof data.message === 'string' && !data.message.includes(traceId)) {
+        data.message = `${data.message} (réf. ${traceId})`;
+      }
+      error.message = `${error.message} (réf. ${traceId})`;
     }
 
     return Promise.reject(error);

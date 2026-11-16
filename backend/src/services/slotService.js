@@ -1,6 +1,11 @@
 import crypto from 'node:crypto';
+import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { Slot } from '../models/Slot.js';
+import { Movie } from '../models/Movie.js';
 import { EXP, attribution } from './abService.js';
+
+const tracer = trace.getTracer('cineslot-api');
+const SMS_GATEWAY_URL = process.env.SMS_GATEWAY_URL || '';
 
 // Liste des clients SSE connectés
 const sseClients = new Set();
@@ -147,51 +152,80 @@ export async function seedInitialSlotsIfEmpty() {
 export async function allSlots() {
   await seedInitialSlotsIfEmpty();
   const slots = await Slot.find().sort({ startsAt: 1 });
+  // T2 : requête N+1 (un findOne par séance) visible dans Jaeger par la répétition des spans MongoDB
+  for (const slot of slots) {
+    if (slot.movieTitle) {
+      await Movie.findOne({ title: slot.movieTitle }).select('_id title').lean();
+    }
+  }
   return slots.map(toSlotView);
 }
 
 /**
- * Réservation d'un créneau avec attribution conditionnelle A/B
+ * Réservation d'un créneau avec attribution conditionnelle A/B et span métier OpenTelemetry
  */
 export async function reserveSlot(slotId, customerId, visitorId, isMeasured) {
-  let experimentId = null;
-  let subjectId = null;
+  return tracer.startActiveSpan('cineslot.reservation', async (span) => {
+    span.setAttribute('cineslot.slot.id', String(slotId));
+    try {
+      let experimentId = null;
+      let subjectId = null;
 
-  if (isMeasured && visitorId) {
-    const subject = await attribution(visitorId);
-    if (subject) {
-      experimentId = EXP;
-      subjectId = subject._id;
+      if (isMeasured && visitorId) {
+        const subject = await attribution(visitorId);
+        if (subject) {
+          experimentId = EXP;
+          subjectId = subject._id;
+        }
+      }
+
+      const filter = { _id: slotId, status: 'AVAILABLE' };
+      const update = {
+        $set: {
+          status: 'BOOKED',
+          bookedBy: customerId || 'Anonyme',
+          bookingId: crypto.randomUUID(),
+          bookedAt: new Date(),
+          experimentId,
+          subjectId
+        },
+        $inc: { version: 1, claimCount: 1 }
+      };
+
+      const winner = await Slot.findOneAndUpdate(filter, update, { new: true });
+      if (!winner) {
+        const exists = await Slot.exists({ _id: slotId });
+        const error = new Error(exists ? 'Créneau déjà réservé' : 'Créneau inconnu');
+        error.status = exists ? 409 : 404;
+        throw error;
+      }
+
+      // T1 : appel synchrone vers la passerelle SMS de confirmation de billet
+      if (SMS_GATEWAY_URL) {
+        await fetch(SMS_GATEWAY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: winner.bookingId, slotId: winner._id })
+        });
+      }
+
+      span.setAttribute('cineslot.reservation.id', String(winner.bookingId));
+      span.setAttribute('cineslot.status', String(winner.status));
+
+      broadcastSlotChange(winner);
+      return {
+        bookingId: winner.bookingId,
+        slotId: winner._id,
+        status: winner.status
+      };
+    } catch (err) {
+      span.recordException(err);
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+      throw err;
+    } finally {
+      span.end();
     }
-  }
-
-  const filter = { _id: slotId, status: 'AVAILABLE' };
-  const update = {
-    $set: {
-      status: 'BOOKED',
-      bookedBy: customerId || 'Anonyme',
-      bookingId: crypto.randomUUID(),
-      bookedAt: new Date(),
-      experimentId,
-      subjectId
-    },
-    $inc: { version: 1, claimCount: 1 }
-  };
-
-  const winner = await Slot.findOneAndUpdate(filter, update, { new: true });
-  if (!winner) {
-    const exists = await Slot.exists({ _id: slotId });
-    const error = new Error(exists ? 'Créneau déjà réservé' : 'Créneau inconnu');
-    error.status = exists ? 409 : 404;
-    throw error;
-  }
-
-  broadcastSlotChange(winner);
-  return {
-    bookingId: winner.bookingId,
-    slotId: winner._id,
-    status: winner.status
-  };
+  });
 }
 
 /**
@@ -247,6 +281,10 @@ export async function getSlotProof(slotId) {
     const error = new Error('Créneau inconnu');
     error.status = 404;
     throw error;
+  }
+  // T3 : erreur 500 intermittente sur certaines séances (ex: The Matrix) pour diagnostic via X-Trace-Id
+  if (slot.movieTitle === 'The Matrix') {
+    throw new Error(`Configuration de salle absente pour le créneau ${slotId}`);
   }
   return {
     id: slot._id,
