@@ -141,6 +141,8 @@ $RECYCLE.BIN/
 # =============================================================================
 .cache/
 .cache
+coverage/
+*/coverage/
 .coverage
 nyc_output/
 
