@@ -280,8 +280,6 @@ export function useSlots() {
     disconnectSse,
     reserveSlot,
     resetSlots,
-    getSlotsByMovie,
-    getSlotsByStatus,
     refreshSlots,
   };
 }
