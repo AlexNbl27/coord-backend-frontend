@@ -5,8 +5,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <div class="flex items-center gap-3">
-            <span class="text-3xl" aria-hidden="true">🎬</span>
-            <h1 class="text-3xl font-extrabold text-white tracking-tight">Catalogue des films</h1>
+            <h1 class="font-display text-3xl font-bold text-white tracking-tight">Catalogue des films</h1>
           </div>
           <p class="text-cinema-textMuted text-sm mt-1">
             Explorez notre sélection de chefs-d'œuvre cinématographiques et réservez votre séance
@@ -102,7 +101,6 @@
         <div v-for="n in 8" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
       </div>
       <div v-else-if="sortedMovies.length === 0" class="text-center py-16 bg-cinema-card/30 rounded-2xl border border-cinema-border/40">
-        <span class="text-4xl block mb-2" aria-hidden="true">🎬</span>
         <h2 class="text-lg font-bold text-white mb-1">Aucun film ne correspond à votre recherche</h2>
         <p class="text-xs text-cinema-textMuted max-w-sm mx-auto mb-4">
           Essayez d'ajuster vos critères de recherche ou réinitialisez les filtres.
@@ -192,8 +190,7 @@
               <!-- Séances disponibles pour ce film -->
               <div class="mb-5 p-3.5 bg-cinema-darker/70 rounded-xl border border-cinema-border/50">
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-xs font-bold uppercase tracking-wider text-accent-gold flex items-center gap-1.5">
-                    <span aria-hidden="true">🎟️</span>
+                  <span class="text-xs font-bold uppercase tracking-wider text-accent-gold">
                     <span>Séances programmées ({{ movieSlots.length }})</span>
                   </span>
                   <span v-if="movieSlots.length > 0" class="text-[10px] text-emerald-400 font-medium">Temps réel</span>
@@ -207,8 +204,7 @@
                     :aria-label="`Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}`"
                     class="group px-3 py-2 rounded-lg bg-cinema-card hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
                   >
-                    <span class="flex items-center gap-1">
-                      <span aria-hidden="true">🕒</span>
+                    <span class="font-mono tabular-nums">
                       <span>{{ formatSlotTime(slot.startsAt) }}</span>
                     </span>
                     <span class="px-1.5 py-0.5 rounded text-[10px] bg-white/10 group-hover:bg-black/20 text-cinema-textMuted group-hover:text-cinema-dark">

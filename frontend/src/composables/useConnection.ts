@@ -94,19 +94,16 @@ export function useConnection() {
     connectionStore.setReconnecting();
 
     try {
-      // 1. Vider la file d'attente hors-ligne
       await offlineQueue.processQueue();
 
-      // 2. Notifier tous les composables enregistrés (rafraîchir séances, films, SSE)
       for (const hook of registeredSyncHooks) {
         try {
           await hook();
         } catch (e) {
-          console.error('[useConnection] Erreur dans hook de synchronisation:', e);
+          console.error('[useConnection] Sync hook error:', e);
         }
       }
 
-      // 3. Basculer l'état à ONLINE
       connectionStore.setOnline();
     } catch (err) {
       console.error('[useConnection] Erreur lors de la reconnexion:', err);

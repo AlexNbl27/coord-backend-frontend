@@ -5,10 +5,10 @@
         <!-- Brand -->
         <div class="space-y-3 md:col-span-1">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-gradient-to-br from-accent-gold to-accent-red rounded-xl flex items-center justify-center shadow-md">
-              <span class="text-lg font-black text-cinema-dark">C</span>
+            <div class="w-9 h-9 bg-cinema-card border border-accent-gold/60 rounded flex items-center justify-center">
+              <span class="font-display text-base font-bold text-accent-gold">CS</span>
             </div>
-            <span class="text-xl font-bold text-white tracking-tight">CinéSlot</span>
+            <span class="font-display text-xl font-bold text-white tracking-tight">CinéSlot</span>
           </div>
           <p class="text-xs text-cinema-textMuted leading-relaxed">
             Plateforme cinématographique haute performance avec réservation réactive et synchronisation des séances en temps réel via Server-Sent Events.
@@ -42,8 +42,8 @@
           <h4 class="text-xs font-bold uppercase tracking-wider text-accent-gold mb-3">Architecture</h4>
           <div class="space-y-2 text-xs text-cinema-textMuted">
             <p>Vue 3 + Vite + Tailwind</p>
-            <p>Spring Boot 3 (SSE Engine)</p>
-            <p>Node.js & Express REST API</p>
+            <p>OpenTelemetry & Jaeger Tracing</p>
+            <p>Node.js 22 ESM & Express API</p>
             <p>MongoDB Replica / Persistent DB</p>
           </div>
         </div>

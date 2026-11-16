@@ -2,14 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===========================================================================
-   STYLES GLOBAUX - CinéSlot
-   =========================================================================== */
-
-/* ===========================================================================
-   Base Styles
-   =========================================================================== */
-
 @layer base {
   html {
     @apply scroll-smooth;
@@ -52,25 +44,18 @@
   }
 }
 
-/* ===========================================================================
-   Component Styles
-   =========================================================================== */
-
 @layer components {
-  /* Movie Card */
   .movie-card {
-    @apply bg-cinema-card rounded-xl overflow-hidden shadow-cinema
-           transition-all duration-300 hover:scale-105 hover:shadow-cinema-lg
-           hover:-translate-y-2 cursor-pointer;
+    @apply bg-cinema-card rounded-lg overflow-hidden border border-cinema-border
+           transition-colors duration-200 hover:border-cinema-borderLight cursor-pointer;
   }
 
   .movie-card img {
-    @apply w-full h-full object-cover transition-transform duration-500;
+    @apply w-full h-full object-cover transition-transform duration-300;
   }
 
-  /* Slot Card */
   .slot-card {
-    @apply bg-cinema-card rounded-lg p-4 border transition-all duration-300;
+    @apply bg-cinema-card rounded-lg p-5 border transition-colors duration-200;
   }
 
   .slot-card-available {
@@ -95,7 +80,7 @@
   }
 
   .badge-genre {
-    @apply bg-accent-purple/20 text-purple-300 border border-accent-purple/30 mr-1;
+    @apply bg-cinema-darker text-cinema-textLight border border-cinema-borderLight mr-1;
   }
 
   .badge-rating {
@@ -276,55 +261,7 @@
   }
 }
 
-/* ===========================================================================
-   Utility Styles
-   =========================================================================== */
-
 @layer utilities {
-  /* Text Gradient */
-  .text-gradient {
-    @apply bg-gradient-to-r from-accent-gold to-accent-red bg-clip-text text-transparent;
-  }
-
-  .text-gradient-purple {
-    @apply bg-gradient-to-r from-accent-purple to-accent-gold bg-clip-text text-transparent;
-  }
-
-  /* Background Gradient Animation */
-  .bg-gradient-animated {
-    @apply bg-gradient-to-br from-cinema-dark via-cinema-darker to-cinema-dark
-           bg-[length:200%_200%] animate-gradient;
-  }
-
-  @keyframes gradient {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-
-  /* Glow Effect */
-  .glow {
-    @apply relative;
-  }
-
-  .glow::after {
-    @apply absolute inset-0 rounded-full bg-radial-gold opacity-0
-           transition-opacity duration-300;
-    content: '';
-    pointer-events: none;
-  }
-
-  .glow:hover::after {
-    @apply opacity-100;
-  }
-
-  /* Hide scrollbar but keep functionality */
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -373,16 +310,6 @@
     @apply bg-white/10 backdrop-blur-sm border border-white/20;
   }
 
-  /* Neon effect for buttons */
-  .neon {
-    @apply relative overflow-hidden;
-  }
-
-  .neon::before {
-    @apply absolute inset-0 bg-gradient-to-b from-transparent via-white/10 to-transparent;
-    content: '';
-  }
-
   /* Shimmer effect for loading */
   .shimmer {
     @apply relative overflow-hidden;
@@ -400,58 +327,6 @@
     }
     100% {
       transform: translateX(100%);
-    }
-  }
-
-  /* Bounce animation for notifications */
-  .bounce-notification {
-    @apply animate-bounce-in;
-  }
-
-  @keyframes bounce-in {
-    0% {
-      transform: scale(0.95) translateY(-10px);
-      opacity: 0;
-    }
-    50% {
-      transform: scale(1.05) translateY(0);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(1) translateY(0);
-      opacity: 1;
-    }
-  }
-
-  /* Slide from left animation */
-  .slide-left {
-    @apply animate-slide-left;
-  }
-
-  @keyframes slide-left {
-    from {
-      transform: translateX(-20px);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  /* Slide from right animation */
-  .slide-right {
-    @apply animate-slide-right;
-  }
-
-  @keyframes slide-right {
-    from {
-      transform: translateX(20px);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
     }
   }
 }

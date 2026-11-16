@@ -8,9 +8,6 @@
       Aller au contenu principal
     </a>
 
-    <!-- Background gradient subtil -->
-    <div class="fixed inset-0 bg-gradient-cinema pointer-events-none" aria-hidden="true"></div>
-    
     <!-- NavBar -->
     <Navbar />
     

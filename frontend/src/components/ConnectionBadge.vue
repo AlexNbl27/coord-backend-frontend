@@ -40,7 +40,6 @@
         aria-label="Tenter une reconnexion immédiate"
         title="Tenter une reconnexion immédiate"
       >
-        <span aria-hidden="true">🔄</span>
         <span>Réessayer</span>
       </button>
     </template>

@@ -102,8 +102,7 @@
 
               <div class="flex justify-between items-center pt-2.5">
                 <span class="text-cinema-textMuted font-medium">Fauteuil attribué</span>
-                <span class="text-emerald-400 font-bold flex items-center gap-1.5">
-                  <span aria-hidden="true">💺</span>
+                <span class="text-emerald-400 font-bold">
                   <span>{{ assignedSeat }}</span>
                 </span>
               </div>
@@ -120,9 +119,8 @@
           <button
             @click="goToReservations"
             :aria-label="`Accéder à mes billets et consulter la réservation de ${movieTitle}`"
-            class="w-full py-3 rounded-xl bg-gradient-to-r from-accent-gold to-yellow-600 text-cinema-dark font-extrabold text-sm hover:brightness-110 shadow-lg shadow-accent-gold/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            class="w-full py-3 rounded-md bg-accent-gold hover:bg-accent-goldLight text-cinema-dark font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span aria-hidden="true">🎟️</span>
             <span>Accéder à mes Billets</span>
           </button>
 
@@ -131,9 +129,8 @@
               v-if="currentBooking"
               @click="downloadCalendar"
               :aria-label="`Ajouter la séance de ${movieTitle} du ${formattedStartsAt} à mon agenda`"
-              class="flex-1 py-2.5 rounded-xl border border-cinema-border hover:border-accent-gold/50 text-cinema-text hover:text-white text-xs font-semibold bg-cinema-darker/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              class="flex-1 py-2.5 rounded-md border border-cinema-border hover:border-accent-gold/50 text-cinema-text hover:text-white text-xs font-semibold bg-cinema-darker/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span aria-hidden="true">📅</span>
               <span>Ajouter à l'agenda</span>
             </button>
 

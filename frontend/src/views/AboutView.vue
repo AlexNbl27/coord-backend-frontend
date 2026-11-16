@@ -1,13 +1,9 @@
 <template>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto">
-      <!-- En-tête standardisé -->
-      <div class="flex items-center gap-3 mb-8">
-        <span class="text-3xl" aria-hidden="true">ℹ️</span>
-        <div>
-          <h1 class="text-3xl font-extrabold text-white tracking-tight">À propos de CinéSlot</h1>
-          <p class="text-cinema-textMuted text-sm mt-1">Plateforme de réservation de cinéma haute fidélité en temps réel</p>
-        </div>
+      <div class="mb-8">
+        <h1 class="font-display text-3xl font-bold text-white tracking-tight">À propos de CinéSlot</h1>
+        <p class="text-cinema-textMuted text-sm mt-1">Plateforme de réservation de cinéma en temps réel</p>
       </div>
 
       <!-- Contenu principal -->
@@ -122,12 +118,11 @@
               <div>
                 <h3 class="text-white font-semibold mb-2">Backend</h3>
                 <div class="flex flex-wrap gap-2">
-                  <span class="badge-rating">Node.js 20</span>
+                  <span class="badge-rating">Node.js 22 ESM</span>
                   <span class="badge-rating">Express</span>
                   <span class="badge-rating">Mongoose</span>
                   <span class="badge-rating">MongoDB</span>
-                  <span class="badge-rating">Spring Boot 3.5</span>
-                  <span class="badge-rating">Java 21</span>
+                  <span class="badge-rating">OpenTelemetry</span>
                   <span class="badge-rating">SSE</span>
                 </div>
               </div>

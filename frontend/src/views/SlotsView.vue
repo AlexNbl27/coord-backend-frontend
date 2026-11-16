@@ -5,8 +5,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <div class="flex items-center gap-3">
-            <span class="text-3xl" aria-hidden="true">🎬</span>
-            <h1 class="text-3xl font-extrabold text-white tracking-tight">Séances de cinéma</h1>
+            <h1 class="font-display text-3xl font-bold text-white tracking-tight">Séances de cinéma</h1>
           </div>
           <p class="text-cinema-textMuted text-sm mt-1">
             Réservation instantanée de places avec synchronisation temps réel
@@ -21,7 +20,6 @@
             aria-label="Réinitialiser toutes les séances à l'état disponible"
             title="Remettre toutes les séances à l'état disponible"
           >
-            <span aria-hidden="true">🔄</span>
             <span>Réinitialiser les séances</span>
           </button>
 
@@ -52,7 +50,9 @@
           <!-- Recherche textuelle -->
           <div class="relative">
             <label for="slots-search-input" class="sr-only">Rechercher par film ou par salle</label>
-            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-cinema-textMuted text-sm" aria-hidden="true">🔍</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-cinema-textMuted pointer-events-none" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+            </svg>
             <input
               id="slots-search-input"
               v-model="searchFilter"
@@ -108,7 +108,7 @@
               :aria-pressed="techFilter === 'IMAX' ? 'true' : 'false'"
               aria-label="Format : Séances IMAX Laser uniquement"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
-              :class="techFilter === 'IMAX' ? 'bg-blue-500 text-white shadow-sm' : 'bg-cinema-darker text-blue-400 hover:text-blue-300 border border-blue-500/30'"
+              :class="techFilter === 'IMAX' ? 'bg-accent-gold text-cinema-dark shadow-sm' : 'bg-cinema-darker text-cinema-textMuted hover:text-white border border-cinema-border/50'"
             >
               IMAX Laser
             </button>
@@ -117,7 +117,7 @@
               :aria-pressed="techFilter === 'Dolby' ? 'true' : 'false'"
               aria-label="Format : Séances Dolby Atmos uniquement"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
-              :class="techFilter === 'Dolby' ? 'bg-purple-500 text-white shadow-sm' : 'bg-cinema-darker text-purple-400 hover:text-purple-300 border border-purple-500/30'"
+              :class="techFilter === 'Dolby' ? 'bg-accent-gold text-cinema-dark shadow-sm' : 'bg-cinema-darker text-cinema-textMuted hover:text-white border border-cinema-border/50'"
             >
               Dolby Atmos
             </button>
@@ -126,7 +126,7 @@
               :aria-pressed="techFilter === '70mm' ? 'true' : 'false'"
               aria-label="Format : Séances 70mm Grand Large uniquement"
               class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer leading-none"
-              :class="techFilter === '70mm' ? 'bg-amber-500 text-cinema-dark shadow-sm' : 'bg-cinema-darker text-amber-400 hover:text-amber-300 border border-amber-500/30'"
+              :class="techFilter === '70mm' ? 'bg-accent-gold text-cinema-dark shadow-sm' : 'bg-cinema-darker text-cinema-textMuted hover:text-white border border-cinema-border/50'"
             >
               70mm Grand Large
             </button>
@@ -177,7 +177,6 @@
 
       <!-- Empty State -->
       <div v-else-if="displayedSlots.length === 0" class="text-center py-16 bg-cinema-card/30 rounded-2xl border border-cinema-border/40 p-8">
-        <span class="text-4xl block mb-2" aria-hidden="true">🎟️</span>
         <h2 class="text-lg font-bold text-white mb-1">Aucune séance ne correspond à ces critères</h2>
         <p class="text-xs text-cinema-textMuted max-w-sm mx-auto mb-4">
           Modifiez vos filtres de film, salle ou format pour afficher d'autres créneaux.

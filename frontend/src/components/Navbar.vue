@@ -4,16 +4,11 @@
       <div class="flex items-center justify-between h-16">
         <!-- Logo -->
         <router-link to="/" class="flex items-center gap-3" aria-label="CinéSlot - Accueil">
-          <div class="relative" aria-hidden="true">
-            <div class="w-10 h-10 bg-gradient-to-br from-accent-gold to-accent-red rounded-xl flex items-center justify-center shadow-md">
-              <span class="text-xl font-black text-cinema-dark">C</span>
-            </div>
-            <div class="absolute -top-1 -right-1 w-4 h-4 bg-accent-gold rounded-full border-2 border-cinema-dark flex items-center justify-center">
-              <span class="text-[10px] font-bold text-cinema-dark">S</span>
-            </div>
+          <div class="w-9 h-9 bg-cinema-card border border-accent-gold/60 rounded flex items-center justify-center" aria-hidden="true">
+            <span class="font-display text-base font-bold text-accent-gold tracking-tight">CS</span>
           </div>
           <div class="hidden sm:flex flex-col">
-            <span class="text-xl font-bold text-cinema-text">CinéSlot</span>
+            <span class="font-display text-xl font-bold text-cinema-text tracking-tight">CinéSlot</span>
             <span class="text-xs text-cinema-textMuted -mt-1">Réservation en temps réel</span>
           </div>
         </router-link>
@@ -98,7 +93,7 @@
             aria-label="Consulter les métriques du Test A/B"
             title="Consulter les métriques du Test A/B"
           >
-            <span aria-hidden="true">🧪</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-accent-gold" aria-hidden="true"></span>
             <span class="hidden sm:inline">Test A/B :</span>
             <span>{{ variant }}</span>
           </button>
@@ -172,7 +167,6 @@
               @click="mobileMenuOpen = false"
             >
               <span class="flex items-center gap-2">
-                <span aria-hidden="true">🎫</span>
                 <span>Mes Billets</span>
               </span>
               <span
@@ -243,24 +237,5 @@ onMounted(() => {
 .navbar {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-}
-
-/* Animation pour le logo */
-.navbar .w-10 {
-  animation: float 6s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-2px) rotate(5deg);
-  }
-}
-
-/* Animation pour le badge S */
-.navbar .w-4 {
-  animation: pulse-slow 2s ease-in-out infinite;
 }
 </style>

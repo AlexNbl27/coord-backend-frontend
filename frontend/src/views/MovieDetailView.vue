@@ -33,7 +33,6 @@
 
       <!-- Error State -->
       <div v-else-if="error || !movie" class="text-center py-16 bg-cinema-card/30 rounded-2xl border border-cinema-border/40">
-        <span class="text-5xl block mb-3">⚠️</span>
         <h2 class="text-xl font-bold text-white mb-2">Film introuvable</h2>
         <p class="text-sm text-cinema-textMuted mb-6">{{ error || "Ce film n'existe pas ou a été retiré." }}</p>
         <router-link
@@ -57,8 +56,8 @@
                 :alt="`Affiche officielle du film ${movie.title}`"
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              <div v-else class="w-full h-full bg-gradient-to-br from-cinema-border to-cinema-darker flex items-center justify-center" aria-hidden="true">
-                <span class="text-6xl opacity-30">🎬</span>
+              <div v-else class="w-full h-full bg-cinema-darker flex items-center justify-center" aria-hidden="true">
+                <span class="text-xs text-cinema-textMuted">Affiche indisponible</span>
               </div>
 
               <!-- Note IMDB Badge -->
@@ -73,7 +72,7 @@
           <!-- Détails film -->
           <div class="lg:col-span-2 flex flex-col justify-between">
             <div>
-              <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-2">
+              <h1 class="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight mb-2">
                 {{ movie.title }}
               </h1>
               <p class="text-sm text-cinema-textMuted mb-4">
@@ -114,7 +113,7 @@
                     :key="index"
                     class="bg-cinema-darker/80 px-3 py-1.5 rounded-lg text-xs text-cinema-text border border-cinema-border/50"
                   >
-                    <span aria-hidden="true">👤</span> {{ actor }}
+                    {{ actor }}
                   </span>
                 </div>
               </div>
@@ -143,8 +142,7 @@
           <div class="flex items-center justify-between">
             <div>
               <div class="flex items-center gap-2">
-                <span class="text-2xl" aria-hidden="true">🎟️</span>
-                <h2 class="text-2xl font-bold text-white">Séances programmées</h2>
+                <h2 class="font-display text-2xl font-bold text-white">Séances programmées</h2>
               </div>
               <p class="text-sm text-cinema-textMuted mt-1">
                 Choisissez votre séance ci-dessous pour réserver immédiatement vos fauteuils en temps réel.
@@ -170,7 +168,6 @@
 
           <!-- Empty State Séances -->
           <div v-else class="text-center py-12 bg-cinema-card/30 rounded-2xl border border-cinema-border/40 p-6">
-            <span class="text-4xl block mb-2" aria-hidden="true">🕒</span>
             <h3 class="text-lg font-bold text-white mb-1">Aucune séance aujourd'hui</h3>
             <p class="text-xs text-cinema-textMuted max-w-md mx-auto mb-4">
               Ce film n'a pas de séance active pour aujourd'hui. D'autres chefs-d'œuvre sont actuellement à l'affiche.

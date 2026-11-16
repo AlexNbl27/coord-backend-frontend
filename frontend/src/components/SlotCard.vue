@@ -12,7 +12,7 @@
       <!-- En-tête avec titre du film et statut -->
       <div class="flex justify-between items-start gap-2 mb-3">
         <div class="flex-1">
-          <h4 class="text-white font-bold text-base sm:text-lg line-clamp-1 leading-snug">
+          <h4 class="font-display text-white font-bold text-base sm:text-lg line-clamp-1 leading-snug">
             {{ slot.movieTitle }}
           </h4>
           <p class="text-cinema-textMuted text-xs mt-1">
@@ -38,7 +38,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cinema-textMuted shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
         </svg>
-        <span class="text-cinema-text text-xs font-semibold">
+        <span class="text-cinema-text text-xs font-mono tabular-nums font-semibold">
           {{ formattedStartsAt }}
         </span>
       </div>
@@ -47,24 +47,24 @@
       <div class="flex items-center gap-1.5 flex-wrap mb-4" aria-label="Caractéristiques de la séance">
         <span
           v-if="slot.hall && slot.hall.includes('IMAX')"
-          class="px-2 py-0.5 rounded text-xs font-black tracking-wider bg-blue-500/15 text-blue-400 border border-blue-500/30"
+          class="px-2 py-0.5 rounded-sm text-[10px] font-mono uppercase tracking-wider bg-cinema-darker text-cinema-textLight border border-cinema-borderLight"
         >
           IMAX LASER
         </span>
         <span
           v-else-if="slot.hall && slot.hall.includes('Dolby')"
-          class="px-2 py-0.5 rounded text-xs font-black tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/30"
+          class="px-2 py-0.5 rounded-sm text-[10px] font-mono uppercase tracking-wider bg-cinema-darker text-cinema-textLight border border-cinema-borderLight"
         >
           DOLBY ATMOS
         </span>
         <span
           v-else-if="slot.hall && slot.hall.includes('70mm')"
-          class="px-2 py-0.5 rounded text-xs font-black tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30"
+          class="px-2 py-0.5 rounded-sm text-[10px] font-mono uppercase tracking-wider bg-cinema-darker text-cinema-textLight border border-cinema-borderLight"
         >
           70MM ANALOG
         </span>
         <span
-          class="px-2 py-0.5 rounded text-xs font-medium bg-white/5 text-gray-400 border border-white/5"
+          class="px-2 py-0.5 rounded-sm text-[10px] font-mono uppercase tracking-wider bg-cinema-darker text-cinema-textMuted border border-cinema-border"
         >
           Fauteuil Club
         </span>
@@ -83,7 +83,6 @@
         :aria-busy="isReserving ? 'true' : 'false'"
       >
         <span v-if="!isReserving" class="flex items-center justify-center gap-2">
-          <span aria-hidden="true">🎟️</span>
           <span>{{ bookingButtonLabel }}</span>
           <span v-if="!sseConnected" class="text-[10px] text-amber-200 opacity-80">(différé)</span>
         </span>
@@ -101,7 +100,6 @@
       <!-- Message si séance complète ou en attente de synchro -->
       <div v-else class="text-center py-2">
         <span v-if="isPendingSync" class="inline-flex items-center gap-1.5 text-xs text-amber-300 font-semibold bg-amber-500/15 px-2.5 py-1 rounded-full border border-amber-500/30">
-          <span aria-hidden="true">⏳</span>
           <span>En attente de synchronisation</span>
         </span>
         <p v-else class="text-xs text-cinema-textMuted/70 font-medium">
