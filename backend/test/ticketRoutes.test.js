@@ -5,7 +5,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import { createTicketRouter } from '../src/routes/ticketRoutes.js';
 import {
-  attachSession,
+  createAttachSession,
   SESSION_COOKIE_NAME,
   signSessionToken
 } from '../src/services/sessionService.js';
@@ -14,7 +14,7 @@ import { CANCELLED_MESSAGE, NOT_FOUND_MESSAGE } from '../src/services/ticketServ
 function createTestApp(buildTicketStub) {
   const app = express();
   app.use(cookieParser());
-  app.use(attachSession);
+  app.use(createAttachSession({ exists: async () => ({}) }));
   app.use('/api/bookings', createTicketRouter({ buildTicket: buildTicketStub }));
   return app;
 }
@@ -32,7 +32,7 @@ async function request(app, path, headers = {}) {
   }
 }
 
-const VALID_COOKIE = `${SESSION_COOKIE_NAME}=${signSessionToken('spectator-1')}`;
+const VALID_COOKIE = `${SESSION_COOKIE_NAME}=${signSessionToken({ id: 'spectator-1', name: 'Hélène Durand', email: 'helene@cineslot.test' })}`;
 
 test('ticketRoutes: returns 200 with inline PDF and security headers', async () => {
   const samplePdf = Buffer.from('%PDF-1.4\n%sample');

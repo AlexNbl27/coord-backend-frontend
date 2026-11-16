@@ -75,6 +75,16 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // Session absente ou expirée : redirection vers la page de connexion
+    if (error.response?.status === 401 && !config?.url?.startsWith('/api/session')) {
+      void import('../router').then(({ default: router }) => {
+        const current = router.currentRoute.value;
+        if (current.name !== 'login') {
+          void router.push({ name: 'login', query: { redirect: current.fullPath } });
+        }
+      });
+    }
+
     const traceId = error.response?.headers?.['x-trace-id'];
     if (traceId && typeof error.message === 'string' && !error.message.includes(traceId)) {
       const data = error.response?.data as { message?: string } | undefined;

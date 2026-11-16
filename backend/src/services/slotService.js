@@ -362,7 +362,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
   });
 }
 
-export async function cancelSlot(slotId, sessionUser = null) {
+export async function cancelSlot(slotId, sessionUser) {
   const safeSlotId = String(slotId);
   const bookingFilter = sessionUser
     ? { slotId: safeSlotId, ownerId: sessionUser.id, status: 'CONFIRMED' }
