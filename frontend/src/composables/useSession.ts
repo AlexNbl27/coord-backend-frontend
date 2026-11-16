@@ -8,6 +8,7 @@ export interface SpectatorUser {
 }
 
 const currentUser = ref<SpectatorUser | null>(null);
+const googleEnabled = ref(false);
 let initPromise: Promise<void> | null = null;
 
 const REQUEST_OPTIONS = { withCredentials: true, skipOfflineTrigger: true };
@@ -21,9 +22,10 @@ function apiErrorMessage(err: any): string {
 export function useSession() {
   const initSession = () => {
     initPromise ??= apiClient
-      .get<{ authenticated: boolean; user: SpectatorUser | null }>('/api/session', REQUEST_OPTIONS)
+      .get<{ authenticated: boolean; user: SpectatorUser | null; googleEnabled?: boolean }>('/api/session', REQUEST_OPTIONS)
       .then((response) => {
         currentUser.value = response.data.authenticated ? response.data.user : null;
+        googleEnabled.value = Boolean(response.data.googleEnabled);
       })
       .catch(() => {
         // Hors-ligne ou tests unitaires : on reste anonyme
@@ -80,6 +82,7 @@ export function useSession() {
 
   return {
     currentUser,
+    googleEnabled,
     initSession,
     login,
     register,

@@ -135,6 +135,11 @@ Comptes email + mot de passe (hash scrypt), session par cookie HttpOnly signé. 
 | POST | `/api/session/forgot-password` | `{email}` → toujours 204, envoie un lien valable 30 min si le compte existe |
 | POST | `/api/session/reset-password` | `{token, password}` → lien à usage unique |
 
+| GET | `/api/session/google` | Connexion Google (OAuth / OpenID Connect, PKCE) |
+| GET | `/api/session/google/callback` | Retour de Google |
+
+**Connexion Google** : créez un identifiant OAuth « Application Web » dans Google Cloud Console, déclarez l'URI de redirection `http://localhost:3001/api/session/google/callback` (ou `http://localhost:5173/...` en dev Vite, via `GOOGLE_REDIRECT_URI` et `APP_URL`), puis renseignez `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`. Sans ces variables, le bouton est masqué. Si un compte avec mot de passe existe déjà pour cet email, la connexion Google est refusée (pas de fusion automatique).
+
 Les emails partent via `SMTP_URL`. En Docker, ils sont capturés par **Mailpit** : http://localhost:8025. Sans `SMTP_URL` (dev hors Docker), le lien est affiché dans les logs du backend.
 
 ### Service Billetterie SSE (Spring Boot)

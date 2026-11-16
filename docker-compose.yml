@@ -35,6 +35,8 @@ services:
       - SMS_GATEWAY_URL=http://sms-passerelle:8090/sms
       - SMTP_URL=${SMTP_URL:-smtp://mailpit:1025}
       - APP_URL=${APP_URL:-http://localhost:3001}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - OTEL_SERVICE_NAME=cineslot-api
       - OTEL_RESOURCE_ATTRIBUTES=service.version=${GIT_SHA:-local}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318

@@ -38,6 +38,11 @@
         </button>
       </form>
 
+      <template v-if="googleEnabled && mode !== 'forgot'">
+        <p class="my-4 text-center text-xs text-cinema-textMuted">ou</p>
+        <a :href="googleUrl" class="btn btn-outline w-full text-center">Continuer avec Google</a>
+      </template>
+
       <div class="mt-6 flex flex-col gap-2 text-sm">
         <button v-if="mode === 'login'" type="button" class="text-accent-gold hover:underline text-left cursor-pointer" @click="switchMode('forgot')">
           Mot de passe oublié ?
@@ -54,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSession } from '../composables/useSession';
 
@@ -73,13 +78,19 @@ const SUBMIT_LABELS: Record<Mode, string> = {
 
 const route = useRoute();
 const router = useRouter();
-const { login, register, forgotPassword } = useSession();
+const { login, register, forgotPassword, googleEnabled, initSession } = useSession();
+void initSession();
+
+const OAUTH_ERRORS: Record<string, string> = {
+  google: 'La connexion avec Google a échoué. Réessayez.',
+  google_email_taken: 'Un compte existe déjà avec cet email : connectez-vous avec votre mot de passe.',
+};
 
 const mode = ref<Mode>('login');
 const email = ref('');
 const name = ref('');
 const password = ref('');
-const error = ref('');
+const error = ref(OAUTH_ERRORS[String(route.query.error)] ?? '');
 const notice = ref(route.query.reset === 'ok' ? 'Mot de passe modifié. Vous pouvez vous connecter.' : '');
 const pending = ref(false);
 
@@ -94,6 +105,8 @@ const redirectTarget = () => {
   const target = route.query.redirect;
   return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') ? target : '/';
 };
+
+const googleUrl = computed(() => `/api/session/google?redirect=${encodeURIComponent(redirectTarget())}`);
 
 const submit = async () => {
   error.value = '';

@@ -4,7 +4,8 @@ const userSchema = new mongoose.Schema({
   _id: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   name: { type: String, required: true, trim: true },
-  passwordHash: { type: String, required: true },
+  passwordHash: { type: String, default: undefined },
+  googleId: { type: String, default: undefined, unique: true, sparse: true },
   resetTokenHash: { type: String, default: undefined, index: { sparse: true } },
   resetTokenExpires: { type: Date, default: undefined },
   createdAt: { type: Date, default: Date.now }
