@@ -39,6 +39,15 @@ const routes = [
     },
   },
   {
+    path: '/cinemas',
+    name: 'cinemas',
+    component: () => import('./views/CinemasView.vue'),
+    meta: {
+      title: 'CinéSlot - Cinémas autour de moi',
+      description: 'Trouvez un cinéma à moins de 5 km',
+    },
+  },
+  {
     path: '/reservations',
     name: 'reservations',
     component: () => import('./views/ReservationsView.vue'),
