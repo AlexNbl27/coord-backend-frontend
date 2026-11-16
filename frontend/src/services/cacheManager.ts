@@ -1,8 +1,3 @@
-/**
- * Service de gestion du cache local persistant (Stale-While-Revalidate)
- * Permet à l'application de fonctionner de manière fluide même en cas de coupure du backend.
- */
-
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -19,9 +14,6 @@ export const CacheKeys = {
 } as const;
 
 export const cacheManager = {
-  /**
-   * Enregistre une valeur dans le cache avec un TTL donné
-   */
   set<T>(key: string, data: T, ttlMs: number = 60000): void {
     try {
       const entry: CacheEntry<T> = {
@@ -35,9 +27,6 @@ export const cacheManager = {
     }
   },
 
-  /**
-   * Récupère une entrée du cache
-   */
   get<T>(key: string): { data: T; isStale: boolean } | null {
     try {
       const raw = localStorage.getItem(`${CACHE_PREFIX}${key}`);
@@ -56,9 +45,6 @@ export const cacheManager = {
     }
   },
 
-  /**
-   * Supprime une clé spécifique du cache
-   */
   remove(key: string): void {
     try {
       localStorage.removeItem(`${CACHE_PREFIX}${key}`);
@@ -67,9 +53,6 @@ export const cacheManager = {
     }
   },
 
-  /**
-   * Vide tout le cache de l'application
-   */
   clearAll(): void {
     try {
       const keysToRemove: string[] = [];

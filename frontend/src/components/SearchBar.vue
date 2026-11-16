@@ -165,7 +165,6 @@ const emit = defineEmits(['search', 'update:search', 'update:genre', 'update:min
 
 const moviesStore = useMoviesStore();
 
-// État local
 const searchQuery = ref(props.search || '');
 const selectedGenre = ref(props.genre || '');
 const minRating = ref(props.minRating?.toString() || '');
@@ -176,24 +175,19 @@ const hasCustomFilters = computed(() => {
   return Boolean(selectedGenre.value || minRating.value || minYear.value);
 });
 
-// Configuration de la recherche réactive
 const minSearchLength = computed(() => props.minSearchLength ?? 2);
 const debounceDelay = computed(() => props.debounceDelay || 250);
 
-// Timer pour le debounce
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-// Genre disponibles
 const availableGenres = computed(() => {
   return props.availableGenres || moviesStore.availableGenres;
 });
 
-// Nombre de résultats
 const resultsCount = computed(() => {
   return props.resultsCount ?? 0;
 });
 
-// Gérer la recherche avec debounce
 const handleSearch = () => {
   if (debounceTimer) {
     clearTimeout(debounceTimer);
@@ -207,7 +201,6 @@ const handleSearch = () => {
   }, debounceDelay.value);
 };
 
-// Appliquer les filtres
 const applyFilters = () => {
   if (debounceTimer) {
     clearTimeout(debounceTimer);
@@ -219,7 +212,6 @@ const applyFilters = () => {
   emit('search', searchQuery.value);
 };
 
-// Réinitialiser les filtres
 const resetFilters = () => {
   selectedGenre.value = '';
   minRating.value = '';
@@ -227,14 +219,12 @@ const resetFilters = () => {
   applyFilters();
 };
 
-// Effacer la recherche
 const clearSearch = () => {
   searchQuery.value = '';
   emit('update:search', '');
   emit('search', '');
 };
 
-// Synchroniser avec les props
 watch(() => props.search, (val) => {
   searchQuery.value = val || '';
 });

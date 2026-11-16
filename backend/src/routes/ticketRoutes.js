@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Cinema } from '../models/Cinema.js';
-import { buildProblemDetail, requireSession } from '../services/sessionService.js';
+import { requireSession, sendProblem } from '../services/sessionService.js';
 import { buildTicket } from '../services/ticketService.js';
 import { getTenantModels, isValidSlug, useTenantDb } from '../tenancy/index.js';
 
@@ -61,10 +61,7 @@ export function createTicketRouter(deps = {}) {
         ? 'La génération du billet PDF a échoué.'
         : err.message;
 
-      return res
-        .status(status)
-        .type('application/problem+json')
-        .json(buildProblemDetail(status, title, detail));
+      return sendProblem(res, status, title, detail);
     }
   });
 

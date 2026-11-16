@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Cinema } from '../models/Cinema.js';
 import { roundKm } from '../geo/distance.js';
 import { findInBox, findWithGeoNear } from '../geo/finders.js';
-import { buildProblemDetail } from '../services/sessionService.js';
+import { sendProblem } from '../services/sessionService.js';
 
 function badRequest(message) {
   const err = new Error(message);
@@ -99,10 +99,7 @@ export function createCinemaRouter(deps = {}) {
     } catch (err) {
       const status = err.status || 500;
       const detail = status >= 500 ? 'La recherche de cinémas a échoué.' : err.message;
-      return res
-        .status(status)
-        .type('application/problem+json')
-        .json(buildProblemDetail(status, status === 400 ? 'Bad Request' : 'Internal Server Error', detail));
+      return sendProblem(res, status, status === 400 ? 'Bad Request' : 'Internal Server Error', detail);
     }
   });
 

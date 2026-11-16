@@ -89,10 +89,6 @@
           :key="booking.bookingId"
           class="relative bg-cinema-card rounded-2xl border border-cinema-border/60 overflow-hidden shadow-cinema hover:border-cinema-border transition-all flex flex-col md:flex-row group print-ticket"
         >
-          <!-- Left Decorative Notch -->
-          <div class="hidden md:block absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-cinema-dark rounded-full border border-cinema-border/60 z-20" aria-hidden="true"></div>
-
-          <!-- Poster / Film visual -->
           <div class="w-full md:w-52 h-48 md:h-auto relative bg-cinema-darker overflow-hidden shrink-0">
             <img
               v-if="posterFor(booking)"
@@ -105,38 +101,34 @@
             </div>
             <div class="absolute inset-0 bg-gradient-to-t from-cinema-card md:from-transparent md:bg-gradient-to-r md:via-transparent md:to-cinema-card/40" aria-hidden="true"></div>
             
-            <!-- Status Badge on Image -->
             <div class="absolute top-3 left-3 z-10">
               <span
                 v-if="booking.status === 'ACTIVE'"
-                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/90 text-cinema-dark backdrop-blur-md shadow-md"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-cinema-dark shadow-md"
               >
-                <span class="w-2 h-2 rounded-full bg-cinema-dark animate-pulse"></span>
                 Billet Valide
               </span>
               <span
                 v-else-if="booking.status === 'PENDING_SYNC'"
-                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/90 text-cinema-dark backdrop-blur-md shadow-md"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-cinema-dark shadow-md"
               >
-                <span class="w-2 h-2 rounded-full bg-cinema-dark animate-ping"></span>
                 En attente de synchronisation
               </span>
               <span
                 v-else-if="booking.status === 'CANCELLED_PENDING_SYNC'"
-                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-600/90 text-white backdrop-blur-md shadow-md"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-600 text-white shadow-md"
               >
                 Annulation différée
               </span>
               <span
                 v-else
-                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-500/80 text-white backdrop-blur-md shadow-md"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white shadow-md"
               >
                 Annulé
               </span>
             </div>
           </div>
 
-          <!-- Main Ticket Content -->
           <div class="flex-1 p-6 flex flex-col justify-between">
             <div>
               <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4">
@@ -285,9 +277,6 @@
             <span class="text-[10px] font-mono text-cinema-textMuted uppercase tracking-wider">Flash Borne</span>
             <span class="text-[10px] font-bold text-accent-gold mt-0.5">Accès Direct</span>
           </div>
-
-          <!-- Right Decorative Notch -->
-          <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-cinema-dark rounded-full border border-cinema-border/60 z-20"></div>
         </div>
       </div>
     </div>

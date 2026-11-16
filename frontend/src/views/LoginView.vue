@@ -208,7 +208,7 @@ async function startMfaStep() {
 // Already signed in on the admin portal (reload, or step-up asked by the router): only the TOTP is missing.
 onMounted(async () => {
   await initSession();
-  if (isAdminPlane && currentUser.value && (mfaVerifiedAt.value === null || route.query.mfa === '1')) {
+  if (isAdminPlane && currentUser?.value && (mfaVerifiedAt?.value === null || route.query.mfa === '1')) {
     await startMfaStep();
   }
 });

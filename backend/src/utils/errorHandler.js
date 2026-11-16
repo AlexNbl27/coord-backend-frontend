@@ -1,6 +1,6 @@
 import { STATUS_CODES } from 'node:http';
 import { trace, isSpanContextValid, SpanStatusCode } from '@opentelemetry/api';
-import { buildProblemDetail } from '../services/sessionService.js';
+import { sendProblem } from '../services/sessionService.js';
 
 const GENERIC_CLIENT_DETAIL = 'La requête n\'a pas pu être traitée.';
 const GENERIC_SERVER_DETAIL = 'Le service est momentanément indisponible.';
@@ -24,8 +24,5 @@ export function errorHandler(err, _req, res, _next) {
   if (status < 500) {
     detail = isFrameworkError(err) || typeof err?.message !== 'string' ? GENERIC_CLIENT_DETAIL : err.message;
   }
-  return res
-    .status(status)
-    .type('application/problem+json')
-    .json(buildProblemDetail(status, STATUS_CODES[status] || 'Error', detail));
+  return sendProblem(res, status, STATUS_CODES[status] || 'Error', detail);
 }
