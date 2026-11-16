@@ -73,9 +73,9 @@ export function buildTicketReference(bookingId) {
 }
 
 /**
- * Builds a deterministic seat label for a slot and booking ID.
+ * Builds a deterministic seat label for a slot, booking ID, and seat count.
  */
-export function generateSeatLabel(slotId, bookingId) {
+export function generateSeatLabel(slotId, bookingId, quantity = 1) {
   const rows = ['D', 'E', 'F', 'G', 'H', 'J', 'K'];
   const combined = `${slotId}:${bookingId}`;
   let hash = 0;
@@ -84,21 +84,41 @@ export function generateSeatLabel(slotId, bookingId) {
   }
   const positive = Math.abs(hash);
   const row = rows[positive % rows.length];
-  const seatNumber = ((positive >> 2) % 20) + 1;
-  return `Rangée ${row} · Fauteuil ${seatNumber}`;
+  const baseSeat = ((positive >> 2) % 20) + 1;
+  const qty = Math.max(1, Math.min(Number(quantity) || 1, 10));
+
+  if (qty === 1) {
+    return `Rangée ${row} · Fauteuil ${baseSeat}`;
+  }
+  const maxSeat = 20;
+  const startSeat = baseSeat + qty - 1 > maxSeat ? Math.max(1, maxSeat - qty + 1) : baseSeat;
+  const seats = Array.from({ length: qty }, (_, i) => startSeat + i);
+  return `Rangée ${row} · Fauteuils ${seats.join(', ')}`;
 }
 
 /**
  * Converts a Booking record into a formatted, display-ready TicketView.
  */
 export function createTicketView(booking) {
+  const totalQuantity = booking.totalQuantity || 1;
+  const tariffsSummary = Array.isArray(booking.tickets) && booking.tickets.length > 0
+    ? booking.tickets.map((t) => `${t.quantity}× ${t.label || t.category}`).join(', ')
+    : `${totalQuantity}× Adulte`;
+  const totalAmount = typeof booking.totalAmount === 'number'
+    ? `${booking.totalAmount.toFixed(2).replace('.', ',')} €`
+    : '';
+
   return {
     reference: buildTicketReference(booking._id),
     spectatorName: booking.ownerName || 'Spectateur CinéSlot',
     movieTitle: booking.movieTitle || 'Séance CinéSlot',
     hall: booking.hall || 'Salle Principale',
     address: booking.address || DEFAULT_CINEMA_ADDRESS,
-    seat: booking.seat || generateSeatLabel(booking.slotId, booking._id),
+    seat: booking.seat || generateSeatLabel(booking.slotId, booking._id, totalQuantity),
+    seatLabel: totalQuantity > 1 ? 'PLACES ATTRIBUÉES' : 'PLACE ATTRIBUÉE',
+    totalQuantity,
+    totalAmount,
+    tariffsSummary,
     day: formatTicketDay(booking.startsAt),
     time: formatTicketTime(booking.startsAt),
     issuedOn: formatIssuedOn(booking.bookedAt || new Date())

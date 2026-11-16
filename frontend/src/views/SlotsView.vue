@@ -195,6 +195,7 @@
           :key="slot.id"
           :slot="slot"
           :sse-connected="sseConnected"
+          :already-booked="bookedSlotIds.has(slot.id)"
           @reserve="handleReserve"
         />
       </div>
@@ -203,7 +204,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useSlotsStore } from '../stores/slots';
 import { useMoviesStore } from '../stores/movies';
 import { useSlots } from '../composables/useSlots';
@@ -211,20 +213,26 @@ import { useMovies } from '../composables/useMovies';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
 import SlotCard from '../components/SlotCard.vue';
-import type { Slot } from '../composables/useSlots';
 
+const router = useRouter();
 const slotsStore = useSlotsStore();
 const moviesStore = useMoviesStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse, reserveSlot, resetSlots, sseConnected } = useSlots();
-const { saveBooking } = useReservations();
+const { fetchSlots, connectSse, resetSlots, sseConnected } = useSlots();
+const { bookings } = useReservations();
 const { exposeIfAvailable } = useAbTest();
+
+const bookedSlotIds = computed(() =>
+  new Set(
+    (bookings?.value ?? [])
+      .filter((b) => b.status === 'ACTIVE' || b.status === 'PENDING_SYNC')
+      .map((b) => b.slotId)
+  )
+);
 
 const handleResetSlots = async () => {
   await resetSlots();
 };
-
-const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
 
 const loading = ref(false);
 const selectedFilter = ref<'ALL' | 'AVAILABLE' | 'BOOKED'>('ALL');
@@ -284,34 +292,8 @@ const resetFilters = () => {
   techFilter.value = 'ALL';
 };
 
-const handleReserve = async (slotId: string, customerId: string) => {
-  try {
-    const result = await reserveSlot(slotId, customerId);
-    const targetSlot = allSlots.value.find(s => s.id === slotId);
-    
-    if (targetSlot) {
-      const movie = moviesStore.movies.find(m => m.title.toLowerCase() === targetSlot.movieTitle.toLowerCase());
-      saveBooking({
-        bookingId: result.bookingId,
-        slotId: targetSlot.id,
-        movieTitle: targetSlot.movieTitle,
-        startsAt: targetSlot.startsAt,
-        hall: targetSlot.hall,
-        poster: movie?.poster
-      });
-
-      if (openReservationModal) {
-        openReservationModal(
-          result.bookingId,
-          targetSlot.movieTitle,
-          targetSlot.startsAt,
-          targetSlot.hall
-        );
-      }
-    }
-  } catch (err) {
-    console.error('Reservation error:', err);
-  }
+const handleReserve = (slotId: string) => {
+  router.push(`/slots/${slotId}/book`);
 };
 
 watch(availableSlotsCount, (count) => {

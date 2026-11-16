@@ -139,9 +139,9 @@
           <!-- Main Ticket Content -->
           <div class="flex-1 p-6 flex flex-col justify-between">
             <div>
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <h2 class="text-xl sm:text-2xl font-bold text-white group-hover:text-accent-gold transition-colors">
+              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4">
+                <div class="min-w-0">
+                  <h2 class="text-xl sm:text-2xl font-bold text-white group-hover:text-accent-gold transition-colors break-words">
                     {{ booking.movieTitle }}
                   </h2>
                   <div class="inline-block mt-1 px-2.5 py-0.5 rounded-md bg-accent-gold/10 border border-accent-gold/30 text-accent-gold text-xs font-semibold">
@@ -149,16 +149,16 @@
                   </div>
                 </div>
 
-                <div class="text-right">
+                <div class="sm:text-right shrink-0">
                   <span class="text-[11px] uppercase tracking-wider text-cinema-textMuted font-mono">Billet N°</span>
-                  <p class="font-mono text-xs text-cinema-text font-bold select-all bg-black/40 px-2 py-1 rounded border border-cinema-border/40 mt-0.5">
-                    {{ booking.bookingId.substring(0, 13) }}...
+                  <p class="inline-block sm:block ml-2 sm:ml-0 font-mono text-xs text-cinema-text font-bold select-all bg-black/40 px-2 py-1 rounded border border-cinema-border/40 mt-0.5" :title="booking.bookingId">
+                    #{{ booking.bookingId.slice(0, 8).toUpperCase() }}
                   </p>
                 </div>
               </div>
 
               <!-- Details Grid -->
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-cinema-border/40">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-cinema-border/40">
                 <div>
                   <span class="text-xs text-cinema-textMuted">Date & Heure</span>
                   <p class="text-sm font-mono tabular-nums font-semibold text-white mt-0.5">
@@ -166,9 +166,13 @@
                   </p>
                 </div>
                 <div>
-                  <span class="text-xs text-cinema-textMuted">Fauteuil</span>
-                  <p class="text-sm font-semibold text-emerald-400 mt-0.5">
+                  <span class="text-xs text-cinema-textMuted">Places & Fauteuils</span>
+                  <p class="text-sm font-semibold text-emerald-400 mt-0.5 break-words">
                     <span>{{ booking.seat || 'Rangée E · Fauteuil 12' }}</span>
+                  </p>
+                  <p v-if="(booking.totalQuantity || 1) > 1 || typeof booking.totalAmount === 'number'" class="text-xs text-cinema-textMuted mt-0.5">
+                    {{ booking.totalQuantity || 1 }} place{{ (booking.totalQuantity || 1) > 1 ? 's' : '' }}
+                    <span v-if="typeof booking.totalAmount === 'number'"> · {{ booking.totalAmount.toFixed(2).replace('.', ',') }} €</span>
                   </p>
                 </div>
                 <div>
@@ -187,7 +191,7 @@
             </div>
 
             <!-- Ticket Footer / Actions -->
-            <div class="flex flex-wrap items-center justify-between gap-3 mt-6 pt-4 border-t border-cinema-border/30">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6 pt-4 border-t border-cinema-border/30">
               <div class="flex flex-wrap items-center gap-2">
                 <TicketPdfButton
                   v-if="booking.status === 'ACTIVE'"
@@ -214,13 +218,13 @@
                 </button>
               </div>
 
-              <div class="flex items-center gap-3 ml-auto">
+              <div class="w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-cinema-border/20 flex justify-end">
                 <button
                   v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="confirmCancel(booking)"
                   :disabled="cancellingSlotId === booking.slotId"
                   :aria-label="`Annuler ma réservation pour le film ${booking.movieTitle}, séance du ${formatDateTime(booking.startsAt)}`"
-                  class="px-4 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 hover:border-red-600 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  class="w-full sm:w-auto justify-center px-4 py-2 rounded-xl text-xs font-bold text-red-400 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 hover:border-red-600 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   <span>{{ cancellingSlotId === booking.slotId ? 'Annulation...' : 'Annuler ma réservation' }}</span>
                 </button>
@@ -228,7 +232,7 @@
                   v-else
                   @click="deleteFromHistory(booking.bookingId)"
                   :aria-label="`Supprimer de mon historique le billet pour ${booking.movieTitle}`"
-                  class="px-3.5 py-2 rounded-xl text-xs font-medium text-cinema-textMuted hover:text-white bg-cinema-darker/50 hover:bg-cinema-darker border border-cinema-border/40 transition-all cursor-pointer"
+                  class="w-full sm:w-auto px-3.5 py-2 rounded-xl text-xs font-medium text-cinema-textMuted hover:text-white bg-cinema-darker/50 hover:bg-cinema-darker border border-cinema-border/40 transition-all cursor-pointer"
                   title="Supprimer de l'historique"
                 >
                   Supprimer
@@ -240,26 +244,25 @@
           <!-- QR Code Section -->
           <div class="hidden lg:flex flex-col items-center justify-center p-6 bg-cinema-darker/60 border-l border-cinema-border/40 shrink-0 text-center" aria-hidden="true">
             <div class="p-2.5 bg-white rounded-xl shadow-md mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-black" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
-                <rect x="0" y="0" width="30" height="30" fill="black"/>
-                <rect x="5" y="5" width="20" height="20" fill="white"/>
-                <rect x="10" y="10" width="10" height="10" fill="black"/>
-                <rect x="70" y="0" width="30" height="30" fill="black"/>
-                <rect x="75" y="5" width="20" height="20" fill="white"/>
-                <rect x="80" y="10" width="10" height="10" fill="black"/>
-                <rect x="0" y="70" width="30" height="30" fill="black"/>
-                <rect x="5" y="75" width="20" height="20" fill="white"/>
-                <rect x="10" y="80" width="10" height="10" fill="black"/>
-                <rect x="35" y="5" width="10" height="10" fill="black"/>
-                <rect x="50" y="10" width="10" height="25" fill="black"/>
-                <rect x="35" y="25" width="10" height="10" fill="black"/>
-                <rect x="10" y="45" width="15" height="10" fill="black"/>
-                <rect x="35" y="45" width="30" height="10" fill="black"/>
-                <rect x="75" y="40" width="15" height="15" fill="black"/>
-                <rect x="40" y="65" width="20" height="10" fill="black"/>
-                <rect x="70" y="70" width="10" height="25" fill="black"/>
-                <rect x="85" y="75" width="10" height="10" fill="black"/>
-                <rect x="45" y="85" width="15" height="10" fill="black"/>
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-black" viewBox="0 0 110 110" fill="currentColor" aria-hidden="true">
+                <rect x="0" y="0" width="30" height="30" fill="black" />
+                <rect x="5" y="5" width="20" height="20" fill="white" />
+                <rect x="10" y="10" width="10" height="10" fill="black" />
+                <rect x="80" y="0" width="30" height="30" fill="black" />
+                <rect x="85" y="5" width="20" height="20" fill="white" />
+                <rect x="90" y="10" width="10" height="10" fill="black" />
+                <rect x="0" y="80" width="30" height="30" fill="black" />
+                <rect x="5" y="85" width="20" height="20" fill="white" />
+                <rect x="10" y="90" width="10" height="10" fill="black" />
+                <rect
+                  v-for="(cell, idx) in qrCells(booking.bookingId)"
+                  :key="idx"
+                  :x="cell.x"
+                  :y="cell.y"
+                  width="10"
+                  height="10"
+                  fill="black"
+                />
               </svg>
             </div>
             <span class="text-[10px] font-mono text-cinema-textMuted uppercase tracking-wider">Flash Borne</span>
@@ -272,15 +275,15 @@
       </div>
     </div>
 
-    <!-- Modal Confirmation Annulation -->
-    <transition
-      enter-active-class="transition duration-200 ease-out"
-      leave-active-class="transition duration-150 ease-in"
-      enter-from-class="opacity-0 scale-95"
-      leave-to-class="opacity-0 scale-95"
-    >
-      <div
-        v-if="showConfirmModal && selectedForCancel"
+    <Teleport to="body">
+      <transition
+        enter-active-class="transition duration-200 ease-out"
+        leave-active-class="transition duration-150 ease-in"
+        enter-from-class="opacity-0 scale-95"
+        leave-to-class="opacity-0 scale-95"
+      >
+        <div
+          v-if="showConfirmModal && selectedForCancel"
         ref="confirmModalRef"
         role="alertdialog"
         aria-modal="true"
@@ -295,7 +298,7 @@
           </div>
           <h2 id="confirm-cancel-title" class="text-xl font-bold text-white text-center mb-2">Annuler la réservation ?</h2>
           <p id="confirm-cancel-desc" class="text-cinema-textMuted text-sm text-center mb-6">
-            Êtes-vous sûr de vouloir annuler votre place pour <strong class="text-white">{{ selectedForCancel.movieTitle }}</strong> ({{ selectedForCancel.seat }}) ? Le créneau sera immédiatement libéré pour les autres spectateurs.
+            Êtes-vous sûr de vouloir annuler {{ (selectedForCancel.totalQuantity || 1) > 1 ? `vos ${selectedForCancel.totalQuantity} places` : 'votre place' }} pour <strong class="text-white">{{ selectedForCancel.movieTitle }}</strong> ({{ selectedForCancel.seat }}) ? Le créneau sera immédiatement libéré pour les autres spectateurs.
           </p>
 
           <div class="flex gap-3">
@@ -317,7 +320,8 @@
           </div>
         </div>
       </div>
-    </transition>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -415,6 +419,24 @@ const formatDateTime = (dateStr: string) => {
   }
 };
 
+const qrCells = (seed: string) => {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const cells: Array<{ x: number; y: number }> = [];
+  for (let r = 0; r < 11; r += 1) {
+    for (let c = 0; c < 11; c += 1) {
+      const inFinder = (r < 3 && c < 3) || (r < 3 && c >= 8) || (r >= 8 && c < 3);
+      if (!inFinder && (((hash >>> ((r * 11 + c) % 24)) ^ (r * 7 + c * 13)) & 1) === 1) {
+        cells.push({ x: c * 10, y: r * 10 });
+      }
+    }
+  }
+  return cells;
+};
+
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
   try {
@@ -435,10 +457,6 @@ const formatDate = (dateStr: string) => {
 
 <style scoped>
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
-  }
   .print-ticket {
     border: 2px solid #000 !important;
     box-shadow: none !important;

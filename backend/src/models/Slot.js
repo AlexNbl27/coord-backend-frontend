@@ -6,6 +6,8 @@ const slotSchema = new mongoose.Schema({
   status: { type: String, enum: ['AVAILABLE', 'BOOKED'], default: 'AVAILABLE' },
   movieTitle: { type: String, default: 'Interstellar' },
   hall: { type: String, default: 'Salle 1 - IMAX Laser' },
+  capacity: { type: Number, default: 40 },
+  availableSeats: { type: Number, default: 40 },
   bookingId: { type: String, default: null },
   bookedBy: { type: String, default: null },
   bookedAt: { type: Date, default: null },

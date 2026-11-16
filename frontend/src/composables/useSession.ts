@@ -73,6 +73,7 @@ export function useSession() {
   };
 
   const logout = async () => {
+    sessionStorage.setItem('cineslot_logged_out', '1');
     try {
       await apiClient.post('/api/session/logout', {}, REQUEST_OPTIONS);
     } finally {
