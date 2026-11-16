@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import { Movie } from '../models/Movie.js';
+import { requireSession } from '../services/sessionService.js';
+import {
+  escapeRegex,
+  isPlainString,
+  isValidObjectId,
+  sanitizeMoviePayload
+} from '../utils/securityMiddleware.js';
 
 export const movieRouter = Router();
 
-// ==========================================
-// 🚀 Cache mémoire léger (TTL 5s) avec invalidation
-// ==========================================
 const cache = new Map();
 const CACHE_TTL_MS = 5000;
 
@@ -30,9 +34,6 @@ export function clearMovieCache() {
   cache.clear();
 }
 
-// ==========================================
-// 1. GET ALL - Récupérer les films avec pagination et cache
-// ==========================================
 movieRouter.get('/', async (req, res) => {
   try {
     const cacheKey = req.originalUrl || req.url;
@@ -44,34 +45,52 @@ movieRouter.get('/', async (req, res) => {
     const { genre, director, minRating, search } = req.query;
     const filter = {};
 
-    if (genre) {
-      // Utilisation directe pour exploiter l'index composite B-Tree
-      filter.genres = genre;
-    }
-    if (director) {
-      filter.director = new RegExp(director, 'i');
-    }
-    if (minRating) {
-      filter['ratings.imdb'] = { $gte: parseFloat(minRating) };
-    }
-    if (search && search.trim()) {
-      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const searchRegex = new RegExp(escaped, 'i');
-      filter.$or = [
-        { title: searchRegex },
-        { director: searchRegex },
-        { genres: searchRegex },
-        { tags: searchRegex },
-        { synopsis: searchRegex }
-      ];
+    if (genre !== undefined) {
+      if (!isPlainString(genre, 50)) {
+        return res.status(400).json({ error: 'Paramètre genre invalide' });
+      }
+      if (genre.trim()) {
+        filter.genres = genre.trim();
+      }
     }
 
-    // Pagination pour préserver la mémoire vive sous forte affluence
-    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    if (director !== undefined) {
+      if (!isPlainString(director, 100)) {
+        return res.status(400).json({ error: 'Paramètre réalisateur invalide' });
+      }
+      if (director.trim()) {
+        filter.director = new RegExp(escapeRegex(director.trim()), 'i');
+      }
+    }
+
+    if (minRating !== undefined) {
+      const parsedRating = Number.parseFloat(String(minRating));
+      if (Number.isNaN(parsedRating) || parsedRating < 0 || parsedRating > 10) {
+        return res.status(400).json({ error: 'Paramètre minRating invalide' });
+      }
+      filter['ratings.imdb'] = { $gte: parsedRating };
+    }
+
+    if (search !== undefined) {
+      if (!isPlainString(search, 120)) {
+        return res.status(400).json({ error: 'Paramètre de recherche invalide' });
+      }
+      if (search.trim()) {
+        const searchRegex = new RegExp(escapeRegex(search.trim()), 'i');
+        filter.$or = [
+          { title: searchRegex },
+          { director: searchRegex },
+          { genres: searchRegex },
+          { tags: searchRegex },
+          { synopsis: searchRegex }
+        ];
+      }
+    }
+
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '20'), 10) || 20, 1), 100);
+    const page = Math.max(parseInt(String(req.query.page ?? '1'), 10) || 1, 1);
     const skip = (page - 1) * limit;
 
-    // Exécution parallèle du comptage total et de la récupération projetée (.lean() + .select())
     const [totalCount, movies] = await Promise.all([
       Movie.countDocuments(filter),
       Movie.find(filter)
@@ -92,82 +111,87 @@ movieRouter.get('/', async (req, res) => {
 
     setCache(cacheKey, responsePayload);
     res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
-    res.json(responsePayload);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.json(responsePayload);
+  } catch {
+    return res.status(500).json({ error: 'Erreur lors de la récupération des films' });
   }
 });
 
-// ==========================================
-// 2. GET BY ID - Récupérer un film spécifique
-// ==========================================
 movieRouter.get('/:id', async (req, res) => {
+  if (!isValidObjectId(req.params.id)) {
+    return res.status(400).json({ error: 'Identifiant de film invalide' });
+  }
   try {
-    const movie = await Movie.findById(req.params.id).lean();
+    const movie = await Movie.findById(req.params.id).select('-__v').lean();
     if (!movie) {
       return res.status(404).json({ error: 'Film non trouvé' });
     }
-    res.json(movie);
-  } catch (error) {
-    res.status(400).json({ error: 'Identifiant invalide : ' + error.message });
+    return res.json(movie);
+  } catch {
+    return res.status(400).json({ error: 'Identifiant de film invalide' });
   }
 });
 
-// ==========================================
-// 3. POST - Créer un nouveau film (CREATE)
-// ==========================================
-movieRouter.post('/', async (req, res) => {
+movieRouter.post('/', requireSession, async (req, res) => {
   try {
-    const newMovie = new Movie(req.body);
+    const payload = sanitizeMoviePayload(req.body);
+    if (!payload || !payload.title || !payload.director || !payload.year) {
+      return res.status(400).json({ error: 'Données de film invalides ou incomplètes' });
+    }
+    const newMovie = new Movie(payload);
     const savedMovie = await newMovie.save();
-    clearMovieCache(); // Invalidation du cache de lecture
-    res.status(201).json({
+    clearMovieCache();
+    return res.status(201).json({
       message: 'Film créé avec succès !',
       data: savedMovie
     });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+  } catch {
+    return res.status(400).json({ error: 'Impossible de créer le film' });
   }
 });
 
-// ==========================================
-// 4. PUT - Mettre à jour un film (UPDATE)
-// ==========================================
-movieRouter.put('/:id', async (req, res) => {
+movieRouter.put('/:id', requireSession, async (req, res) => {
+  if (!isValidObjectId(req.params.id)) {
+    return res.status(400).json({ error: 'Identifiant de film invalide' });
+  }
   try {
+    const payload = sanitizeMoviePayload(req.body);
+    if (!payload || Object.keys(payload).length === 0) {
+      return res.status(400).json({ error: 'Données de mise à jour invalides' });
+    }
     const updatedMovie = await Movie.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      { $set: payload },
       { new: true, runValidators: true }
-    );
+    ).select('-__v');
     if (!updatedMovie) {
       return res.status(404).json({ error: 'Film non trouvé' });
     }
     clearMovieCache();
-    res.json({
+    return res.json({
       message: 'Film mis à jour avec succès !',
       data: updatedMovie
     });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+  } catch {
+    return res.status(400).json({ error: 'Impossible de mettre à jour le film' });
   }
 });
 
-// ==========================================
-// 5. DELETE - Supprimer un film (DELETE)
-// ==========================================
-movieRouter.delete('/:id', async (req, res) => {
+movieRouter.delete('/:id', requireSession, async (req, res) => {
+  if (!isValidObjectId(req.params.id)) {
+    return res.status(400).json({ error: 'Identifiant de film invalide' });
+  }
   try {
     const deletedMovie = await Movie.findByIdAndDelete(req.params.id);
     if (!deletedMovie) {
       return res.status(404).json({ error: 'Film non trouvé' });
     }
     clearMovieCache();
-    res.json({
+    return res.json({
       message: 'Film supprimé avec succès !',
       deletedId: req.params.id
     });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+  } catch {
+    return res.status(400).json({ error: 'Impossible de supprimer le film' });
   }
 });

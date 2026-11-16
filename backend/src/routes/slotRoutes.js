@@ -8,24 +8,18 @@ import {
   getSlotProof,
   resetAllSlots
 } from '../services/slotService.js';
+import { requireSession } from '../services/sessionService.js';
+import { isPlainString, isValidEntityId } from '../utils/securityMiddleware.js';
 
 export const slotRouter = Router();
 
 const COOKIE_NAME = 'ab_visitor';
 
-/**
- * GET /api/slots/events
- * Flux SSE des mises à jour des créneaux en temps réel
- */
 slotRouter.get('/events', (req, res) => {
   subscribeSse(req, res);
 });
 
-/**
- * GET /api/slots
- * Récupère la liste de tous les créneaux disponibles et réservés
- */
-slotRouter.get('/', async (req, res, next) => {
+slotRouter.get('/', async (_req, res, next) => {
   try {
     const slots = await allSlots();
     res.json(slots);
@@ -34,49 +28,46 @@ slotRouter.get('/', async (req, res, next) => {
   }
 });
 
-/**
- * POST /api/slots/:id/reservations
- * Réserve un créneau. Gère l'attribution A/B si X-AB-Measure === 'true'
- */
 slotRouter.post('/:id/reservations', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { customerId } = req.body;
+    if (!isValidEntityId(id)) {
+      return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+    }
+    const rawCustomerId = req.body?.customerId;
+    if (rawCustomerId !== undefined && !isPlainString(rawCustomerId, 100)) {
+      return res.status(400).json({ message: 'Identifiant client invalide' });
+    }
     const visitorId = req.cookies?.[COOKIE_NAME];
     const isMeasured = req.headers['x-ab-measure'] === 'true';
 
-    const booking = await reserveSlot(id, customerId, visitorId, isMeasured, req.sessionUser);
-    res.status(201).json(booking);
+    const booking = await reserveSlot(id, rawCustomerId, visitorId, isMeasured, req.sessionUser);
+    return res.status(201).json(booking);
   } catch (err) {
     if (err.status) {
       return res.status(err.status).json({ message: err.message });
     }
-    next(err);
+    return next(err);
   }
 });
 
-/**
- * DELETE /api/slots/:id/reservations
- * Annule une réservation
- */
 slotRouter.delete('/:id/reservations', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const slot = await cancelSlot(id);
-    res.json(slot);
+    if (!isValidEntityId(id)) {
+      return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+    }
+    const slot = await cancelSlot(id, req.sessionUser);
+    return res.json(slot);
   } catch (err) {
     if (err.status) {
       return res.status(err.status).json({ message: err.message });
     }
-    next(err);
+    return next(err);
   }
 });
 
-/**
- * POST /api/slots/lab
- * Génère un créneau aléatoire pour le test
- */
-slotRouter.post('/lab', async (req, res, next) => {
+slotRouter.post('/lab', requireSession, async (_req, res, next) => {
   try {
     const demo = await createDemoSlot();
     res.status(201).json(demo);
@@ -85,28 +76,23 @@ slotRouter.post('/lab', async (req, res, next) => {
   }
 });
 
-/**
- * GET /api/slots/:id/proof
- * Renvoie les informations de preuve d'un créneau
- */
-slotRouter.get('/:id/proof', async (req, res, next) => {
+slotRouter.get('/:id/proof', requireSession, async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (!isValidEntityId(id)) {
+      return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+    }
     const proof = await getSlotProof(id);
-    res.json(proof);
+    return res.json(proof);
   } catch (err) {
     if (err.status) {
       return res.status(err.status).json({ message: err.message });
     }
-    next(err);
+    return next(err);
   }
 });
 
-/**
- * POST /api/slots/reset
- * Réinitialise tous les créneaux pour qu'ils soient de nouveau disponibles
- */
-slotRouter.post('/reset', async (req, res, next) => {
+slotRouter.post('/reset', requireSession, async (_req, res, next) => {
   try {
     const result = await resetAllSlots();
     res.json(result);

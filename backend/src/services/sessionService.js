@@ -2,7 +2,11 @@ import crypto from 'node:crypto';
 
 export const SESSION_COOKIE_NAME = 'cineslot_session';
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'cineslot-dev-session-secret-2026';
+const SESSION_SECRET = process.env.SESSION_SECRET || (
+  process.env.NODE_ENV === 'production'
+    ? (() => { throw new Error('SESSION_SECRET environment variable is required in production'); })()
+    : 'dev-only-ephemeral-hmac-secret-key-32bytes'
+);
 
 export const DEMO_SPECTATORS = Object.freeze([
   {
@@ -19,9 +23,6 @@ export const DEMO_SPECTATORS = Object.freeze([
 
 const SPECTATOR_MAP = new Map(DEMO_SPECTATORS.map((u) => [u.id, u]));
 
-/**
- * Finds a demo spectator by ID.
- */
 export function findSpectatorById(userId) {
   if (!userId || typeof userId !== 'string') {
     return null;
@@ -29,11 +30,9 @@ export function findSpectatorById(userId) {
   return SPECTATOR_MAP.get(userId) ?? null;
 }
 
-/**
- * Signs a spectator session token using HMAC-SHA256.
- */
-export function signSessionToken(userId) {
-  const payload = Buffer.from(userId, 'utf8').toString('base64url');
+export function signSessionToken(userId, ttlMs = SESSION_MAX_AGE_MS) {
+  const exp = Date.now() + ttlMs;
+  const payload = Buffer.from(JSON.stringify({ sub: userId, exp }), 'utf8').toString('base64url');
   const signature = crypto
     .createHmac('sha256', SESSION_SECRET)
     .update(payload)
@@ -41,9 +40,6 @@ export function signSessionToken(userId) {
   return `${payload}.${signature}`;
 }
 
-/**
- * Verifies a signed session token and returns the corresponding spectator or null.
- */
 export function verifySessionToken(token) {
   if (!token || typeof token !== 'string') {
     return null;
@@ -69,13 +65,21 @@ export function verifySessionToken(token) {
     return null;
   }
 
-  const userId = Buffer.from(payload, 'base64url').toString('utf8');
-  return findSpectatorById(userId);
+  const decoded = Buffer.from(payload, 'base64url').toString('utf8');
+  try {
+    const parsed = JSON.parse(decoded);
+    if (!parsed || typeof parsed.sub !== 'string' || typeof parsed.exp !== 'number') {
+      return null;
+    }
+    if (Date.now() > parsed.exp) {
+      return null;
+    }
+    return findSpectatorById(parsed.sub);
+  } catch {
+    return findSpectatorById(decoded);
+  }
 }
 
-/**
- * Builds RFC 9457 ProblemDetail payload for error responses.
- */
 export function buildProblemDetail(status, title, detail) {
   return {
     type: 'about:blank',
@@ -86,18 +90,12 @@ export function buildProblemDetail(status, title, detail) {
   };
 }
 
-/**
- * Middleware that attaches req.sessionUser when a valid session cookie is present.
- */
 export function attachSession(req, _res, next) {
   const token = req.cookies?.[SESSION_COOKIE_NAME];
   req.sessionUser = verifySessionToken(token);
   next();
 }
 
-/**
- * Middleware that requires an authenticated spectator session (401 ProblemDetail otherwise).
- */
 export function requireSession(req, res, next) {
   if (!req.sessionUser) {
     return res
@@ -111,6 +109,7 @@ export function requireSession(req, res, next) {
 export function getSessionCookieOptions() {
   return {
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/api',
     maxAge: SESSION_MAX_AGE_MS

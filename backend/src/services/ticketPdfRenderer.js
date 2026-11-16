@@ -100,9 +100,6 @@ export async function renderTicketPdf(view, options = {}) {
   const fontsDir = options.fontsDir || DEFAULT_FONTS_DIR;
   const { regularPath, boldPath } = assertEmbeddedFonts(fontsDir);
 
-  // Validate HTML template rendering as part of the document pipeline
-  renderTicketHtml(view, options.templatePath);
-
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
@@ -133,7 +130,7 @@ export async function renderTicketPdf(view, options = {}) {
       const rootStruct = doc.struct('Document');
       doc.addStructure(rootStruct);
 
-      // 1. Header banner
+      // Header banner
       const headerStruct = doc.struct('Sect', () => {
         doc.save();
         doc.rect(left, 45, contentWidth, 82).fill('#0F172A');
@@ -176,7 +173,7 @@ export async function renderTicketPdf(view, options = {}) {
       });
       rootStruct.add(headerStruct);
 
-      // 2. Main film & screening card
+      // Main film & screening card
       const movieSection = doc.struct('Sect', () => {
         doc.font('DejaVu-Bold').fontSize(8.5).fillColor('#475569').text('FILM & SÉANCE', left, 148);
 
@@ -213,7 +210,7 @@ export async function renderTicketPdf(view, options = {}) {
       });
       rootStruct.add(movieSection);
 
-      // 3. Spectator & seat 2x2 grid
+      // Spectator & seat 2x2 grid
       const gridSection = doc.struct('Sect', () => {
         doc.font('DejaVu-Bold').fontSize(8.5).fillColor('#475569').text(
           'INFORMATIONS DU SPECTATEUR & PLACEMENT',
@@ -260,7 +257,7 @@ export async function renderTicketPdf(view, options = {}) {
       });
       rootStruct.add(gridSection);
 
-      // 4. Detachable control stub
+      // Detachable control stub
       const stubSection = doc.struct('Sect', () => {
         const cutY = 492;
         doc.save();
@@ -308,7 +305,7 @@ export async function renderTicketPdf(view, options = {}) {
       });
       rootStruct.add(stubSection);
 
-      // 5. Footer
+      // Footer
       const footerStruct = doc.struct('P', () => {
         const footerY = doc.page.height - 62;
         doc.save();
