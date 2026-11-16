@@ -58,7 +58,7 @@
             
             <!-- Bottom: Title + Genres -->
             <div class="pointer-events-auto">
-              <h3 class="font-display text-white font-bold text-lg line-clamp-1 drop-shadow-md group-hover:text-accent-gold transition-colors">
+              <h3 class="font-display text-white font-bold text-lg line-clamp-2 drop-shadow-md group-hover:text-accent-gold transition-colors">
                 {{ movie.title }}
               </h3>
               <p class="text-xs text-gray-300 font-medium mt-0.5">
@@ -92,7 +92,7 @@
           {{ movie.synopsis || 'Aucun synopsis disponible.' }}
         </p>
         <div class="pt-2.5 mt-2 border-t border-cinema-border/30 flex items-center justify-between text-xs text-cinema-textMuted" aria-hidden="true">
-          <span class="truncate max-w-[150px]">Dir. {{ movie.director || 'Inconnu' }}</span>
+          <span class="truncate flex-1 mr-2">Dir. {{ movie.director || 'Inconnu' }}</span>
           <span class="text-accent-gold font-medium group-hover:underline">Voir les détails →</span>
         </div>
       </div>

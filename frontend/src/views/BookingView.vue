@@ -166,7 +166,7 @@
               type="button"
               @click="submitBooking"
               :disabled="submitting || totalQuantity < 1 || remainingSeats < 1 || totalQuantity > remainingSeats"
-              class="px-6 py-3 rounded-md bg-accent-gold hover:bg-accent-goldLight text-cinema-dark font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              class="w-full sm:w-auto text-center justify-center px-6 py-3 rounded-md bg-accent-gold hover:bg-accent-goldLight text-cinema-dark font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {{ submitting ? 'Confirmation en cours...' : 'Confirmer la réservation' }}
             </button>

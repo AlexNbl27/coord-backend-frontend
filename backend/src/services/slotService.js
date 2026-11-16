@@ -318,7 +318,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
         throw error;
       }
 
-      const seat = generateSeatLabel(winner._id, bookingId);
+      const seat = generateSeatLabel(winner._id, bookingId, totalQuantity);
       await Booking.create({
         _id: bookingId,
         slotId: winner._id,
@@ -387,30 +387,35 @@ export async function cancelSlot(slotId, sessionUser = null) {
     { _id: activeBooking._id },
     { $set: { status: 'CANCELLED', cancelledAt: new Date() } }
   );
+  const remainingActive = await Booking.countDocuments({ slotId: safeSlotId, status: 'CONFIRMED' });
+
+  const pipeline = [
+    {
+      $set: {
+        status: 'AVAILABLE',
+        capacity: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+        availableSeats: {
+          $min: [
+            { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+            {
+              $add: [
+                { $ifNull: ['$availableSeats', 0] },
+                restoreQty
+              ]
+            }
+          ]
+        },
+        version: { $add: ['$version', 1] }
+      }
+    }
+  ];
+  if (remainingActive === 0) {
+    pipeline.push({ $unset: ['bookedBy', 'bookingId', 'bookedAt', 'experimentId', 'subjectId'] });
+  }
 
   const updated = await Slot.findOneAndUpdate(
     { _id: safeSlotId },
-    [
-      {
-        $set: {
-          status: 'AVAILABLE',
-          capacity: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
-          availableSeats: {
-            $min: [
-              { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
-              {
-                $add: [
-                  { $ifNull: ['$availableSeats', 0] },
-                  restoreQty
-                ]
-              }
-            ]
-          },
-          version: { $add: ['$version', 1] }
-        }
-      },
-      { $unset: ['bookedBy', 'bookingId', 'bookedAt', 'experimentId', 'subjectId'] }
-    ],
+    pipeline,
     { new: true }
   );
 

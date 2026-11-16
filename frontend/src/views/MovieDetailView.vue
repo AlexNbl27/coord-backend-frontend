@@ -157,22 +157,32 @@
             </router-link>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div
               v-for="booking in activeMovieBookings"
               :key="booking.bookingId"
-              class="p-4 rounded-xl bg-cinema-darker/70 border border-cinema-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              class="p-4 rounded-xl bg-cinema-darker/70 border border-cinema-border/60 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
             >
-              <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                  <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+              <div class="min-w-0 flex-1 space-y-1.5">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold shrink-0">
                     {{ booking.status === 'PENDING_SYNC' ? 'Synchro en attente' : 'Confirmé' }}
                   </span>
-                  <span class="text-xs font-mono text-cinema-textMuted">{{ booking.bookingId }}</span>
+                  <span
+                    class="text-xs font-mono text-cinema-textMuted truncate max-w-[140px]"
+                    :title="booking.bookingId"
+                  >
+                    #{{ booking.bookingId.slice(0, 8).toUpperCase() }}
+                  </span>
                 </div>
-                <p class="text-sm font-semibold text-white">
-                  {{ booking.hall }} • {{ booking.totalQuantity || 1 }} place{{ (booking.totalQuantity || 1) > 1 ? 's' : '' }}
-                  <span v-if="booking.seat" class="text-accent-gold font-mono ml-1">({{ booking.seat }})</span>
+                <p class="text-sm font-semibold text-white break-words">
+                  {{ booking.hall }} · {{ booking.totalQuantity || 1 }} place{{ (booking.totalQuantity || 1) > 1 ? 's' : '' }}
+                  <span v-if="typeof booking.totalAmount === 'number'" class="text-cinema-textMuted font-normal">
+                    ({{ booking.totalAmount.toFixed(2).replace('.', ',') }} €)
+                  </span>
+                </p>
+                <p v-if="booking.seat" class="text-xs text-accent-gold font-mono break-words">
+                  {{ booking.seat }}
                 </p>
                 <p class="text-xs text-cinema-textMuted">
                   {{ new Date(booking.startsAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }) }}

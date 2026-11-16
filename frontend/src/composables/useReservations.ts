@@ -23,7 +23,7 @@ const STORAGE_KEY = 'cineslot_my_bookings';
 // État partagé réactif
 const bookings = ref<UserBooking[]>(loadInitialBookings());
 
-function generateSeat(slotId: string, bookingId: string): string {
+function generateSeat(slotId: string, bookingId: string, quantity = 1): string {
   const rows = ['D', 'E', 'F', 'G', 'H', 'J', 'K'];
   const combined = `${slotId}:${bookingId}`;
   let hash = 0;
@@ -32,8 +32,15 @@ function generateSeat(slotId: string, bookingId: string): string {
   }
   const positive = Math.abs(hash);
   const row = rows[positive % rows.length];
-  const seatNum = ((positive >> 2) % 20) + 1;
-  return `Rangée ${row} · Fauteuil ${seatNum}`;
+  const baseSeat = ((positive >> 2) % 20) + 1;
+  const qty = Math.max(1, Math.min(Number(quantity) || 1, 10));
+  if (qty === 1) {
+    return `Rangée ${row} · Fauteuil ${baseSeat}`;
+  }
+  const maxSeat = 20;
+  const startSeat = baseSeat + qty - 1 > maxSeat ? Math.max(1, maxSeat - qty + 1) : baseSeat;
+  const seats = Array.from({ length: qty }, (_, i) => startSeat + i);
+  return `Rangée ${row} · Fauteuils ${seats.join(', ')}`;
 }
 
 function loadInitialBookings(): UserBooking[] {
@@ -103,7 +110,7 @@ export function useReservations() {
     totalAmount?: number;
     status?: 'ACTIVE' | 'PENDING_SYNC';
   }) => {
-    const seat = item.seat || generateSeat(item.slotId, item.bookingId);
+    const seat = item.seat || generateSeat(item.slotId, item.bookingId, item.totalQuantity || 1);
     const effectiveStatus = item.status || (item.bookingId.startsWith('temp_') ? 'PENDING_SYNC' : 'ACTIVE');
     const newBooking: UserBooking = {
       ...item,

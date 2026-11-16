@@ -12,7 +12,7 @@
       <!-- En-tête avec titre du film et statut -->
       <div class="flex justify-between items-start gap-2 mb-3">
         <div class="flex-1">
-          <h4 class="font-display text-white font-bold text-base sm:text-lg line-clamp-1 leading-snug">
+          <h4 class="font-display text-white font-bold text-base sm:text-lg line-clamp-2 leading-snug">
             {{ slot.movieTitle }}
           </h4>
           <p class="text-cinema-textMuted text-xs mt-1">

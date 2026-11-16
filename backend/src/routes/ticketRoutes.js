@@ -22,9 +22,9 @@ export function createTicketRouter(deps = {}) {
       const active = await Booking.find({
         ownerId: req.sessionUser.id,
         status: 'CONFIRMED'
-      }).select('id slotId').lean();
+      }).select('_id slotId').lean();
       return res.json({
-        bookings: active.map((b) => ({ bookingId: b.id, slotId: b.slotId }))
+        bookings: active.map((b) => ({ bookingId: b._id, slotId: b.slotId }))
       });
     } catch (err) {
       return next(err);
