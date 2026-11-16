@@ -140,7 +140,6 @@ export const useMoviesStore = defineStore('movies', () => {
   };
 
   return {
-    // State
     movies,
     loading,
     error,
@@ -150,16 +149,12 @@ export const useMoviesStore = defineStore('movies', () => {
     searchQuery,
     selectedGenre,
     minRating,
-    
-    // Getters
     hasMovies,
     hasMore,
     filteredMovies,
     availableGenres,
     popularMovies,
     recentMovies,
-    
-    // Actions
     setMovies,
     addMovie,
     updateMovie,

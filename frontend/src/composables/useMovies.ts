@@ -393,7 +393,6 @@ export function useMovies() {
     return Array.from(genresSet).sort();
   });
 
-  // Annuler la requête en cours
   const cancelCurrentRequest = () => {
     if (activeAbortController) {
       activeAbortController.abort();
@@ -401,22 +400,14 @@ export function useMovies() {
     }
   };
 
-  // Films filtrés par note minimale
-  const getMoviesByRating = (minRating: number) => {
-    return movies.value.filter(movie => movie.ratings?.imdb >= minRating);
-  };
-
-  // Films populaires (note >= 8.5)
   const popularMovies = computed(() => {
     return movies.value.filter(movie => movie.ratings?.imdb >= 8.5);
   });
 
-  // Films récents (année >= 2020)
   const recentMovies = computed(() => {
     return movies.value.filter(movie => movie.year >= 2020);
   });
 
-  // Films par réalisateur
   const getMoviesByDirector = (director: string) => {
     return movies.value.filter(movie => 
       movie.director?.toLowerCase().includes(director.toLowerCase())

@@ -67,7 +67,7 @@ describe('Flux 3 : Réservation & Confirmation de Billet (A11y Modale)', () => {
   });
 
   it('doit maintenir un piège de focus (Focus Trap) à l\'intérieur de la modale', async () => {
-    const { container } = render(ReservationModal, {
+    render(ReservationModal, {
       props: mockProps,
     });
 

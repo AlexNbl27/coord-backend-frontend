@@ -45,7 +45,7 @@
             <div class="bg-cinema-card/50 p-6 rounded-xl border border-cinema-border/50">
               <div class="w-12 h-12 bg-accent-gold/20 rounded-xl flex items-center justify-center mb-4" aria-hidden="true">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-accent-gold" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path d="M8.433 7.418c.158-.103.346-.196.552-.257m-4.283 6.018c.32.32.755.523 1.227.523s.907-.203 1.227-.523c.64-.64.64-1.672 0-2.312a1.633 1.633 0 00-2.454 0c-1.282 1.282-2.953 1.282-2.953 0a1.633 1.633 0 00-2.454 0c-.84.84-1.127 2.376 0 3.212C5.468 14.382 6.78 14.382 7.62 13.212a1.633 1.633 0 000-2.454z" />
+                  <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd" />
                 </svg>
               </div>
               <h3 class="text-white font-semibold mb-2">Pile technique</h3>

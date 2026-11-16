@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import crypto from 'node:crypto';
 import http from 'node:http';
 import test from 'node:test';
 import express from 'express';

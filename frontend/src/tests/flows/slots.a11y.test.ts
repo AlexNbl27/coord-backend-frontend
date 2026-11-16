@@ -49,20 +49,17 @@ describe('Flux 2 : Consultation des Séances & Daltonisme (A11y)', () => {
 
   describe('Composant SlotCard (Double encodage Daltonisme & VoiceOver)', () => {
     it('doit utiliser un double encodage (icône + texte) pour différencier les statuts Disponible et Complet', () => {
-      const { container: containerAvailable } = render(SlotCard, {
+      render(SlotCard, {
         props: {
           slot: mockSlotAvailable,
           sseConnected: true,
         },
       });
 
-      // Statut Disponible : texte ET icône de validation
       const badgeAvailable = screen.getByText(/disponible/i);
-      expect(badgeAvailable).toBeTruthy();
-      expect(badgeAvailable.textContent).toMatch(/[✓✔]/); // Symbole distinctif daltonien
+      expect(badgeAvailable.textContent).toMatch(/[✓✔]/);
 
-      // Statut Complet : rendu distinct
-      const { container: containerBooked } = render(SlotCard, {
+      render(SlotCard, {
         props: {
           slot: mockSlotBooked,
           sseConnected: true,
@@ -70,8 +67,7 @@ describe('Flux 2 : Consultation des Séances & Daltonisme (A11y)', () => {
       });
 
       const badgeBooked = screen.getByText(/complet/i);
-      expect(badgeBooked).toBeTruthy();
-      expect(badgeBooked.textContent).toMatch(/[✕✖⊘]/); // Symbole distinctif daltonien
+      expect(badgeBooked.textContent).toMatch(/[✕✖⊘]/);
     });
 
     it('le bouton de réservation doit avoir un nom accessible complet incluant le film et l\'horaire', async () => {

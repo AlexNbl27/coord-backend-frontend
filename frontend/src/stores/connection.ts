@@ -15,9 +15,7 @@ export const useConnectionStore = defineStore('connection', () => {
   const lastSyncTime = ref<number | null>(Date.now());
   const activeToast = ref<ToastNotification | null>(null);
 
-  // Timers pour l'anti-flapping (éviter les flashs de popup)
   let offlineDebounceTimer: any = null;
-  let offlineStartTime: number | null = null;
   let toastTimeout: any = null;
 
   const isOnline = computed(() => status.value === 'ONLINE');
@@ -52,7 +50,6 @@ export const useConnectionStore = defineStore('connection', () => {
     if (status.value !== 'ONLINE') {
       status.value = 'ONLINE';
       lastSyncTime.value = Date.now();
-      offlineStartTime = null;
     }
   };
 
@@ -62,7 +59,6 @@ export const useConnectionStore = defineStore('connection', () => {
     if (immediate) {
       if (offlineDebounceTimer) clearTimeout(offlineDebounceTimer);
       status.value = 'OFFLINE';
-      offlineStartTime = Date.now();
       return;
     }
 
@@ -71,7 +67,6 @@ export const useConnectionStore = defineStore('connection', () => {
         offlineDebounceTimer = null;
         if (status.value !== 'OFFLINE') {
           status.value = 'OFFLINE';
-          offlineStartTime = Date.now();
         }
       }, 1500);
     }

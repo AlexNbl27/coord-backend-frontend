@@ -49,7 +49,6 @@ import { computed } from 'vue';
 import { useConnection } from '../composables/useConnection';
 
 const {
-  isOnline,
   isOffline,
   isReconnecting,
   pendingCount,

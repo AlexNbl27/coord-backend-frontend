@@ -95,20 +95,13 @@ export const useSlotsStore = defineStore('slots', () => {
     slots.value = [];
   };
 
-  const refreshSlots = async () => {
-    // À implémenter avec l'API
-  };
-
   return {
-    // State
     slots,
     loading,
     error,
     sseConnected,
     sseError,
     selectedMovieTitle,
-    
-    // Getters
     hasSlots,
     availableSlots,
     bookedSlots,
@@ -116,8 +109,6 @@ export const useSlotsStore = defineStore('slots', () => {
     availableSlotsCount,
     bookedSlotsCount,
     nextAvailableSlot,
-    
-    // Actions
     setSlots,
     addSlot,
     updateSlot,
@@ -129,6 +120,5 @@ export const useSlotsStore = defineStore('slots', () => {
     setSseError,
     setSelectedMovieTitle,
     clearSlots,
-    refreshSlots,
   };
 });
