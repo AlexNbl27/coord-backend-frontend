@@ -13,6 +13,8 @@ import { slotRouter } from './routes/slotRoutes.js';
 import { sessionRouter } from './routes/sessionRoutes.js';
 import { googleAuthRouter } from './routes/googleAuthRoutes.js';
 import { ticketRouter } from './routes/ticketRoutes.js';
+import { cinemaRouter } from './routes/cinemaRoutes.js';
+import { seedCinemas } from './geo/cinemas.js';
 import { attachSession } from './services/sessionService.js';
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
 
@@ -93,6 +95,7 @@ function createServer() {
   app.use('/api/session/google', googleAuthRouter);
   app.use('/api/session', sessionRouter);
   app.use('/api/bookings', ticketRouter);
+  app.use('/api/cinemas', cinemaRouter);
 
   app.use((err, _req, res, _next) => {
     const span = trace.getActiveSpan();
@@ -120,6 +123,7 @@ async function startWorker() {
       serverSelectionTimeoutMS: 5000,
     });
     console.log(`[MongoDB] Connected (worker ${process.pid})`);
+    await seedCinemas().catch((err) => console.error('[Cinemas] Seed failed:', err.message));
 
     const app = createServer();
     app.listen(PORT, '0.0.0.0', () => {
