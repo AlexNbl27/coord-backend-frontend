@@ -28,9 +28,17 @@ export async function verifyPassword(password, stored) {
   if (!saltB64 || !hashB64) {
     return false;
   }
-  const expected = Buffer.from(hashB64, 'base64url');
-  const actual = await scrypt(password, Buffer.from(saltB64, 'base64url'), expected.length);
-  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+  try {
+    const salt = Buffer.from(saltB64, 'base64url');
+    const expected = Buffer.from(hashB64, 'base64url');
+    if (salt.length === 0 || expected.length !== SCRYPT_KEYLEN) {
+      return false;
+    }
+    const actual = await scrypt(password, salt, SCRYPT_KEYLEN);
+    return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
 }
 
 export function hashResetToken(token) {
