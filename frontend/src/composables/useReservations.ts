@@ -162,6 +162,19 @@ export function useReservations() {
     persistBookings();
   };
 
+  const markAllCancelledLocally = () => {
+    let changed = false;
+    bookings.value.forEach((b) => {
+      if (b.status === 'ACTIVE' || b.status === 'PENDING_SYNC') {
+        b.status = 'CANCELLED';
+        changed = true;
+      }
+    });
+    if (changed) {
+      persistBookings();
+    }
+  };
+
   const downloadCalendarFile = (booking: UserBooking) => {
     const startDate = new Date(booking.startsAt);
     const endDate = new Date(startDate.getTime() + 2.5 * 60 * 60 * 1000); // +2h30
@@ -206,6 +219,7 @@ export function useReservations() {
     saveBooking,
     cancelBooking,
     deleteFromHistory,
+    markAllCancelledLocally,
     downloadCalendarFile,
   };
 }

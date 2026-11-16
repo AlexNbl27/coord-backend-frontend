@@ -6,6 +6,7 @@ import { useSlotsStore } from '../stores/slots';
 import { useConnectionStore } from '../stores/connection';
 import { useConnection } from './useConnection';
 import { useAbTest } from './useAbTest';
+import { useReservations } from './useReservations';
 
 // Interface pour une séance (slot)
 export interface Slot {
@@ -259,6 +260,11 @@ export function useSlots() {
     try {
       loading.value = true;
       await apiClient.post(`${API_SLOTS_URL}/reset`, {});
+      try {
+        useReservations().markAllCancelledLocally();
+      } catch {
+        // Ignore in isolated unit-test environments
+      }
       await fetchSlots();
     } catch (err) {
       console.error('Failed to reset slots:', err);

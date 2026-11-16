@@ -122,10 +122,10 @@
       </div>
     </div>
 
-    <!-- Modal de détails enrichie -->
-    <transition name="modal">
-      <div
-        v-if="selectedMovie"
+    <Teleport to="body">
+      <transition name="modal">
+        <div
+          v-if="selectedMovie"
         ref="movieModalRef"
         class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
         role="dialog"
@@ -242,7 +242,8 @@
           </div>
         </div>
       </div>
-    </transition>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
