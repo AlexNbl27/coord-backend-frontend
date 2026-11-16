@@ -8,7 +8,6 @@ import { useConnection } from './useConnection';
 import { useAbTest } from './useAbTest';
 import { useReservations } from './useReservations';
 
-// Interface pour une séance (slot)
 export interface Slot {
   id: string;
   startsAt: string;
@@ -16,11 +15,12 @@ export interface Slot {
   version: number;
   movieTitle: string;
   hall: string;
+  capacity?: number;
+  availableSeats?: number;
   bookingId?: string;
   bookedBy?: string;
 }
 
-// Interface pour la vue d'une séance (API)
 export interface SlotView {
   id: string;
   startsAt: string;
@@ -28,21 +28,35 @@ export interface SlotView {
   version: number;
   movieTitle: string;
   hall: string;
+  capacity?: number;
+  availableSeats?: number;
 }
 
-// Interface pour la réservation
+export interface TicketLine {
+  category: string;
+  label?: string;
+  unitPrice?: number;
+  quantity: number;
+}
+
 export interface BookingView {
   bookingId: string;
   slotId: string;
   status: string;
   seat?: string;
+  tickets?: TicketLine[];
+  totalQuantity?: number;
+  totalAmount?: number;
+  availableSeats?: number;
+  capacity?: number;
 }
 
-// Interface pour l'événement SSE
 export interface SseEvent {
   slotId: string;
   status: string;
   version: number;
+  capacity?: number;
+  availableSeats?: number;
 }
 
 // URL de base pour l'API des séances
@@ -105,6 +119,8 @@ export function useSlots() {
         version: slot.version,
         movieTitle: slot.movieTitle,
         hall: slot.hall,
+        capacity: slot.capacity,
+        availableSeats: slot.availableSeats,
       }));
 
       // Persistance dans le cache local (10 min)
@@ -165,10 +181,13 @@ export function useSlots() {
         try {
           const data: SseEvent = JSON.parse(event.data);
           slotsStore.updateSlotStatus(data.slotId, data.status as 'AVAILABLE' | 'BOOKED');
-          slotsStore.updateSlot(data.slotId, { version: data.version });
-          console.log(`[SSE] Séance ${data.slotId} mise à jour: ${data.status}`);
+          slotsStore.updateSlot(data.slotId, {
+            version: data.version,
+            ...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
+            ...(data.availableSeats !== undefined ? { availableSeats: data.availableSeats } : {}),
+          });
         } catch (e) {
-          console.error('[SSE] Erreur parsing SSE slot-updated event:', e);
+          console.error('[SSE] Error parsing slot-updated event:', e);
         }
       });
 
@@ -202,22 +221,33 @@ export function useSlots() {
     // Si hors contexte Vue
   }
 
-  const reserveSlot = async (slotId: string, customerId: string = ''): Promise<BookingView> => {
+  const reserveSlot = async (
+    slotId: string,
+    customerId: string = '',
+    tickets?: TicketLine[]
+  ): Promise<BookingView> => {
     const { measured } = useAbTest();
 
     try {
       const response = await apiClient.post<BookingView>(
         `${API_SLOTS_URL}/${slotId}/reservations`,
-        { customerId },
+        { customerId, ...(tickets ? { tickets } : {}) },
         {
           headers: {
             'X-AB-Measure': String(measured.value),
           },
         }
       );
-      
-      // Mise à jour optimiste locale immédiate (complétée par le SSE)
-      slotsStore.updateSlotStatus(slotId, 'BOOKED');
+
+      slotsStore.updateSlot(slotId, {
+        status: response.data.status as 'AVAILABLE' | 'BOOKED',
+        ...(response.data.availableSeats !== undefined
+          ? { availableSeats: response.data.availableSeats }
+          : {}),
+        ...(response.data.capacity !== undefined
+          ? { capacity: response.data.capacity }
+          : {}),
+      });
       return response.data;
     } catch (err: any) {
       const isNetworkOrServer = !err.response || err.response.status >= 500;

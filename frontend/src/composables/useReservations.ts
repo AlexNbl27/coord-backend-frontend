@@ -12,6 +12,9 @@ export interface UserBooking {
   poster?: string;
   bookedAt: string;
   seat: string;
+  tickets?: Array<{ category: string; label?: string; unitPrice?: number; quantity: number }>;
+  totalQuantity?: number;
+  totalAmount?: number;
   status: 'ACTIVE' | 'CANCELLED' | 'PENDING_SYNC' | 'CANCELLED_PENDING_SYNC';
 }
 
@@ -95,6 +98,9 @@ export function useReservations() {
     hall: string;
     poster?: string;
     seat?: string;
+    tickets?: Array<{ category: string; label?: string; unitPrice?: number; quantity: number }>;
+    totalQuantity?: number;
+    totalAmount?: number;
     status?: 'ACTIVE' | 'PENDING_SYNC';
   }) => {
     const seat = item.seat || generateSeat(item.slotId, item.bookingId);
@@ -212,14 +218,52 @@ export function useReservations() {
     URL.revokeObjectURL(url);
   };
 
+  const markBookingCancelled = (bookingId: string) => {
+    const target = bookings.value.find((b) => b.bookingId === bookingId);
+    if (target && target.status !== 'CANCELLED') {
+      target.status = 'CANCELLED';
+      persistBookings();
+    }
+  };
+
+  const syncBookingsWithServer = async () => {
+    try {
+      const { data } = await apiClient.get<{ bookings: Array<{ bookingId: string; slotId: string }> }>(
+        '/api/bookings/mine',
+        { withCredentials: true }
+      );
+      const activeIds = new Set((data?.bookings ?? []).map((b) => b.bookingId));
+      let changed = false;
+      bookings.value.forEach((b) => {
+        if (b.status === 'ACTIVE' && !activeIds.has(b.bookingId)) {
+          b.status = 'CANCELLED';
+          changed = true;
+        }
+      });
+      if (changed) {
+        persistBookings();
+      }
+    } catch {
+      // Offline or unauthenticated: keep local state intact
+    }
+  };
+
+  const hasActiveBookingForSlot = (slotId: string) =>
+    bookings.value.some(
+      (b) => b.slotId === slotId && (b.status === 'ACTIVE' || b.status === 'PENDING_SYNC')
+    );
+
   return {
     bookings,
     activeBookings,
     activeBookingsCount,
+    hasActiveBookingForSlot,
     saveBooking,
     cancelBooking,
     deleteFromHistory,
     markAllCancelledLocally,
+    markBookingCancelled,
+    syncBookingsWithServer,
     downloadCalendarFile,
   };
 }

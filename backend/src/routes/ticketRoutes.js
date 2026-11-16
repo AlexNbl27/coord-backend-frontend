@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { buildProblemDetail, requireSession } from '../services/sessionService.js';
 import { buildTicket } from '../services/ticketService.js';
+import { Booking } from '../models/Booking.js';
 
 const STATUS_TITLES = {
   401: 'Unauthorized',
@@ -15,6 +16,20 @@ const STATUS_TITLES = {
 export function createTicketRouter(deps = {}) {
   const router = Router();
   const build = deps.buildTicket || buildTicket;
+
+  router.get('/mine', requireSession, async (req, res, next) => {
+    try {
+      const active = await Booking.find({
+        ownerId: req.sessionUser.id,
+        status: 'CONFIRMED'
+      }).select('id slotId').lean();
+      return res.json({
+        bookings: active.map((b) => ({ bookingId: b.id, slotId: b.slotId }))
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
 
   /**
    * GET /api/bookings/:id/ticket.pdf
