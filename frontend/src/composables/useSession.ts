@@ -36,6 +36,8 @@ export function useSession() {
 
       if (response.data.authenticated && response.data.user) {
         currentUser.value = response.data.user;
+      } else if (sessionStorage.getItem('cineslot_logged_out') === '1') {
+        currentUser.value = null;
       } else {
         await switchUser('spectator-1');
       }
@@ -50,6 +52,7 @@ export function useSession() {
       return;
     }
 
+    sessionStorage.removeItem('cineslot_logged_out');
     try {
       const response = await apiClient.post<{ authenticated: boolean; user: SpectatorUser }>(
         '/api/session/login',
@@ -64,6 +67,7 @@ export function useSession() {
   };
 
   const logout = async () => {
+    sessionStorage.setItem('cineslot_logged_out', '1');
     try {
       await apiClient.post('/api/session/logout', {}, { withCredentials: true, skipOfflineTrigger: true });
     } finally {
