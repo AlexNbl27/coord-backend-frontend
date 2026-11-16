@@ -113,6 +113,10 @@
 
         <!-- Actions -->
         <div class="flex flex-col gap-2.5">
+          <div v-if="!isOfflineBooking && bookingId" class="flex justify-center">
+            <TicketPdfButton :booking-id="bookingId" :movie-title="movieTitle" />
+          </div>
+
           <button
             @click="goToReservations"
             :aria-label="`Accéder à mes billets et consulter la réservation de ${movieTitle}`"
@@ -152,6 +156,7 @@ import { ref, computed, toRef } from 'vue';
 import { useRouter } from 'vue-router';
 import { useReservations } from '../composables/useReservations';
 import { useAccessibleDialog } from '../composables/useAccessibleDialog';
+import TicketPdfButton from './TicketPdfButton.vue';
 
 const props = defineProps<{
   show: boolean;
@@ -222,6 +227,7 @@ const formattedStartsAt = computed(() => {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Europe/Paris',
   });
 });
 </script>

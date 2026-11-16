@@ -10,6 +10,9 @@ import { trace, isSpanContextValid, SpanStatusCode } from '@opentelemetry/api';
 import { movieRouter } from './routes/movieRoutes.js';
 import { abRouter } from './routes/abRoutes.js';
 import { slotRouter } from './routes/slotRoutes.js';
+import { sessionRouter } from './routes/sessionRoutes.js';
+import { ticketRouter } from './routes/ticketRoutes.js';
+import { attachSession } from './services/sessionService.js';
 
 dotenv.config();
 
@@ -33,11 +36,12 @@ function createServer() {
   app.use(cors({
     origin: true,
     credentials: true,
-    exposedHeaders: ['X-Trace-Id'],
+    exposedHeaders: ['X-Trace-Id', 'Content-Disposition'],
     maxAge: 86400
   }));
   app.use(express.json());
   app.use(cookieParser());
+  app.use(attachSession);
 
   // Corrélation Front/Back : renvoie l'identifiant de trace dans l'en-tête X-Trace-Id
   app.use((req, res, next) => {
@@ -89,6 +93,8 @@ function createServer() {
   app.use('/api/movies', movieRouter);
   app.use('/api/slots', slotRouter);
   app.use('/api/ab', abRouter);
+  app.use('/api/session', sessionRouter);
+  app.use('/api/bookings', ticketRouter);
 
   // Gestionnaire d'erreurs global : enregistre l'exception dans le span actif
   app.use((err, req, res, _next) => {

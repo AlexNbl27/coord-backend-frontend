@@ -1,0 +1,176 @@
+openapi: 3.1.0
+info:
+  title: CinéSlot API — Billetterie PDF & Session
+  version: 1.0.0
+  description: >
+    Contrat d'interface pour la génération et le téléchargement sécurisé des billets PDF
+    sur CinéSlot (données de démonstration uniquement).
+servers:
+  - url: http://localhost:3001/api
+    description: Reverse proxy Nginx (même origine)
+  - url: http://localhost:3000/api
+    description: Backend Express direct
+paths:
+  /session:
+    get:
+      summary: Lire la session spectateur courante
+      responses:
+        "200":
+          description: État de session et comptes de démonstration
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authenticated, user, demoUsers]
+                properties:
+                  authenticated:
+                    type: boolean
+                  user:
+                    nullable: true
+                    $ref: "#/components/schemas/SpectatorUser"
+                  demoUsers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SpectatorUser"
+  /session/login:
+    post:
+      summary: Ouvrir une session spectateur de démonstration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: string
+                  enum: [spectator-1, spectator-2]
+      responses:
+        "200":
+          description: Session ouverte (cookie HttpOnly SameSite=Lax déposé)
+        "400":
+          description: Compte spectateur inconnu
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+  /session/logout:
+    post:
+      summary: Fermer la session spectateur courante
+      responses:
+        "204":
+          description: Session fermée
+  /bookings/{id}/ticket.pdf:
+    get:
+      summary: Télécharger ou afficher le billet PDF d'une réservation confirmée
+      description: >
+        Génère côté serveur un PDF A4 balisé avec police embarquée DejaVu Sans et
+        horaire converti en Europe/Paris. Vérifie la session et la propriété du billet
+        avant toute génération.
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant UUID de la réservation (aucune donnée personnelle dans l'URL)
+          schema:
+            type: string
+        - name: download
+          in: query
+          required: false
+          description: Si true, renvoie Content-Disposition attachment au lieu de inline
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Billet PDF généré
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/pdf
+            Content-Disposition:
+              schema:
+                type: string
+                example: inline; filename="ticket-42a8f0c1-111.pdf"
+            Cache-Control:
+              schema:
+                type: string
+                example: no-store
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            Content-Length:
+              schema:
+                type: integer
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Session absente ou expirée
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "404":
+          description: Réservation inexistante ou appartenant à un autre spectateur (anti-IDOR)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "409":
+          description: Réservation annulée (billet indisponible)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "500":
+          description: Erreur interne du moteur de rendu PDF
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: cineslot_session
+  schemas:
+    SpectatorUser:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+    ProblemDetail:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        message:
+          type: string

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Billet {{c.reference}}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 18mm 22mm;
+      @bottom-center {
+        content: "CinéSlot · page " counter(page) " sur " counter(pages);
+      }
+    }
+    * {
+      font-family: 'DejaVu Sans', sans-serif;
+      box-sizing: border-box;
+    }
+    body {
+      color: #0f172a;
+      font-size: 10pt;
+      line-height: 1.45;
+    }
+    .header {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 16px 20px;
+      border-bottom: 3px solid #d97706;
+    }
+    .badge {
+      display: inline-block;
+      border: 1px solid #10b981;
+      color: #10b981;
+      padding: 2px 8px;
+      font-size: 8pt;
+      font-weight: bold;
+    }
+    .card {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-left: 4px solid #d97706;
+      padding: 14px 16px;
+      margin-top: 14px;
+    }
+    .grid {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    .grid td {
+      width: 50%;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+    .label {
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      color: #475569;
+    }
+    .value {
+      font-size: 10.5pt;
+      font-weight: bold;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div>CINÉSLOT · Cinémathèque &amp; Billetterie officielle</div>
+    <h1>Billet de séance {{c.reference}}</h1>
+    <span class="badge">CONFIRMÉ</span>
+  </header>
+
+  <section class="card">
+    <div class="label">Film &amp; Séance</div>
+    <h2>{{c.movieTitle}}</h2>
+    <p>Jour : <strong>{{c.day}}</strong></p>
+    <p>Horaire d'accès : <strong>{{c.time}}</strong> (heure de Paris)</p>
+  </section>
+
+  <table class="grid">
+    <tr>
+      <td>
+        <div class="label">Titulaire du billet</div>
+        <div class="value">{{c.spectatorName}}</div>
+      </td>
+      <td>
+        <div class="label">Salle de projection</div>
+        <div class="value">{{c.hall}}</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="label">Place attribuée</div>
+        <div class="value">{{c.seat}}</div>
+      </td>
+      <td>
+        <div class="label">Adresse du cinéma</div>
+        <div class="value">{{c.address}}</div>
+      </td>
+    </tr>
+  </table>
+
+  <footer>
+    <p>Émis le {{c.issuedOn}} (heure de Paris) · Ce document officiel fait foi au contrôle.</p>
+  </footer>
+</body>
+</html>

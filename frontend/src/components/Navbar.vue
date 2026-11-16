@@ -55,6 +55,23 @@
           <!-- Indicateur de Connexion & Résilience -->
           <ConnectionBadge class="hidden sm:inline-flex" />
 
+          <!-- Sélecteur de session spectateur (démo) -->
+          <select
+            :value="currentUser ? currentUser.id : 'anonymous'"
+            @change="handleSessionChange"
+            aria-label="Compte spectateur de démonstration"
+            class="hidden lg:inline-block px-2.5 py-1.5 rounded-full bg-cinema-card border border-cinema-border text-cinema-text text-xs font-medium cursor-pointer focus:outline-none focus:border-accent-gold"
+          >
+            <option
+              v-for="user in demoUsers"
+              :key="user.id"
+              :value="user.id"
+            >
+              {{ user.name }}
+            </option>
+            <option value="anonymous">Déconnecté (401)</option>
+          </select>
+
           <!-- User / Mes Billets Quick Action Button -->
           <router-link
             to="/reservations"
@@ -179,11 +196,18 @@ import ConnectionBadge from './ConnectionBadge.vue';
 import { useSlotsStore } from '../stores/slots';
 import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
+import { useSession } from '../composables/useSession';
 
 const slotsStore = useSlotsStore();
 const { sseConnected } = storeToRefs(slotsStore);
 const { activeBookingsCount } = useReservations();
 const { variant } = useAbTest();
+const { currentUser, demoUsers, initSession, switchUser } = useSession();
+
+const handleSessionChange = (event: Event) => {
+  const select = event.target as HTMLSelectElement;
+  void switchUser(select.value);
+};
 
 const openAbMetricsModal = inject<() => void>('openAbMetricsModal');
 
@@ -205,6 +229,7 @@ const closeMobileMenu = () => {
 };
 
 onMounted(() => {
+  void initSession();
   document.addEventListener('click', (event) => {
     const target = event.target as HTMLElement;
     if (!target.closest('.navbar') && !target.closest('[data-mobile-menu]')) {
