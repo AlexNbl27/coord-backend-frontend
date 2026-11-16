@@ -8,11 +8,15 @@ processors:
   memory_limiter:
     check_interval: 1s
     limit_mib: 200
-  attributes/sante:
+  attributes/sanitize:
     actions:
       - key: url.query
         action: delete
       - key: enduser.id
+        action: delete
+      - key: http.request.header.cookie
+        action: delete
+      - key: http.request.header.authorization
         action: delete
 
 exporters:
@@ -20,12 +24,10 @@ exporters:
     endpoint: jaeger:4317
     tls:
       insecure: true
-  debug:
-    verbosity: basic
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, attributes/sante]
-      exporters: [otlp_grpc/jaeger, debug]
+      processors: [memory_limiter, attributes/sanitize]
+      exporters: [otlp_grpc/jaeger]

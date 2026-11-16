@@ -2,15 +2,14 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Installation des dépendances
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev --ignore-scripts && chown -R node:node /app
 
-# Copie des sources
-COPY src ./src
+COPY --chown=node:node src ./src
+
+USER node
 
 EXPOSE 3000
-
 ENV PORT=3000
 
 CMD ["node", "--import", "./src/tracing.js", "src/server.js"]
