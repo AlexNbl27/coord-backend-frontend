@@ -2,7 +2,7 @@
 
 Application Vue 3 + Vite + TypeScript pour la plateforme de réservation de films CinéSlot.
 
-## 🚀 Démarrage rapide
+## Démarrage rapide
 
 ### Développement
 
@@ -30,7 +30,7 @@ docker build -t cineslot-frontend .
 docker run -p 3001:80 cineslot-frontend
 ```
 
-## 📁 Structure du projet
+## Structure du projet
 
 ```
 frontend/
@@ -52,7 +52,7 @@ frontend/
 └── .dockerignore
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Variables d'environnement
 
@@ -68,7 +68,7 @@ VITE_SSE_EVENTS_URL=http://localhost:8086/api/slots/events
 
 Le fichier `vite.config.ts` est préconfiguré pour proxyfier les requêtes API vers les backends en développement.
 
-## 🎯 Fonctionnalités
+## Fonctionnalités
 
 - **Recherche et filtrage** des films par titre, genre, note minimale
 - **Affichage détaillé** des films avec affiches, synopsis, casting
@@ -77,13 +77,13 @@ Le fichier `vite.config.ts` est préconfiguré pour proxyfier les requêtes API 
 - **Design dark mode** inspiré des plateformes cinéma premium
 - **Responsive** pour tous les appareils
 
-## 🌐 API Backend
+## API Backend
 
 - **API Films**: http://localhost:3000/api/movies
 - **Service SSE**: http://localhost:8086/api/slots
 - **Flux SSE**: http://localhost:8086/api/slots/events
 
-## 📦 Technologies
+## Technologies
 
 - **Framework**: Vue 3
 - **Build Tool**: Vite 5
@@ -94,7 +94,7 @@ Le fichier `vite.config.ts` est préconfiguré pour proxyfier les requêtes API 
 - **HTTP Client**: Axios
 - **Container**: Docker + Nginx
 
-## 🔒 Bonnes pratiques
+## Bonnes pratiques
 
 - Composants réutilisables dans `src/components/`
 - Logique métier dans `src/composables/`
@@ -102,7 +102,7 @@ Le fichier `vite.config.ts` est préconfiguré pour proxyfier les requêtes API 
 - Types TypeScript pour toutes les interfaces API
 - Design responsive avec Tailwind CSS
 
-## 🎨 Thème Cinéma
+## Thème Cinéma
 
 Le design utilise une palette de couleurs dark mode avec :
 - Fond sombre (`bg-cinema-dark`)
@@ -110,7 +110,7 @@ Le design utilise une palette de couleurs dark mode avec :
 - Accents dorés (`accent-gold`)
 - Cartes avec bordures subtiles (`bg-cinema-card`)
 
-## 📱 Points de terminaison API
+## Points de terminaison API
 
 ### Films
 - `GET /api/movies` - Liste des films avec filtres et pagination
@@ -124,13 +124,13 @@ Le design utilise une palette de couleurs dark mode avec :
 - `POST /api/slots/:id/reservations` - Réserver une place
 - `GET /api/slots/events` - Flux SSE pour les mises à jour en temps réel
 
-## 🛡️ Sécurité
+##  Sécurité
 
 - Toutes les requêtes API passent par Axios avec gestion des erreurs
 - Connexion SSE sécurisée avec reconnexion automatique
 - Validation des données côté frontend et backend
 
-## 📊 Performance
+## Performance
 
 - Cache des requêtes API (5 secondes TTL)
 - Lazy loading des composants Vue

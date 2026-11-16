@@ -79,7 +79,7 @@
               </div>
               <h3 class="text-white font-semibold mb-2">Tests de charge</h3>
               <p class="text-sm text-cinema-textMuted">
-                k6 avec Grafana pour valider les performances jusqu'à 2000 utilisateurs simultanés.
+                k6 avec tableau de bord web pour valider les performances jusqu'à 500 utilisateurs simultanés.
               </p>
             </div>
 
@@ -154,30 +154,4 @@
 </template>
 
 <script setup lang="ts">
-// Pas besoin de logique particulière pour cette page
 </script>
-
-<style scoped>
-/* Animation pour les cartes de fonctionnalités */
-.feature-card {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-.feature-card:nth-child(1) { animation-delay: 0.1s; }
-.feature-card:nth-child(2) { animation-delay: 0.2s; }
-.feature-card:nth-child(3) { animation-delay: 0.3s; }
-.feature-card:nth-child(4) { animation-delay: 0.4s; }
-.feature-card:nth-child(5) { animation-delay: 0.5s; }
-.feature-card:nth-child(6) { animation-delay: 0.6s; }
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-</style>

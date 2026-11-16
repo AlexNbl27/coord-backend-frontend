@@ -1,19 +1,19 @@
-# 🚀 Tests de charge et de performance avec Grafana k6
+# Tests de charge et de performance avec Grafana k6
 
 Ce dossier contient les scénarios de test de charge conçus pour évaluer la résilience et les performances de l'API Node.js/Express connectée à MongoDB.
 
 ---
 
-## 📈 Scénario de montée en charge (`load-test.js`)
+## Scénario de montée en charge (`load-test.js`)
 
 Le test simule une montée progressive par paliers calculés dynamiquement en **pourcentages de la charge maximale (`MAX_VUS`)** :
-1. **0s ➜ 15s** : Montée à **10% du MAX** (*Warmup*).
-2. **15s ➜ 30s** : Montée à **30% du MAX** (*Charge nominale*).
-3. **30s ➜ 50s** : Montée à **60% du MAX** (*Zone limite / Forte affluence*).
-4. **50s ➜ 70s** : Pic à **100% du MAX** (*Point de rupture ciblé*).
-5. **70s ➜ 80s** : Descente et récupération à **0 VU**.
+1. **0s 15s** : Montée à **10% du MAX** (*Warmup*).
+2. **15s 30s** : Montée à **30% du MAX** (*Charge nominale*).
+3. **30s 50s** : Montée à **60% du MAX** (*Zone limite / Forte affluence*).
+4. **50s 70s** : Pic à **100% du MAX** (*Point de rupture ciblé*).
+5. **70s 80s** : Descente et récupération à **0 VU**.
 
-### ⚙️ Paramètres configurables (Variables d'environnement) :
+### Paramètres configurables (Variables d'environnement) :
 - `MAX_VUS` : Capacité maximale ciblée (par défaut : `500` VUs).
 - `MAX_PING_MS` : Marge de latence/ping tolérée au 95e centile (par défaut : `500` ms).
 - `TARGET_URL` : URL de l'API ciblée (par défaut : `http://backend:3000`).
@@ -40,7 +40,7 @@ Idéal pour observer les graphiques en temps réel pendant une présentation ou 
 docker compose run --rm -p 5665:5665 k6
 ```
 
-👉 Ouvrez votre navigateur sur **[http://localhost:5665](http://localhost:5665)**
+Ouvrez votre navigateur sur **[http://localhost:5665](http://localhost:5665)**
 - Grâce à l'option `--linger`, le dashboard reste accessible même après la fin du test pour vous permettre d'analyser les métriques.
 - Pour quitter : faites `Ctrl + C` dans le terminal.
 
@@ -81,4 +81,4 @@ Le workflow [`.github/workflows/load-test.yml`](../.github/workflows/load-test.y
 - Automatiquement lors des `push` et `pull_request` sur les branches `main`, `master` et `develop`.
 - Manuellement via le bouton **"Run workflow"** avec choix des valeurs `max_vus` et `max_ping_ms`.
 
-🚨 **Notification incident** : Si l'API dépasse la marge de ping tolérée ou subit plus de 1% d'erreurs, le job CI échoue et **ouvre automatiquement un ticket GitHub (Issue)** avec tous les détails du run (commit, branche, métriques ciblées, diagnostic recommandé).
+**Notification incident** : Si l'API dépasse la marge de ping tolérée ou subit plus de 1% d'erreurs, le job CI échoue et **ouvre automatiquement un ticket GitHub (Issue)** avec tous les détails du run (commit, branche, métriques ciblées, diagnostic recommandé).

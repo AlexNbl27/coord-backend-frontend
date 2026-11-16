@@ -47,7 +47,7 @@
         </div>
         
         <div v-if="loadingPopular && popularMovies.length === 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div v-for="n in 4" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
+          <div v-for="n in 4" :key="n" class="bg-cinema-card h-96 rounded-lg animate-pulse"></div>
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <MovieCard
@@ -75,7 +75,7 @@
         </div>
 
         <div v-if="loadingSlots && availableSlots.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="n in 6" :key="n" class="bg-gray-800 h-40 rounded-lg animate-pulse"></div>
+          <div v-for="n in 6" :key="n" class="bg-cinema-card h-40 rounded-lg animate-pulse"></div>
         </div>
         <div v-else-if="availableSlots.length === 0 && !loadingSlots" class="text-center py-12">
           <p class="text-gray-400">Aucune séance disponible.</p>
@@ -214,7 +214,6 @@ import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 import MovieCard from '../components/MovieCard.vue';
 import SlotCard from '../components/SlotCard.vue';
 import type { Movie } from '../composables/useMovies';
-import type { Slot } from '../composables/useSlots';
 
 const router = useRouter();
 const moviesStore = useMoviesStore();
@@ -226,7 +225,6 @@ const { exposeIfAvailable } = useAbTest();
 const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
 
 const loadingPopular = ref(false);
-const loadingRecent = ref(false);
 const selectedMovie = ref<Movie | null>(null);
 
 const movieModalRef = ref<HTMLElement | null>(null);
@@ -290,8 +288,6 @@ const handleReserveFromModal = async (slotId: string) => {
 const handleReserve = async (slotId: string, customerId: string) => {
   try {
     const result = await reserveSlot(slotId, customerId);
-    
-    // Find the slot to get details
     const slot = availableSlots.value.find(s => s.id === slotId);
     if (slot) {
       const movie = moviesStore.movies.find(m => m.title.toLowerCase() === slot.movieTitle.toLowerCase());
@@ -310,21 +306,6 @@ const handleReserve = async (slotId: string, customerId: string) => {
     }
   } catch (err) {
     console.error('Reservation error:', err);
-  }
-};
-
-const reserveForMovie = async (movie: Movie | null) => {
-  if (!movie) return;
-  const slot = availableSlots.value.find(
-    s => s.movieTitle.toLowerCase() === movie.title.toLowerCase() && s.status === 'AVAILABLE'
-  );
-  if (slot) {
-    selectedMovie.value = null;
-    const customerId = `user-${Math.random().toString(36).substring(2, 9)}-${Date.now()}`;
-    await handleReserve(slot.id, customerId);
-  } else {
-    selectedMovie.value = null;
-    router.push('/slots');
   }
 };
 

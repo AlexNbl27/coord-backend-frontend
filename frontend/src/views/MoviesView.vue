@@ -247,7 +247,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, inject, onMounted } from 'vue';
+import { ref, computed, inject, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMoviesStore } from '../stores/movies';
 import { useSlotsStore } from '../stores/slots';

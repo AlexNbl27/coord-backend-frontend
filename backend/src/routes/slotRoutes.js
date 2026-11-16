@@ -51,7 +51,7 @@ slotRouter.post('/:id/reservations', async (req, res, next) => {
   }
 });
 
-slotRouter.delete('/:id/reservations', async (req, res, next) => {
+slotRouter.delete('/:id/reservations', requireSession, async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!isValidEntityId(id)) {
