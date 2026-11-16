@@ -13,13 +13,13 @@
             v-model="password"
             type="password"
             autocomplete="new-password"
-            minlength="8"
+            minlength="12"
             maxlength="128"
             required
             aria-describedby="reset-password-hint"
             class="input"
           />
-          <p id="reset-password-hint" class="text-xs text-cinema-textMuted mt-1">8 caractères minimum.</p>
+          <p id="reset-password-hint" class="text-xs text-cinema-textMuted mt-1">12 caractères minimum.</p>
         </div>
         <div>
           <label for="reset-confirm" class="block text-sm font-medium text-cinema-text mb-1">Confirmer le mot de passe</label>

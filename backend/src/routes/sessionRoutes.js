@@ -33,13 +33,13 @@ function readEmail(value) {
 }
 
 function isValidPassword(value) {
-  return isPlainString(value, 128) && value.length >= 8;
+  // CNIL recommendation: 12 characters minimum.
+  return isPlainString(value, 128) && value.length >= 12;
 }
 
 function openSession(res, user) {
-  const publicUser = toPublicUser(user);
-  res.cookie(SESSION_COOKIE_NAME, signSessionToken(publicUser), getSessionCookieOptions());
-  return publicUser;
+  res.cookie(SESSION_COOKIE_NAME, signSessionToken(user), getSessionCookieOptions());
+  return toPublicUser(user);
 }
 
 /**
@@ -50,6 +50,12 @@ export function createSessionRouter(deps = {}) {
   const sendResetEmail = deps.sendPasswordResetEmail || sendPasswordResetEmail;
   const router = Router();
   const authLimiter = deps.authLimiter || createRateLimiter({ windowMs: 15 * 60_000, max: 20 });
+  // Per account, so rotating IPs does not help brute-forcing one email.
+  const loginLimiter = deps.loginLimiter || createRateLimiter({
+    windowMs: 15 * 60_000,
+    max: 10,
+    keyFn: (req) => `email:${readEmail(req.body?.email) ?? req.ip}`
+  });
 
   /**
    * GET /api/session
@@ -80,7 +86,7 @@ export function createSessionRouter(deps = {}) {
         return problem(res, 400, 'Bad Request', 'Le nom est obligatoire (80 caractères maximum).');
       }
       if (!isValidPassword(password)) {
-        return problem(res, 400, 'Bad Request', 'Le mot de passe doit contenir entre 8 et 128 caractères.');
+        return problem(res, 400, 'Bad Request', 'Le mot de passe doit contenir entre 12 et 128 caractères.');
       }
 
       const user = await users.create({
@@ -102,7 +108,7 @@ export function createSessionRouter(deps = {}) {
    * POST /api/session/login
    * Checks email + password and sets an HttpOnly SameSite=Lax cookie.
    */
-  router.post('/login', authLimiter, async (req, res, next) => {
+  router.post('/login', authLimiter, loginLimiter, async (req, res, next) => {
     try {
       const email = readEmail(req.body?.email);
       const password = req.body?.password;
@@ -158,14 +164,14 @@ export function createSessionRouter(deps = {}) {
   /**
    * POST /api/session/reset-password
    * Sets a new password from a single-use reset token.
-   * Note: sessions opened before the reset stay valid until their cookie expires.
+   * Revokes every session opened before the reset (sessionVersion).
    */
   router.post('/reset-password', authLimiter, async (req, res, next) => {
     try {
       const token = req.body?.token;
       const password = req.body?.password;
       if (!isValidPassword(password)) {
-        return problem(res, 400, 'Bad Request', 'Le mot de passe doit contenir entre 8 et 128 caractères.');
+        return problem(res, 400, 'Bad Request', 'Le mot de passe doit contenir entre 12 et 128 caractères.');
       }
       if (!isPlainString(token, 128) || !token) {
         return problem(res, 400, 'Bad Request', 'Lien invalide ou expiré.');
@@ -174,6 +180,7 @@ export function createSessionRouter(deps = {}) {
         { resetTokenHash: hashResetToken(token), resetTokenExpires: { $gt: new Date() } },
         {
           $set: { passwordHash: await hashPassword(password) },
+          $inc: { sessionVersion: 1 },
           $unset: { resetTokenHash: 1, resetTokenExpires: 1 }
         }
       );

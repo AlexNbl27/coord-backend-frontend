@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
+import { User } from '../models/User.js';
 
 const scrypt = promisify(crypto.scrypt);
 
@@ -41,9 +42,11 @@ export function toPublicUser(user) {
 }
 
 // name/email are copied into the cookie: re-read the user from DB if profile editing is ever added.
+// ver = user's sessionVersion: bumping it in DB revokes every session signed before.
 export function signSessionToken(user, ttlMs = SESSION_MAX_AGE_MS) {
   const exp = Date.now() + ttlMs;
-  const payload = Buffer.from(JSON.stringify({ sub: user.id, name: user.name, email: user.email, exp }), 'utf8').toString('base64url');
+  const claims = { sub: String(user._id ?? user.id), name: user.name, email: user.email, ver: user.sessionVersion ?? 0, exp };
+  const payload = Buffer.from(JSON.stringify(claims), 'utf8').toString('base64url');
   const signature = crypto
     .createHmac('sha256', SESSION_SECRET)
     .update(payload)
@@ -85,7 +88,7 @@ export function verifySessionToken(token) {
     if (Date.now() > parsed.exp) {
       return null;
     }
-    return { id: parsed.sub, name: parsed.name, email: parsed.email };
+    return { id: parsed.sub, name: parsed.name, email: parsed.email, ver: Number.isInteger(parsed.ver) ? parsed.ver : 0 };
   } catch {
     return null;
   }
@@ -101,11 +104,31 @@ export function buildProblemDetail(status, title, detail) {
   };
 }
 
-export function attachSession(req, _res, next) {
-  const token = req.cookies?.[SESSION_COOKIE_NAME];
-  req.sessionUser = verifySessionToken(token);
-  next();
+/**
+ * Reads the session cookie and checks in DB that the account still exists
+ * and that its sessions were not revoked (password reset).
+ */
+export function createAttachSession(users = User) {
+  return async function attachSession(req, _res, next) {
+    req.sessionUser = null;
+    const claims = verifySessionToken(req.cookies?.[SESSION_COOKIE_NAME]);
+    if (!claims) {
+      return next();
+    }
+    try {
+      const { ver, ...user } = claims;
+      // null also matches a missing field, i.e. version 0.
+      if (await users.exists({ _id: user.id, sessionVersion: ver || null })) {
+        req.sessionUser = user;
+      }
+      return next();
+    } catch (err) {
+      return next(err);
+    }
+  };
 }
+
+export const attachSession = createAttachSession();
 
 export function requireSession(req, res, next) {
   if (!req.sessionUser) {
