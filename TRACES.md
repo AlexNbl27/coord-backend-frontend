@@ -63,14 +63,14 @@ Le span métier `cineslot.reservation` dans `backend/src/services/slotService.js
 
 ### Tests unitaires Frontend (`cd frontend && npm test`)
 ```text
- ✓ src/tests/flows/context.a11y.test.ts (6 tests) 2102ms
- ✓ src/tests/flows/booking.a11y.test.ts (3 tests) 1578ms
- ✓ src/tests/flows/cancel.a11y.test.ts (3 tests) 1989ms
- ✓ src/tests/flows/discovery.a11y.test.ts (3 tests) 1747ms
- ✓ src/tests/flows/dialogs.a11y.test.ts (4 tests) 2063ms
- ✓ src/tests/flows/global.a11y.test.ts (3 tests) 1577ms
- ✓ src/tests/flows/slots.a11y.test.ts (4 tests) 984ms
- ✓ src/tests/tracing.test.ts (3 tests) 1015ms
+ src/tests/flows/context.a11y.test.ts (6 tests) 2102ms
+ src/tests/flows/booking.a11y.test.ts (3 tests) 1578ms
+ src/tests/flows/cancel.a11y.test.ts (3 tests) 1989ms
+ src/tests/flows/discovery.a11y.test.ts (3 tests) 1747ms
+ src/tests/flows/dialogs.a11y.test.ts (4 tests) 2063ms
+ src/tests/flows/global.a11y.test.ts (3 tests) 1577ms
+ src/tests/flows/slots.a11y.test.ts (4 tests) 984ms
+ src/tests/tracing.test.ts (3 tests) 1015ms
 
  Test Files  8 passed (8)
       Tests  29 passed (29)

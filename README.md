@@ -1,4 +1,4 @@
-# 🎬 CinéSlot - Coordination Backend & Frontend
+# CinéSlot - Coordination Backend & Frontend
 
 **Plateforme complète de gestion cinéma avec recherche de films, réservation de séances en temps réel et tests de charge.**
 
@@ -6,7 +6,7 @@ Projet académique YNOV - Module Coordination Backend & Frontend.
 
 ---
 
-## 🏗️ Architecture
+## ️ Architecture
 
 ```
 coord-backend-frontend/
@@ -50,7 +50,7 @@ coord-backend-frontend/
 
 ---
 
-## 🚀 Démarrage Rapide
+## Démarrage Rapide
 
 ### Prérequis
 
@@ -101,7 +101,7 @@ npm run build
 
 ---
 
-## 📡 Endpoints API
+## Endpoints API
 
 ### API Films (Node.js / Express)
 
@@ -150,9 +150,9 @@ npm run build
 
 ---
 
-## 🎨 Frontend - Fonctionnalités
+## Frontend - Fonctionnalités
 
-### ✅ Recherche et exploration de films
+### Recherche et exploration de films
 
 - **Recherche textuelle dynamique** : Filtre instantané sur titre, réalisateur, genres, tags
 - **Filtres par genre** : Sélection multiple avec suggestions
@@ -160,14 +160,14 @@ npm run build
 - **Pagination infinie** : Chargement automatique au scroll
 - **Affichage optimisé** : Cartes avec affiches, notes, durée, réalisateur
 
-### ✅ Réservation de séances en temps réel
+### Réservation de séances en temps réel
 
 - **Connexion SSE native** : `new EventSource('/api/slots/events')`
 - **Synchronisation instantanée** : Mise à jour de l'UI dès qu'une réservation est effectuée (par vous ou un autre client)
 - **Modal de confirmation** : Affichage de l'ID de réservation, du film, de la séance et de la salle
 - **Indicateur de connexion** : Badge visuel en bas à droite de l'écran
 
-### ✅ Design et expérience utilisateur
+### Design et expérience utilisateur
 
 - **Thème cinéma dark-mode** : Inspiré Letterboxd, Pathé, Netflix
 - **Palettes de couleurs** : Noir profond (#0a0a0a), Doré (#d4af37), Rouge cinéma (#b91c1c)
@@ -177,7 +177,7 @@ npm run build
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### Variables d'environnement
 
@@ -216,7 +216,7 @@ WEB_CONCURRENCY=4
 
 ---
 
-## 🧪 Tests & CI/CD
+## Tests & CI/CD
 
 ### 1. Exécuter les tests de charge locaux
 
@@ -257,7 +257,7 @@ docker compose run --rm k6-ci
 
 ---
 
-## 📦 Technologies
+## Technologies
 
 | Composant | Technologie | Version | Description |
 |-----------|-------------|---------|-------------|
@@ -282,7 +282,7 @@ docker compose run --rm k6-ci
 
 ---
 
-## 📁 Structure du Frontend
+## Structure du Frontend
 
 ```
 frontend/
@@ -321,7 +321,7 @@ frontend/
 
 ---
 
-## 🎯 Cas d'usage
+## Cas d'usage
 
 ### 1. Découvrir les films
 
@@ -362,26 +362,26 @@ POST /api/lab/slots
 
 ---
 
-## 🛑 Arrêter la stack
+## Arrêter la stack
 
 ```bash
 # Arrêter tous les conteneurs
 docker compose down
 
-# Arrêter et supprimer les volumes (⚠️ supprime les données)
+# Arrêter et supprimer les volumes (supprime les données)
 docker compose down -v
 ```
 
 ---
 
-## 📝 Journal des changements
+## Journal des changements
 
 ### 2026-10-08
 
-- ✅ **Phase 1** : Nettoyage du dépôt - Renommage du service SSE
-- ✅ **Phase 3** : Orchestration Docker - Ajout de tous les services
-- ✅ **Phase 2** : Frontend - Application Vue 3 complète avec SSE
-- ✅ Mise à jour de la documentation
+- **Phase 1** : Nettoyage du dépôt - Renommage du service SSE
+- **Phase 3** : Orchestration Docker - Ajout de tous les services
+- **Phase 2** : Frontend - Application Vue 3 complète avec SSE
+- Mise à jour de la documentation
 
 ### Fonctionnalités implémentées
 
@@ -394,7 +394,7 @@ docker compose down -v
 
 ---
 
-## 📄 Licences
+## Licences
 
 - **Backend Node.js** : MIT
 - **Service SSE Spring Boot** : Apache 2.0
@@ -403,7 +403,7 @@ docker compose down -v
 
 ---
 
-## 🙏 Remerciements
+## Remerciements
 
 - **YNOV** : École d'ingénierie numérique
 - **Vite** : [https://vitejs.dev](https://vitejs.dev)
