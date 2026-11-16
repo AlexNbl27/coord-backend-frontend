@@ -209,6 +209,15 @@
                 </button>
                 <button
                   v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
+                  @click="openGoogleCalendar(booking)"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
+                  :aria-label="`Exporter vers Google Agenda la séance de ${booking.movieTitle} du ${formatDateTime(booking.startsAt)}`"
+                  title="Ajouter à Google Agenda"
+                >
+                  <span>Google Agenda</span>
+                </button>
+                <button
+                  v-if="booking.status === 'ACTIVE' || booking.status === 'PENDING_SYNC'"
                   @click="printTicket"
                   class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-darker hover:bg-cinema-border text-cinema-text hover:text-white border border-cinema-border transition-all flex items-center gap-1.5 cursor-pointer"
                   :aria-label="`Imprimer le billet pour ${booking.movieTitle}, fauteuil ${booking.seat || 'non spécifié'}`"
@@ -332,7 +341,7 @@ import { useConnectionStore } from '../stores/connection';
 import { useAccessibleDialog } from '../composables/useAccessibleDialog';
 import TicketPdfButton from '../components/TicketPdfButton.vue';
 
-const { bookings, activeBookingsCount, cancelBooking, deleteFromHistory, downloadCalendarFile } = useReservations();
+const { bookings, activeBookingsCount, cancelBooking, deleteFromHistory, downloadCalendarFile, openGoogleCalendar } = useReservations();
 const connectionStore = useConnectionStore();
 
 const filter = ref<'ALL' | 'ACTIVE' | 'CANCELLED'>('ALL');
