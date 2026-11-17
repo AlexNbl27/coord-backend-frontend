@@ -6,7 +6,7 @@ import { getTenantModels } from '../tenancy/index.js';
 import { getCinemaStatus } from './cinemaStatusService.js';
 import { EXP, attribution } from './abService.js';
 import { generateSeatLabel } from '../utils/ticketFormatters.js';
-import { buildProblemDetail } from './sessionService.js';
+import { sendProblem } from './sessionService.js';
 import { SSE_BROADCAST_TYPE, isValidSseBroadcast } from './sseMessages.js';
 
 const tracer = trace.getTracer('cineslot-api');
@@ -115,24 +115,13 @@ function normalizeTickets(rawTickets) {
 
 function sendSseEvent(res, eventName, data) {
   res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
-  if (typeof res.flush === 'function') {
-    res.flush();
-  }
-}
-
-function sseProblem(res, status, title, detail) {
-  return res
-    .status(status)
-    .type('application/problem+json')
-    .json(buildProblemDetail(status, title, detail));
+  if (typeof res.flush === 'function') res.flush();
 }
 
 function releaseSseClient(slug, res) {
   const clients = sseClientsBySlug.get(slug);
   const ip = clients?.get(res);
-  if (ip === undefined || !clients.delete(res)) {
-    return;
-  }
+  if (ip === undefined || !clients.delete(res)) return;
   if (clients.size === 0) {
     sseClientsBySlug.delete(slug);
   }
@@ -147,17 +136,15 @@ function releaseSseClient(slug, res) {
 
 export function subscribeSse(req, res) {
   const slug = req.tenant?.slug;
-  if (!slug) {
-    return sseProblem(res, 404, 'Not Found', 'Aucun cinéma ne correspond à cette adresse.');
-  }
+  if (!slug) return sendProblem(res, 404, 'Not Found', 'Aucun cinéma ne correspond à cette adresse.');
   const ip = req.ip || req.socket?.remoteAddress || 'unknown';
   if ((sseConnectionsByIp.get(ip) ?? 0) >= MAX_SSE_PER_IP) {
     res.setHeader('Retry-After', '30');
-    return sseProblem(res, 429, 'Too Many Requests', 'Trop de connexions temps réel ouvertes depuis cette adresse.');
+    return sendProblem(res, 429, 'Too Many Requests', 'Trop de connexions temps réel ouvertes depuis cette adresse.');
   }
   if (sseClientCount >= MAX_SSE_CLIENTS) {
     res.setHeader('Retry-After', '30');
-    return sseProblem(res, 503, 'Service Unavailable', 'Limite de connexions temps réel atteinte.');
+    return sendProblem(res, 503, 'Service Unavailable', 'Limite de connexions temps réel atteinte.');
   }
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -181,14 +168,11 @@ export function subscribeSse(req, res) {
   } catch {
     releaseSseClient(slug, res);
   }
-  return undefined;
 }
 
 function sendToTenantClients(slug, eventName, data) {
   const clients = sseClientsBySlug.get(slug);
-  if (!clients) {
-    return;
-  }
+  if (!clients) return;
   for (const client of [...clients.keys()]) {
     try {
       sendSseEvent(client, eventName, data);
@@ -200,9 +184,7 @@ function sendToTenantClients(slug, eventName, data) {
 
 function broadcastToTenant(slug, eventName, payload) {
   const msg = { type: SSE_BROADCAST_TYPE, slug, eventName, payload, originPid: process.pid };
-  if (!isValidSseBroadcast(msg)) {
-    return;
-  }
+  if (!isValidSseBroadcast(msg)) return;
   sendToTenantClients(slug, eventName, payload);
   if (process.send) {
     process.send(msg);
