@@ -19,6 +19,7 @@ import { seedCinemas } from './geo/cinemas.js';
 import { attachSession, rejectDuplicateSessionCookies } from './services/sessionService.js';
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
 import { connectDatabases, databasesReady, requireTenant, resolveTenant } from './tenancy/index.js';
+import { isForwardableIpcMessage } from './services/sseMessages.js';
 
 dotenv.config();
 
@@ -145,7 +146,7 @@ if (cluster.isPrimary && numCPUs > 1) {
 
   const setupWorker = (w) => {
     w.on('message', (msg) => {
-      if (msg && (msg.type === 'BROADCAST_SSE' || msg.type === 'CLEAR_MOVIE_CACHE' || msg.type === 'CLEAR_CINEMA_CACHE')) {
+      if (isForwardableIpcMessage(msg)) {
         for (const id in cluster.workers) {
           cluster.workers[id]?.send(msg);
         }
