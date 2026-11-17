@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Movie } from '../models/Movie.js';
 import { requireRole } from '../services/sessionService.js';
+import { auditRequest } from '../events/audit.js';
 import {
   escapeRegex,
   isPlainString,
@@ -152,6 +153,10 @@ movieRouter.post('/', requireRole('SUPER_ADMIN'), async (req, res) => {
     const newMovie = new Movie(payload);
     const savedMovie = await newMovie.save();
     clearMovieCache();
+    await auditRequest(req, 'MOVIE_CREATE', {
+      target: { type: 'movie', id: String(savedMovie._id) },
+      after: payload
+    });
     return res.status(201).json({
       message: 'Film créé avec succès !',
       data: savedMovie
@@ -170,6 +175,10 @@ movieRouter.put('/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
     if (!payload || Object.keys(payload).length === 0) {
       return res.status(400).json({ error: 'Données de mise à jour invalides' });
     }
+    const before = await Movie.findById(req.params.id).select(Object.keys(payload).join(' ')).lean();
+    if (!before) {
+      return res.status(404).json({ error: 'Film non trouvé' });
+    }
     const updatedMovie = await Movie.findByIdAndUpdate(
       req.params.id,
       { $set: payload },
@@ -179,6 +188,11 @@ movieRouter.put('/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
       return res.status(404).json({ error: 'Film non trouvé' });
     }
     clearMovieCache();
+    await auditRequest(req, 'MOVIE_UPDATE', {
+      target: { type: 'movie', id: req.params.id },
+      before,
+      after: payload
+    });
     return res.json({
       message: 'Film mis à jour avec succès !',
       data: updatedMovie
@@ -198,6 +212,10 @@ movieRouter.delete('/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
       return res.status(404).json({ error: 'Film non trouvé' });
     }
     clearMovieCache();
+    await auditRequest(req, 'MOVIE_DELETE', {
+      target: { type: 'movie', id: req.params.id },
+      before: { title: deletedMovie.title, director: deletedMovie.director, year: deletedMovie.year }
+    });
     return res.json({
       message: 'Film supprimé avec succès !',
       deletedId: req.params.id

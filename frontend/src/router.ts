@@ -80,6 +80,17 @@ const routes = [
     },
   },
   {
+    path: '/admin/logs',
+    name: 'admin-logs',
+    component: () => import('./views/AdminLogsView.vue'),
+    meta: {
+      title: 'CinéSlot - Journaux d\'activité',
+      description: 'Journaux des réservations et audit des actions d\'administration',
+      requiresAuth: true,
+      requiresRole: ['SUPER_ADMIN', 'CINEMA_ADMIN'],
+    },
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('./views/LoginView.vue'),

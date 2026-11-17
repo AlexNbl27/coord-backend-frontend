@@ -1,12 +1,25 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import test from 'node:test';
+import test, { mock, beforeEach, afterEach } from 'node:test';
 import express from 'express';
 import { createSlotRouter } from '../src/routes/slotRoutes.js';
 import { createAbRouter } from '../src/routes/abRoutes.js';
 import { movieRouter } from '../src/routes/movieRoutes.js';
 import { errorHandler } from '../src/utils/errorHandler.js';
 import { areDemoRoutesEnabled, sanitizeMoviePayload } from '../src/utils/securityMiddleware.js';
+import { AuditLog } from '../src/models/AuditLog.js';
+import { auditForbiddenResponses } from '../src/events/audit.js';
+import { createMemoryModel } from './helpers/memoryModel.js';
+
+let audits;
+
+beforeEach(() => {
+  audits = createMemoryModel({ unique: ['seq', 'prevHash'] });
+  mock.method(AuditLog, 'findOne', (...args) => audits.findOne(...args));
+  mock.method(AuditLog, 'create', (doc) => audits.create(doc));
+});
+
+afterEach(() => mock.restoreAll());
 
 function createTestApp({ demoRoutes = true } = {}) {
   const app = express();
@@ -16,6 +29,7 @@ function createTestApp({ demoRoutes = true } = {}) {
     req.sessionUser = role ? { id: 'u-1', name: 'Ada', email: 'ada@cineslot.test', role, cinemaSlugs: [] } : null;
     next();
   });
+  app.use(auditForbiddenResponses);
   app.use('/api/slots', createSlotRouter({ demoRoutes }));
   app.use('/api/ab', createAbRouter({ demoRoutes }));
   app.use('/api/movies', movieRouter);
@@ -64,6 +78,9 @@ test('dangerous routes: SPECTATOR and CINEMA_ADMIN receive 403 problem+json', as
       }
     }
   });
+  const denied = audits.docs.filter((d) => d.action === 'ACCESS_DENIED' && d.result === 'DENIED');
+  assert.equal(denied.length, GUARDED.length * 2, 'every refusal is audited');
+  assert.ok(denied.some((d) => d.target.id === 'POST /api/slots/reset' && d.actor.role === 'SPECTATOR'));
 });
 
 test('dangerous routes: anonymous receives 401', async () => {
@@ -72,6 +89,7 @@ test('dangerous routes: anonymous receives 401', async () => {
       assert.equal((await call(method, path)).status, 401, `${method} ${path}`);
     }
   });
+  assert.equal(audits.docs.length, 0, 'anonymous 401 are not audited');
 });
 
 test('dangerous routes: SUPER_ADMIN passes the guard', async () => {

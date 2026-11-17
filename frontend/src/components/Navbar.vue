@@ -58,6 +58,14 @@
           >
             À propos
           </router-link>
+          <router-link
+            v-if="isAdmin"
+            to="/admin/logs"
+            class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium"
+            active-class="text-accent-gold font-semibold"
+          >
+            Journaux
+          </router-link>
         </div>
 
         <!-- Right side: Status + User Tickets -->
@@ -194,6 +202,15 @@
             >
               À propos
             </router-link>
+            <router-link
+              v-if="isAdmin"
+              to="/admin/logs"
+              class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2"
+              active-class="text-accent-gold font-semibold"
+              @click="mobileMenuOpen = false"
+            >
+              Journaux
+            </router-link>
             <div class="pt-3 border-t border-cinema-border/30 flex items-center justify-between gap-2">
               <template v-if="currentUser">
                 <span class="text-xs text-cinema-text truncate">{{ currentUser.name }}</span>
@@ -268,7 +285,7 @@ const slotsStore = useSlotsStore();
 const { sseConnected } = storeToRefs(slotsStore);
 const { activeBookingsCount } = useReservations();
 const { variant } = useAbTest();
-const { currentUser, isSuperAdmin, initSession, logout } = useSession();
+const { currentUser, isSuperAdmin, isAdmin, initSession, logout } = useSession();
 const router = useRouter();
 const hostContext = currentHostContext();
 const chooseCinemaHref = apexUrl('/choisir-un-cinema');
