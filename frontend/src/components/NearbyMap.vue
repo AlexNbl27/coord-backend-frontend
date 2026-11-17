@@ -3,7 +3,7 @@
     ref="el"
     role="region"
     aria-label="Carte des cinémas"
-    class="h-80 w-full rounded-2xl border border-cinema-border/50 overflow-hidden"
+    class="h-80 w-full rounded-2xl border border-accent-gold/60 overflow-hidden shadow-[0_0_0_1px_rgba(200,164,86,0.35),0_0_28px_rgba(200,164,86,0.35)]"
   ></div>
 </template>
 

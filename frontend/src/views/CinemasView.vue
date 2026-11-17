@@ -34,7 +34,7 @@
       <NearbyMap v-if="center" :center="center" :radius-km="5" :cinemas="cinemas" />
       <div
         v-else
-        class="relative h-80 w-full rounded-2xl border border-cinema-border/50 overflow-hidden bg-cinema-darker"
+        class="relative h-80 w-full rounded-2xl border border-accent-gold/60 overflow-hidden bg-cinema-darker shadow-[0_0_0_1px_rgba(200,164,86,0.35),0_0_28px_rgba(200,164,86,0.35)]"
       >
         <div
           class="absolute inset-0 blur-sm scale-105 opacity-70"
