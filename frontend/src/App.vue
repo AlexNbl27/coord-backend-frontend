@@ -66,12 +66,14 @@ import CinemaStatusBanner from './components/CinemaStatusBanner.vue';
 import { useAbTest } from './composables/useAbTest';
 import { useSlots } from './composables/useSlots';
 import { useConnection } from './composables/useConnection';
+import { useSession } from './composables/useSession';
 import { currentHostContext } from './services/tenant';
 import { useCurrentCinema } from './composables/useCurrentCinema';
 
 const { initAssignment } = useAbTest();
 const { connectSse } = useSlots();
 const { initConnectionWatcher, activeToast, clearToast } = useConnection();
+const { initSession } = useSession();
 const { loadCurrentCinema } = useCurrentCinema();
 
 const showReservationModal = ref(false);
@@ -109,6 +111,7 @@ provide('openAbMetricsModal', openAbMetricsModal);
 
 onMounted(() => {
   initConnectionWatcher();
+  initSession();
   const { plane } = currentHostContext();
   if (plane !== 'admin') {
     initAssignment();

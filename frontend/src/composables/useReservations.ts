@@ -124,6 +124,13 @@ offlineQueue.registerCallbacks(
   },
 );
 
+export function clearLocalBookings() {
+  bookings.value = [];
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {}
+}
+
 export function useReservations() {
   const activeBookings = computed(() => {
     return bookings.value.filter(
@@ -298,8 +305,10 @@ export function useReservations() {
       if (changed) {
         persistBookings();
       }
-    } catch {
-      // Offline or unauthenticated: keep local state intact
+    } catch (err: any) {
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        clearLocalBookings();
+      }
     }
   };
 
@@ -312,8 +321,10 @@ export function useReservations() {
       if (Array.isArray(response.data?.bookings)) {
         bookings.value = response.data.bookings;
       }
-    } catch {
-      // Unauthenticated or offline
+    } catch (err: any) {
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        clearLocalBookings();
+      }
     }
   };
 

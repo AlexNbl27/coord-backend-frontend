@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue';
 import { apiClient } from '../services/apiClient';
 import { currentHostContext } from '../services/tenant';
+import { clearLocalBookings } from './useReservations';
 
 export type UserRole = 'SUPER_ADMIN' | 'CINEMA_ADMIN' | 'SPECTATOR';
 
@@ -45,6 +46,7 @@ export function useSession() {
       .get<{ authenticated: boolean; user: SpectatorUser | null; googleEnabled?: boolean; mfaEnabled?: boolean; mfaVerifiedAt?: number | null }>(endpoint, REQUEST_OPTIONS)
       .then((response) => {
         currentUser.value = response.data.authenticated ? response.data.user : null;
+        if (!response.data.authenticated && !adminPlane) clearLocalBookings();
         googleEnabled.value = adminPlane ? false : Boolean(response.data.googleEnabled);
         mfaVerifiedAt.value = adminPlane ? (response.data.mfaVerifiedAt ?? null) : null;
         mfaEnabled.value = adminPlane && Boolean(response.data.mfaEnabled);
@@ -131,6 +133,7 @@ export function useSession() {
       await apiClient.post(adminPlane ? '/api/admin/session/logout' : '/api/session/logout', {}, REQUEST_OPTIONS);
     } finally {
       currentUser.value = null;
+      clearLocalBookings();
       mfaEnabled.value = false;
       mfaVerifiedAt.value = null;
     }
