@@ -10,6 +10,7 @@ import {
 } from '../services/slotService.js';
 import { requireRole, requireSession } from '../services/sessionService.js';
 import { areDemoRoutesEnabled, isValidEntityId } from '../utils/securityMiddleware.js';
+import { auditRequest } from '../events/audit.js';
 
 const COOKIE_NAME = 'ab_visitor';
 
@@ -85,6 +86,10 @@ export function createSlotRouter({ demoRoutes = areDemoRoutesEnabled() } = {}) {
     slotRouter.post('/lab', requireRole('SUPER_ADMIN'), async (req, res, next) => {
       try {
         const demo = await createDemoSlot(req.tenant);
+        await auditRequest(req, 'SLOT_LAB_CREATE', {
+          target: { type: 'slot', id: demo.id, cinemaSlug: req.tenant?.slug ?? null },
+          after: demo
+        });
         res.status(201).json(demo);
       } catch (err) {
         next(err);
@@ -94,6 +99,9 @@ export function createSlotRouter({ demoRoutes = areDemoRoutesEnabled() } = {}) {
     slotRouter.post('/reset', requireRole('SUPER_ADMIN'), async (req, res, next) => {
       try {
         const result = await resetAllSlots(req.tenant);
+        await auditRequest(req, 'SLOTS_RESET', {
+          target: { type: 'slots', id: '*', cinemaSlug: req.tenant?.slug ?? null }
+        });
         res.json(result);
       } catch (err) {
         next(err);

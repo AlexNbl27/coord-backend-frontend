@@ -15,12 +15,14 @@ import { ticketRouter } from './routes/ticketRoutes.js';
 import { cinemaRouter } from './routes/cinemaRoutes.js';
 import { adminSessionRouter } from './routes/adminSessionRoutes.js';
 import { adminCinemaRouter } from './routes/adminCinemaRoutes.js';
+import { adminLogRouter } from './routes/adminLogRoutes.js';
 import { seedCinemas } from './geo/cinemas.js';
 import { attachSession, rejectDuplicateSessionCookies } from './services/sessionService.js';
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
 import { connectDatabases, createCrossOriginWriteGuard, databasesReady, requireTenant, resolveTenant } from './tenancy/index.js';
 import { isForwardableIpcMessage } from './services/sseMessages.js';
 import { errorHandler } from './utils/errorHandler.js';
+import { auditForbiddenResponses } from './events/audit.js';
 
 dotenv.config();
 
@@ -94,6 +96,7 @@ function createServer() {
   app.use(resolveTenant);
   app.use(rejectDuplicateSessionCookies);
   app.use(attachSession);
+  app.use(auditForbiddenResponses);
 
   app.use('/api/movies', movieRouter);
   app.use('/api/slots', requireTenant, slotRouter);
@@ -104,6 +107,7 @@ function createServer() {
   app.use('/api/cinemas', cinemaRouter);
   app.use('/api/admin/session', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminSessionRouter);
   app.use('/api/admin/cinemas', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminCinemaRouter);
+  app.use('/api/admin', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminLogRouter);
 
   app.use(errorHandler);
 

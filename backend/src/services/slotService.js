@@ -8,6 +8,7 @@ import { EXP, attribution } from './abService.js';
 import { generateSeatLabel } from '../utils/ticketFormatters.js';
 import { sendProblem } from './sessionService.js';
 import { SSE_BROADCAST_TYPE, isValidSseBroadcast } from './sseMessages.js';
+import { emitReservationEvent } from '../events/reservationEvents.js';
 
 const tracer = trace.getTracer('cineslot-api');
 const SMS_GATEWAY_URL = process.env.SMS_GATEWAY_URL || '';
@@ -302,8 +303,23 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       const checkStatus = deps.getCinemaStatus || getCinemaStatus;
       const resolveAddress = deps.getCinemaAddress || getCinemaAddress;
 
+      const { lines, totalQuantity, totalAmount } = normalizeTickets(rawTickets);
+
+      const ownerId = sessionUser?.id || 'spectator-1';
+      const safeCustomer = typeof customerId === 'string' ? customerId.trim().slice(0, 80) : '';
+      const ownerName = sessionUser?.name || safeCustomer || 'Hélène Durand';
+      const logEvent = (action, extra = {}) => emitReservationEvent({
+        action,
+        cinemaSlug: tenant?.slug ?? null,
+        slotId: String(slotId),
+        userId: ownerId,
+        quantity: totalQuantity,
+        ...extra
+      });
+
       const currentStatus = await checkStatus(tenant?.slug);
       if (currentStatus !== 'ACTIVE') {
+        await logEvent('REJECTED_DISABLED');
         const error = new Error('Ce cinéma est temporairement désactivé.');
         error.status = 423;
         throw error;
@@ -313,18 +329,13 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
       const SlotModel = models.Slot;
       const BookingModel = models.Booking;
 
-      const { lines, totalQuantity, totalAmount } = normalizeTickets(rawTickets);
-
-      const ownerId = sessionUser?.id || 'spectator-1';
-      const safeCustomer = typeof customerId === 'string' ? customerId.trim().slice(0, 80) : '';
-      const ownerName = sessionUser?.name || safeCustomer || 'Hélène Durand';
-
       const existingBooking = await BookingModel.findOne({
         slotId: String(slotId),
         ownerId,
         status: 'CONFIRMED'
       }).lean();
       if (existingBooking) {
+        await logEvent('REJECTED_CONFLICT', { bookingId: existingBooking._id, movieId: existingBooking.movieId });
         const error = new Error('Vous avez déjà une réservation active pour cette séance');
         error.status = 409;
         throw error;
@@ -398,6 +409,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
           error.status = 404;
           throw error;
         }
+        await logEvent('REJECTED_FULL', { movieId: current.movieId });
         const remaining = current.availableSeats ?? (current.status === 'BOOKED' ? 0 : DEFAULT_CAPACITY);
         const error = new Error(
           remaining <= 0 || current.status === 'BOOKED'
@@ -427,6 +439,8 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
         status: 'CONFIRMED',
         bookedAt
       });
+
+      await logEvent('BOOKED', { bookingId, movieId: winner.movieId });
 
       dispatchSmsConfirmation(bookingId, winner._id);
 
@@ -513,6 +527,16 @@ export async function cancelSlot(slotId, sessionUser, tenant) {
     { new: true }
   );
 
+  await emitReservationEvent({
+    action: 'CANCELLED',
+    cinemaSlug: tenant?.slug ?? null,
+    slotId: safeSlotId,
+    movieId: activeBooking.movieId ?? updated?.movieId,
+    bookingId: activeBooking._id,
+    userId: activeBooking.ownerId,
+    quantity: restoreQty
+  });
+
   broadcastSlotChange(updated, tenant.slug);
   return toSlotView(updated);
 }
@@ -563,6 +587,9 @@ export async function getSlotProof(slotId, tenant) {
 
 export async function resetAllSlots(tenant) {
   const { Slot, Booking } = tenantModels(tenant);
+  const activeBookings = await Booking.find({ status: 'CONFIRMED' })
+    .select('_id slotId ownerId movieId totalQuantity')
+    .lean();
   await Slot.updateMany({}, [
     {
       $set: {
@@ -576,9 +603,21 @@ export async function resetAllSlots(tenant) {
   ]);
 
   await Booking.updateMany(
-    { status: 'CONFIRMED' },
+    { _id: { $in: activeBookings.map((b) => b._id) }, status: 'CONFIRMED' },
     { $set: { status: 'CANCELLED', cancelledAt: new Date() } }
   );
+
+  for (const booking of activeBookings) {
+    await emitReservationEvent({
+      action: 'CANCELLED',
+      cinemaSlug: tenant?.slug ?? null,
+      slotId: booking.slotId,
+      movieId: booking.movieId,
+      bookingId: booking._id,
+      userId: booking.ownerId,
+      quantity: booking.totalQuantity || 1
+    });
+  }
 
   broadcastToTenant(tenant.slug, 'ready', { action: 'reload' });
 
