@@ -7,14 +7,15 @@ const ticketLineSchema = new mongoose.Schema({
   quantity: { type: Number, required: true, min: 1 }
 }, { _id: false });
 
-const bookingSchema = new mongoose.Schema({
+export const bookingSchema = new mongoose.Schema({
   _id: { type: String, required: true },
   slotId: { type: String, required: true, index: true },
   ownerId: { type: String, required: true, index: true },
   ownerName: { type: String, required: true },
+  movieId: { type: mongoose.Schema.Types.ObjectId, default: null },
   movieTitle: { type: String, required: true },
   hall: { type: String, required: true },
-  address: { type: String, default: '14 rue de la Cinémathèque, 69002 Lyon' },
+  address: { type: String, default: '' },
   startsAt: { type: String, required: true },
   seat: { type: String, required: true },
   tickets: { type: [ticketLineSchema], default: [] },
@@ -34,5 +35,4 @@ const bookingSchema = new mongoose.Schema({
 
 bookingSchema.index({ ownerId: 1, bookedAt: -1 });
 bookingSchema.index({ slotId: 1, status: 1 });
-
-export const Booking = mongoose.model('Booking', bookingSchema);
+bookingSchema.index({ movieId: 1, bookedAt: -1 });

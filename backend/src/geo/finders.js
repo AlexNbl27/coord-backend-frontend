@@ -11,7 +11,8 @@ export async function findInBox(query) {
   const box = boundingBox(query.lat, query.lon, query.radiusKm);
   const filter = {
     latitude: { $gte: box.minLat, $lte: box.maxLat },
-    longitude: { $gte: box.minLon, $lte: box.maxLon }
+    longitude: { $gte: box.minLon, $lte: box.maxLon },
+    status: { $ne: 'DELETED' }
   };
   if (query.feature) filter.features = query.feature;
   const rows = await Cinema.find(filter).lean();
@@ -26,7 +27,7 @@ export async function findWithGeoNear({ lat, lon, radiusKm, feature }) {
         distanceField: 'meters',
         maxDistance: radiusKm * 1000,
         spherical: true,
-        query: feature ? { features: feature } : {}
+        query: feature ? { features: feature, status: { $ne: 'DELETED' } } : { status: { $ne: 'DELETED' } }
       }
     }
   ]);

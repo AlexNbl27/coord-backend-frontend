@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { Subject } from '../models/Subject.js';
-import { Slot } from '../models/Slot.js';
+import { getTenantModels } from '../tenancy/index.js';
 import {
   calculateConfidenceInterval,
   calculateSrm,
@@ -112,7 +112,13 @@ export async function attribution(visitorId) {
   return subject;
 }
 
-export async function getMetrics() {
+export async function getMetrics(tenant) {
+  const { Slot } = getTenantModels(tenant?.db);
+  const convertedSubjectIds = await Slot.distinct('subjectId', {
+    experimentId: EXP,
+    status: 'BOOKED',
+    subjectId: { $ne: null }
+  });
   const variants = [];
 
   for (const v of ['A', 'B']) {
@@ -122,40 +128,14 @@ export async function getMetrics() {
 
     let converted = 0;
     if (exposed > 0) {
-      const conversionData = await Slot.aggregate([
-        {
-          $match: {
-            experimentId: EXP,
-            status: 'BOOKED',
-            subjectId: { $ne: null }
-          }
-        },
-        {
-          $lookup: {
-            from: 'ab_subjects',
-            localField: 'subjectId',
-            foreignField: '_id',
-            as: 'subject'
-          }
-        },
-        { $unwind: '$subject' },
-        {
-          $match: {
-            'subject.variant': v,
-            'subject.exposed': true
-          }
-        },
-        {
-          $group: {
-            _id: '$subjectId'
-          }
-        },
-        {
-          $count: 'total'
-        }
-      ]);
-
-      converted = conversionData[0]?.total || 0;
+      converted = convertedSubjectIds.length === 0
+        ? 0
+        : await Subject.countDocuments({
+          _id: { $in: convertedSubjectIds },
+          experimentId: EXP,
+          variant: v,
+          exposed: true
+        });
     }
 
     const rate = exposed === 0 ? null : parseFloat((converted / exposed).toFixed(4));
@@ -198,7 +178,8 @@ export async function getMetrics() {
   };
 }
 
-export async function simulateData({ countA = 80, convA = 16, countB = 80, convB = 30 } = {}) {
+export async function simulateData({ countA = 80, convA = 16, countB = 80, convB = 30 } = {}, tenant = null) {
+  const { Slot } = getTenantModels(tenant?.db);
   const subjectsToInsert = [];
   const now = new Date();
 
@@ -255,5 +236,5 @@ export async function simulateData({ countA = 80, convA = 16, countB = 80, convB
     await slot.save();
   }
 
-  return await getMetrics();
+  return await getMetrics(tenant);
 }

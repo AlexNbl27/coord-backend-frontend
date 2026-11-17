@@ -55,6 +55,13 @@
             <p class="font-semibold text-white">{{ c.name }}</p>
             <p class="text-sm text-cinema-textMuted">{{ c.address }}, {{ c.city }}</p>
             <p class="text-xs text-cinema-textMuted mt-1">{{ c.features.join(', ').toUpperCase() }}</p>
+            <a
+              v-if="isValidSlug(c.slug)"
+              :href="tenantUrl(c.slug, '/slots')"
+              class="inline-block mt-2 text-sm text-accent-gold hover:underline"
+            >
+              Voir les séances<span class="sr-only"> de {{ c.name }}</span>
+            </a>
           </div>
           <p v-if="c.distanceKm !== null" class="text-sm text-accent-gold text-right shrink-0">
             {{ formatDistance(c.distanceKm) }}<br />
@@ -81,6 +88,7 @@ import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import NearbyBar from '../components/NearbyBar.vue';
 import { apiClient } from '../services/apiClient';
 import { type Center, formatDistance, nearbyParams } from '../services/geo';
+import { isValidSlug, tenantUrl } from '../services/tenant';
 
 const NearbyMap = defineAsyncComponent(() => import('../components/NearbyMap.vue'));
 

@@ -1,5 +1,4 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cluster from 'node:cluster';
@@ -19,11 +18,12 @@ import { adminCinemaRouter } from './routes/adminCinemaRoutes.js';
 import { seedCinemas } from './geo/cinemas.js';
 import { attachSession, rejectDuplicateSessionCookies } from './services/sessionService.js';
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
+import { connectDatabases, createCrossOriginWriteGuard, databasesReady, requireTenant, resolveTenant } from './tenancy/index.js';
+import { isForwardableIpcMessage } from './services/sseMessages.js';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb:27017/cours_db?directConnection=true';
 const defaultCPUs = typeof os.availableParallelism === 'function'
   ? os.availableParallelism()
   : os.cpus().length;
@@ -32,7 +32,7 @@ const numCPUs = process.env.WEB_CONCURRENCY
   : defaultCPUs;
 
 const ALLOWED_ORIGINS = new Set(
-  (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3001,http://localhost:5173,http://127.0.0.1:3001,http://127.0.0.1:5173')
+  (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean)
@@ -57,12 +57,11 @@ function createServer() {
     exposedHeaders: ['X-Trace-Id', 'Content-Disposition'],
     maxAge: 86400
   }));
+  app.use(createCrossOriginWriteGuard(ALLOWED_ORIGINS));
 
   app.use(createRateLimiter({ windowMs: 60_000, max: 600 }));
   app.use(express.json({ limit: '32kb' }));
   app.use(cookieParser());
-  app.use(rejectDuplicateSessionCookies);
-  app.use(attachSession);
 
   app.use((_req, res, next) => {
     const span = trace.getActiveSpan();
@@ -82,22 +81,25 @@ function createServer() {
   });
 
   const healthHandler = (_req, res) => {
-    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
     res.json({
       status: 'OK',
-      database: dbStatus,
+      database: databasesReady() ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString()
     });
   };
   app.get('/health', healthHandler);
   app.get('/api/health', healthHandler);
 
+  app.use(resolveTenant);
+  app.use(rejectDuplicateSessionCookies);
+  app.use(attachSession);
+
   app.use('/api/movies', movieRouter);
-  app.use('/api/slots', slotRouter);
+  app.use('/api/slots', requireTenant, slotRouter);
   app.use('/api/ab', abRouter);
   app.use('/api/session/google', googleAuthRouter);
   app.use('/api/session', sessionRouter);
-  app.use('/api/bookings', ticketRouter);
+  app.use('/api/bookings', requireTenant, ticketRouter);
   app.use('/api/cinemas', cinemaRouter);
   app.use('/api/admin/session', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminSessionRouter);
   app.use('/api/admin/cinemas', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminCinemaRouter);
@@ -122,7 +124,7 @@ function createServer() {
 
 async function startWorker() {
   try {
-    await mongoose.connect(MONGO_URI, {
+    await connectDatabases({
       maxPoolSize: 50,
       minPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
@@ -145,7 +147,7 @@ if (cluster.isPrimary && numCPUs > 1) {
 
   const setupWorker = (w) => {
     w.on('message', (msg) => {
-      if (msg && (msg.type === 'BROADCAST_SSE' || msg.type === 'CLEAR_MOVIE_CACHE' || msg.type === 'CLEAR_CINEMA_CACHE')) {
+      if (isForwardableIpcMessage(msg)) {
         for (const id in cluster.workers) {
           cluster.workers[id]?.send(msg);
         }

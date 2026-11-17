@@ -1,7 +1,19 @@
 import mongoose from 'mongoose';
+import { RESERVED_SLUGS, SLUG_PATTERN, tenantDbName } from '../tenancy/slug.js';
 
 const cinemaSchema = new mongoose.Schema({
-  slug: { type: String, required: true, unique: true },
+  slug: {
+    type: String,
+    required: true,
+    unique: true,
+    immutable: true,
+    match: SLUG_PATTERN,
+    validate: {
+      validator: (v) => !RESERVED_SLUGS.has(v),
+      message: 'Slug de cinéma réservé.'
+    }
+  },
+  dbName: { type: String, required: true, immutable: true },
   name: { type: String, required: true },
   address: { type: String, required: true },
   city: { type: String, required: true },
@@ -18,6 +30,13 @@ const cinemaSchema = new mongoose.Schema({
 }, {
   collection: 'cinemas',
   versionKey: false
+});
+
+cinemaSchema.pre('validate', function setDbName(next) {
+  if (!this.dbName && typeof this.slug === 'string' && SLUG_PATTERN.test(this.slug) && !RESERVED_SLUGS.has(this.slug)) {
+    this.dbName = tenantDbName(this.slug);
+  }
+  next();
 });
 
 cinemaSchema.index({ latitude: 1, longitude: 1 });

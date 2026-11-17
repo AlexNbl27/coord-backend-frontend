@@ -1,4 +1,5 @@
 import { Cinema } from '../models/Cinema.js';
+import { tenantDbName } from '../tenancy/slug.js';
 
 export const DEMO_CINEMAS = [
   { slug: 'cine-bellecour', name: 'Ciné Bellecour', address: 'Place Bellecour', city: 'Lyon', latitude: 45.756942, longitude: 4.832981, features: ['vo'] },
@@ -18,7 +19,10 @@ export async function seedCinemas() {
   await Cinema.bulkWrite(DEMO_CINEMAS.map((c) => ({
     updateOne: {
       filter: { slug: c.slug },
-      update: { $set: { ...c, location: { type: 'Point', coordinates: [c.longitude, c.latitude] } } },
+      update: {
+        $set: { ...c, location: { type: 'Point', coordinates: [c.longitude, c.latitude] } },
+        $setOnInsert: { dbName: tenantDbName(c.slug), status: 'ACTIVE', deletedAt: null, purgeState: null }
+      },
       upsert: true
     }
   })));
