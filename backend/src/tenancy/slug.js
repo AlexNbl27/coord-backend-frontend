@@ -3,12 +3,12 @@ export const RESERVED_SLUGS = new Set([
   'static', 'assets', 'otlp', 'mail', 'auth', 'login', 'root', 'test'
 ]);
 
-const SLUG_RE = /^[a-z](?:[a-z0-9]|-(?!-)){1,28}[a-z0-9]$/;
+export const SLUG_PATTERN = /^[a-z](?:[a-z0-9]|-(?!-)){1,28}[a-z0-9]$/;
 
 export const TENANT_DB_PREFIX = 'cinema_';
 
 export function isValidSlug(s) {
-  return typeof s === 'string' && SLUG_RE.test(s) && !RESERVED_SLUGS.has(s);
+  return typeof s === 'string' && SLUG_PATTERN.test(s) && !RESERVED_SLUGS.has(s);
 }
 
 export function tenantDbName(slug) {

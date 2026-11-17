@@ -1,5 +1,5 @@
 import { trace, SpanStatusCode } from '@opentelemetry/api';
-import { Booking } from '../models/Booking.js';
+import { getTenantModels } from '../tenancy/index.js';
 import { createTicketView } from '../utils/ticketFormatters.js';
 import { renderTicketPdf } from './ticketPdfRenderer.js';
 
@@ -27,7 +27,7 @@ export function ticketFilename(bookingId) {
  * Validates ownership and booking status before rendering the PDF ticket.
  */
 export async function buildTicket(ownerId, bookingId, deps = {}) {
-  const findBooking = deps.findBookingById || ((id) => Booking.findById(id).lean());
+  const findBooking = deps.findBookingById || ((id) => getTenantModels(deps.tenant?.db).Booking.findById(id).lean());
   const renderPdf = deps.renderPdf || renderTicketPdf;
 
   return tracer.startActiveSpan('cineslot.ticket.pdf.generate', async (span) => {

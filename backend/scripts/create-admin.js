@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import 'dotenv/config';
 import { User } from '../src/models/User.js';
 import { hashPassword } from '../src/services/sessionService.js';
+import { resolveMongoConfig } from '../src/tenancy/index.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -48,8 +49,8 @@ async function main() {
     process.exit(1);
   }
 
-  const mongoUri = process.env.MONGO_URI || 'mongodb://mongodb:27017/cineslot_master?directConnection=true';
-  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
+  const { masterUri, masterDbName } = resolveMongoConfig();
+  await mongoose.connect(masterUri, { dbName: masterDbName, serverSelectionTimeoutMS: 5000 });
   try {
     const user = await User.create({
       _id: crypto.randomUUID(),

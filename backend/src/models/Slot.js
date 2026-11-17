@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
-const slotSchema = new mongoose.Schema({
+export const slotSchema = new mongoose.Schema({
   _id: { type: String, required: true },
   startsAt: { type: String, required: true },
   status: { type: String, enum: ['AVAILABLE', 'BOOKED'], default: 'AVAILABLE' },
+  movieId: { type: mongoose.Schema.Types.ObjectId, default: null },
   movieTitle: { type: String, default: 'Interstellar' },
   hall: { type: String, default: 'Salle 1 - IMAX Laser' },
   capacity: { type: Number, default: 40 },
@@ -22,5 +23,4 @@ const slotSchema = new mongoose.Schema({
 
 slotSchema.index({ status: 1, startsAt: 1 });
 slotSchema.index({ experimentId: 1, subjectId: 1 });
-
-export const Slot = mongoose.model('Slot', slotSchema);
+slotSchema.index({ movieId: 1, startsAt: 1 });

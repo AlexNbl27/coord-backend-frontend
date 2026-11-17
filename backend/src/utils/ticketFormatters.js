@@ -1,5 +1,4 @@
 export const PARIS_TIME_ZONE = 'Europe/Paris';
-export const DEFAULT_CINEMA_ADDRESS = '14 rue de la Cinémathèque, 69002 Lyon';
 
 const DAY_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
@@ -113,7 +112,7 @@ export function createTicketView(booking) {
     spectatorName: booking.ownerName || 'Spectateur CinéSlot',
     movieTitle: booking.movieTitle || 'Séance CinéSlot',
     hall: booking.hall || 'Salle Principale',
-    address: booking.address || DEFAULT_CINEMA_ADDRESS,
+    address: booking.address || '',
     seat: booking.seat || generateSeatLabel(booking.slotId, booking._id, totalQuantity),
     seatLabel: totalQuantity > 1 ? 'PLACES ATTRIBUÉES' : 'PLACE ATTRIBUÉE',
     totalQuantity,
