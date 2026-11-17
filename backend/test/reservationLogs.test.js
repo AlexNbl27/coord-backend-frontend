@@ -115,8 +115,7 @@ test('reserveSlot with invalid tickets logs nothing', async () => {
 });
 
 test('cancelSlot logs CANCELLED with the restored quantity', async () => {
-  mock.method(Booking, 'findOne', () => lean({ _id: 'book-1', ownerId: 'u-1', movieId: 'movie-9', totalQuantity: 4 }));
-  mock.method(Booking, 'updateOne', async () => ({}));
+  Booking.findOneAndUpdate = () => lean({ _id: 'book-1', ownerId: 'u-1', movieId: 'movie-9', totalQuantity: 4 });
   mock.method(Booking, 'countDocuments', async () => 0);
   mock.method(Slot, 'findOneAndUpdate', async () => ({ _id: 'slot-1', status: 'AVAILABLE', capacity: 40, availableSeats: 40, version: 2 }));
 

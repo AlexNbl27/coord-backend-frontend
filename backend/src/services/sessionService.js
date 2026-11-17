@@ -10,11 +10,12 @@ const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const ADMIN_SLIDING_TTL_MS = 30 * 60 * 1000;
 export const ADMIN_ABSOLUTE_TTL_MS = 8 * 60 * 60 * 1000;
 export const MFA_STEP_UP_TTL_MS = 5 * 60 * 1000;
-const SESSION_SECRET = process.env.SESSION_SECRET || (
-  process.env.NODE_ENV === 'production'
-    ? (() => { throw new Error('SESSION_SECRET environment variable is required in production'); })()
-    : 'dev-only-ephemeral-hmac-secret-key-32bytes'
-);
+const MIN_SECRET_LENGTH = 32;
+const SESSION_SECRET = process.env.SESSION_SECRET
+  || (process.env.NODE_ENV === 'test' ? 'dev-only-ephemeral-hmac-secret-key-32bytes' : '');
+if (SESSION_SECRET.length < MIN_SECRET_LENGTH) {
+  throw new Error(`SESSION_SECRET must be set and at least ${MIN_SECRET_LENGTH} characters long`);
+}
 
 const SCRYPT_KEYLEN = 64;
 const SCRYPT_N = 2 ** 17;
