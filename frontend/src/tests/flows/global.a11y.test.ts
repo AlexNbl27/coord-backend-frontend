@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import Navbar from '@/components/Navbar.vue';
 import App from '@/App.vue';
 import { expectNoA11yViolations } from '../setup';
+import { useSession } from '@/composables/useSession';
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn(), go: vi.fn() }),
@@ -99,6 +100,19 @@ describe('Flux 5 : Navigation Globale & Ergonomie Clavier (A11y)', () => {
 
       // Audit axe-core
       await expectNoA11yViolations(container);
+    });
+
+    it('n\'expose le tableau de bord A/B qu\'au SUPER_ADMIN', async () => {
+      useSession().currentUser.value = { id: 'u-1', name: 'Ada', email: 'ada@cineslot.test', role: 'SPECTATOR' };
+      const { unmount } = render(Navbar);
+      expect(screen.queryByRole('button', { name: /métriques du test a\/b/i })).toBeNull();
+      unmount();
+
+      useSession().currentUser.value = { id: 'u-0', name: 'Root', email: 'root@cineslot.test', role: 'SUPER_ADMIN' };
+      const { container } = render(Navbar);
+      expect(screen.getByRole('button', { name: /métriques du test a\/b/i })).toBeTruthy();
+      await expectNoA11yViolations(container);
+      useSession().currentUser.value = null;
     });
 
     it('le logo doit avoir un libellé accessible explicite pour les lecteurs d\'écran', () => {

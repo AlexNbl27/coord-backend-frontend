@@ -6,6 +6,7 @@ import ReservationModal from '@/components/ReservationModal.vue';
 import AbMetricsModal from '@/components/AbMetricsModal.vue';
 import ReservationsView from '@/views/ReservationsView.vue';
 import { expectNoA11yViolations } from '../setup';
+import { useSession } from '@/composables/useSession';
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn(), go: vi.fn() }),
@@ -160,6 +161,35 @@ describe('Scénarios Avancés : Gestion du Focus & Arrière-Plan Inerte sur les 
       expect(closed).toBe(true);
 
       await expectNoA11yViolations(container);
+    });
+
+    it('masque « Libérer les créneaux » et la simulation pour un SPECTATOR', async () => {
+      useSession().currentUser.value = { id: 'u-1', name: 'Ada', email: 'ada@cineslot.test', role: 'SPECTATOR' };
+      const { container } = render(AbMetricsModal, { props: { show: true } });
+      await nextTick();
+
+      expect(await screen.findByRole('button', { name: /actualiser/i })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /libérer les créneaux/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /simuler/i })).toBeNull();
+
+      await expectNoA11yViolations(container);
+      useSession().currentUser.value = null;
+    });
+
+    it('affiche les actions d\'administration au clavier pour un SUPER_ADMIN', async () => {
+      useSession().currentUser.value = { id: 'u-0', name: 'Root', email: 'root@cineslot.test', role: 'SUPER_ADMIN' };
+      const { container } = render(AbMetricsModal, { props: { show: true } });
+      await nextTick();
+
+      const resetBtn = await screen.findByRole('button', { name: /libérer les créneaux/i });
+      const simulateBtn = screen.getByRole('button', { name: /simuler/i });
+      expect(resetBtn.tagName).toBe('BUTTON');
+      expect(simulateBtn.tagName).toBe('BUTTON');
+      resetBtn.focus();
+      expect(document.activeElement).toBe(resetBtn);
+
+      await expectNoA11yViolations(container);
+      useSession().currentUser.value = null;
     });
   });
 

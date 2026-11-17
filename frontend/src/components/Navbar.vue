@@ -105,6 +105,7 @@
 
           <!-- Bouton Test A/B -->
           <button
+            v-if="isSuperAdmin"
             @click="handleOpenAbModal"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/40 text-accent-gold text-xs font-bold transition-all shadow-sm cursor-pointer"
             aria-label="Consulter les métriques du Test A/B"
@@ -267,7 +268,7 @@ const slotsStore = useSlotsStore();
 const { sseConnected } = storeToRefs(slotsStore);
 const { activeBookingsCount } = useReservations();
 const { variant } = useAbTest();
-const { currentUser, initSession, logout } = useSession();
+const { currentUser, isSuperAdmin, initSession, logout } = useSession();
 const router = useRouter();
 const hostContext = currentHostContext();
 const chooseCinemaHref = apexUrl('/choisir-un-cinema');
