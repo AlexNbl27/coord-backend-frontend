@@ -59,6 +59,7 @@ function toItem(cinema, distanceKm) {
     address: cinema.address,
     city: cinema.city,
     features: cinema.features,
+    status: cinema.status ?? 'ACTIVE',
     latitude: cinema.latitude,
     longitude: cinema.longitude,
     distanceKm
@@ -66,7 +67,7 @@ function toItem(cinema, distanceKm) {
 }
 
 async function listCinemas({ feature, page, limit }) {
-  const filter = feature ? { features: feature } : {};
+  const filter = feature ? { features: feature, status: { $ne: 'DELETED' } } : { status: { $ne: 'DELETED' } };
   const [total, rows] = await Promise.all([
     Cinema.countDocuments(filter),
     Cinema.find(filter).sort({ name: 1, slug: 1 }).skip((page - 1) * limit).limit(limit).lean()

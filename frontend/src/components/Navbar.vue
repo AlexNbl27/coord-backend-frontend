@@ -36,7 +36,15 @@
           >
             Séances
           </router-link>
+          <a
+            v-if="hostContext.plane === 'tenant'"
+            :href="chooseCinemaHref"
+            class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium"
+          >
+            Cinémas
+          </a>
           <router-link
+            v-else
             to="/cinemas"
             class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium"
             active-class="text-accent-gold font-semibold"
@@ -161,7 +169,15 @@
             >
               Séances
             </router-link>
+            <a
+              v-if="hostContext.plane === 'tenant'"
+              :href="chooseCinemaHref"
+              class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2"
+            >
+              Cinémas
+            </a>
             <router-link
+              v-else
               to="/cinemas"
               class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium py-2"
               active-class="text-accent-gold font-semibold"
@@ -245,6 +261,7 @@ import { useReservations } from '../composables/useReservations';
 import { useAbTest } from '../composables/useAbTest';
 import { useRouter } from 'vue-router';
 import { useSession } from '../composables/useSession';
+import { apexUrl, currentHostContext } from '../services/tenant';
 
 const slotsStore = useSlotsStore();
 const { sseConnected } = storeToRefs(slotsStore);
@@ -252,6 +269,8 @@ const { activeBookingsCount } = useReservations();
 const { variant } = useAbTest();
 const { currentUser, initSession, logout } = useSession();
 const router = useRouter();
+const hostContext = currentHostContext();
+const chooseCinemaHref = apexUrl('/choisir-un-cinema');
 
 const handleLogout = async () => {
   await logout();

@@ -18,7 +18,7 @@ import { adminCinemaRouter } from './routes/adminCinemaRoutes.js';
 import { seedCinemas } from './geo/cinemas.js';
 import { attachSession, rejectDuplicateSessionCookies } from './services/sessionService.js';
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
-import { connectDatabases, databasesReady, requireTenant, resolveTenant } from './tenancy/index.js';
+import { connectDatabases, createCrossOriginWriteGuard, databasesReady, requireTenant, resolveTenant } from './tenancy/index.js';
 import { isForwardableIpcMessage } from './services/sseMessages.js';
 
 dotenv.config();
@@ -32,7 +32,7 @@ const numCPUs = process.env.WEB_CONCURRENCY
   : defaultCPUs;
 
 const ALLOWED_ORIGINS = new Set(
-  (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3001,http://localhost:5173,http://127.0.0.1:3001,http://127.0.0.1:5173')
+  (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean)
@@ -57,6 +57,7 @@ function createServer() {
     exposedHeaders: ['X-Trace-Id', 'Content-Disposition'],
     maxAge: 86400
   }));
+  app.use(createCrossOriginWriteGuard(ALLOWED_ORIGINS));
 
   app.use(createRateLimiter({ windowMs: 60_000, max: 600 }));
   app.use(express.json({ limit: '32kb' }));
