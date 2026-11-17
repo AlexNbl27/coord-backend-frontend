@@ -35,10 +35,10 @@ jobs:
 
       - name: Wait for API to be healthy
         run: |
-          echo "Waiting for Backend API (http://localhost:3000/health) to be ready..."
+          echo "Waiting for Backend API (backend:3000/health, depuis le conteneur) to be ready..."
           max_retries=30
           count=0
-          until curl -s http://localhost:3000/health | grep -q '"database":"connected"'; do
+          until docker compose exec -T backend node -e "fetch('http://127.0.0.1:3000/health').then(r=>r.text()).then(t=>process.stdout.write(t))" 2>/dev/null | grep -q '"database":"connected"'; do
             sleep 2
             count=$((count+1))
             if [ $count -ge $max_retries ]; then
