@@ -24,15 +24,6 @@
             <option value="vo">Version originale</option>
           </select>
         </div>
-        <button
-          v-if="center && cinemas.length"
-          type="button"
-          class="text-sm text-cinema-textMuted hover:text-white underline cursor-pointer"
-          :aria-expanded="showMap"
-          @click="showMap = !showMap"
-        >
-          {{ showMap ? 'Masquer la carte' : 'Afficher la carte' }}
-        </button>
       </div>
 
       <p v-if="center?.label" class="text-sm text-cinema-textMuted">Autour de : {{ center.label }}</p>
@@ -40,7 +31,31 @@
         Position approximative (environ {{ formatDistance(center.accuracyM / 1000) }}).
       </p>
 
-      <NearbyMap v-if="showMap && center" :center="center" :radius-km="5" :cinemas="cinemas" />
+      <NearbyMap v-if="center" :center="center" :radius-km="5" :cinemas="cinemas" />
+      <div
+        v-else
+        class="relative h-80 w-full rounded-2xl border border-cinema-border/50 overflow-hidden bg-cinema-darker"
+      >
+        <div
+          class="absolute inset-0 blur-sm scale-105 opacity-70"
+          aria-hidden="true"
+          style="background-image: linear-gradient(rgba(200,164,86,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(200,164,86,0.18) 1px, transparent 1px), radial-gradient(circle at 35% 40%, rgba(200,164,86,0.35) 0, transparent 8%), radial-gradient(circle at 62% 58%, rgba(200,164,86,0.3) 0, transparent 6%), radial-gradient(circle at 50% 50%, rgba(200,164,86,0.12) 0, transparent 40%); background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%, 100% 100%;"
+        ></div>
+        <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-cinema-dark/40 backdrop-blur-sm p-4 text-center">
+          <button
+            type="button"
+            class="px-6 py-3 rounded-full bg-accent-gold hover:bg-accent-goldLight text-cinema-dark text-sm font-bold shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+            :disabled="locating"
+            @click="discoverAroundMe"
+          >
+            {{ locating ? 'Localisation…' : 'Découvrir les cinémas autour de moi' }}
+          </button>
+          <p class="text-xs text-cinema-textMuted max-w-sm">
+            La carte n'est chargée qu'après votre accord. Aucune donnée n'est envoyée à OpenStreetMap avant ce clic.
+          </p>
+          <p v-if="mapError" role="alert" class="text-sm text-red-300">{{ mapError }}</p>
+        </div>
+      </div>
 
       <p role="status" class="text-sm text-cinema-text">{{ loading ? 'Chargement des cinémas…' : summary }}</p>
       <p v-if="error" role="alert" class="text-sm text-red-300">{{ error }}</p>
@@ -57,7 +72,7 @@
         <li
           v-for="c in cinemas"
           :key="c.slug"
-          class="flex items-center justify-between gap-4 p-4 rounded-xl bg-cinema-card border border-cinema-border/60"
+          class="relative flex items-center justify-between gap-4 p-4 rounded-xl bg-cinema-card border border-cinema-border/60 transition-colors hover:border-accent-gold/50 hover:bg-cinema-cardHover focus-within:border-accent-gold"
         >
           <div class="min-w-0 flex-1">
             <p class="font-semibold text-white">{{ c.name }}</p>
@@ -67,7 +82,7 @@
             <a
               v-if="isValidSlug(c.slug)"
               :href="tenantUrl(c.slug, '/slots')"
-              class="inline-block mt-2 text-sm text-accent-gold hover:underline"
+              class="inline-block mt-2 text-sm text-accent-gold hover:underline after:absolute after:inset-0 after:content-[''] after:rounded-xl focus:outline-none"
             >
               Voir les séances<span class="sr-only"> de {{ c.name }}</span>
             </a>
@@ -96,7 +111,7 @@
 import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import NearbyBar from '../components/NearbyBar.vue';
 import { apiClient } from '../services/apiClient';
-import { type Center, formatDistance, nearbyParams } from '../services/geo';
+import { type Center, formatDistance, nearbyParams, getPosition, GeoError, GEO_MESSAGES } from '../services/geo';
 import { isValidSlug, tenantUrl } from '../services/tenant';
 
 const NearbyMap = defineAsyncComponent(() => import('../components/NearbyMap.vue'));
@@ -121,7 +136,8 @@ const cinemas = ref<Cinema[]>([]);
 const total = ref(0);
 const loading = ref(false);
 const error = ref('');
-const showMap = ref(false);
+const locating = ref(false);
+const mapError = ref('');
 
 const pages = computed(() => Math.max(1, Math.ceil(total.value / 6)));
 const summary = computed(() =>
@@ -155,6 +171,18 @@ const reload = () => {
 const handleCenter = (c: Center) => {
   center.value = c;
   reload();
+};
+
+const discoverAroundMe = async () => {
+  mapError.value = '';
+  locating.value = true;
+  try {
+    handleCenter(await getPosition());
+  } catch (err) {
+    mapError.value = err instanceof GeoError ? err.message : GEO_MESSAGES.network;
+  } finally {
+    locating.value = false;
+  }
 };
 
 watch(feature, reload);
