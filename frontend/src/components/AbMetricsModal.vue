@@ -80,7 +80,7 @@
             <div class="flex items-center justify-between mb-4">
               <div>
                 <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Variante A (Contrôle)</span>
-                <h4 class="text-lg font-black text-white mt-0.5">« Réserver »</h4>
+                <h3 class="text-lg font-black text-white mt-0.5">« Réserver »</h3>
               </div>
               <span v-if="variant === 'A'" class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
                 Votre version
@@ -123,7 +123,7 @@
             <div class="flex items-center justify-between mb-4">
               <div>
                 <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Variante B (Challenger)</span>
-                <h4 class="text-lg font-black text-white mt-0.5">« Choisir ce créneau »</h4>
+                <h3 class="text-lg font-black text-white mt-0.5">« Choisir ce créneau »</h3>
               </div>
               <span v-if="variant === 'B'" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 Votre version
@@ -232,6 +232,7 @@
           </div>
           <div class="flex items-center gap-2 flex-wrap shrink-0">
             <button
+              v-if="isSuperAdmin"
               @click="handleSimulate"
               :disabled="simulating"
               class="px-3.5 py-2 rounded-md bg-cinema-darker hover:bg-cinema-cardHover border border-cinema-border text-xs font-semibold text-cinema-text transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
@@ -240,6 +241,7 @@
               <span>{{ simulating ? 'Simulation...' : 'Simuler 160 visiteurs' }}</span>
             </button>
             <button
+              v-if="isSuperAdmin"
               @click="handleResetSlots"
               class="px-3.5 py-2 rounded-md bg-cinema-darker hover:bg-cinema-cardHover border border-cinema-border text-xs font-semibold text-cinema-text hover:text-white transition-colors flex items-center gap-2 cursor-pointer"
               title="Libérer tous les créneaux"
@@ -264,6 +266,7 @@ import { ref, computed, onMounted, toRef } from 'vue';
 import { useAbTest, type AbMetric, type AbSummary } from '../composables/useAbTest';
 import { useSlots } from '../composables/useSlots';
 import { useAccessibleDialog } from '../composables/useAccessibleDialog';
+import { useSession } from '../composables/useSession';
 
 const props = defineProps<{
   show: boolean;
@@ -283,6 +286,7 @@ useAccessibleDialog({
 
 const { variant, experimentId, exposed, measured, bookingButtonLabel, fetchMetrics, simulateData } = useAbTest();
 const { resetSlots } = useSlots();
+const { isSuperAdmin } = useSession();
 
 const loading = ref(false);
 const simulating = ref(false);
