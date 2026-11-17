@@ -13,7 +13,7 @@
   - `Content-Length: <taille_en_octets>`
 - **Messages d'erreur (`application/problem+json`, RFC 9457)** :
   - `401 Unauthorized` : « Votre session a expiré. Reconnectez-vous. »
-  - `404 Not Found` : « Ce billet est introuvable. » (renvoyé aussi si le billet appartient à un autre spectateur, pour ne pas révéler son existence — protection anti-IDOR).
+  - `404 Not Found` : « Ce billet est introuvable. » (renvoyé aussi si le billet appartient à un autre spectateur, pour ne pas révéler son existence : protection anti-IDOR).
   - `409 Conflict` : « Cette réservation est annulée : son billet n'est plus disponible. »
   - `500 Internal Server Error` : « La génération du billet a échoué. Réessayez dans un instant. » (ou le `detail` du `ProblemDetail`).
 
@@ -52,7 +52,7 @@ Cache-Control: no-store
 X-Trace-Id: 35ea641263a221d478d92a5db2306b52
 ```
 
-### 2. Protection anti-IDOR — second spectateur (`404 Not Found`)
+### 2. Protection anti-IDOR : second spectateur (`404 Not Found`)
 
 ```http
 HTTP/1.1 404 Not Found
@@ -94,7 +94,7 @@ Pour un **récapitulatif annuel** regroupant une centaine de séances (générat
 2. **Suivre (`GET /api/me/annual-summaries/{jobId}`)** :
    - Protégé par session + vérification `job.ownerId === req.sessionUser.id` (`404` sinon).
    - Réponse `200 OK` (`Cache-Control: no-store`) : `{ "status": "PENDING" | "RUNNING" | "DONE" | "FAILED" }`.
-   - **Côté front** : interrogation bornée toutes les `2000 ms` avec un maximum de `60` tentatives (2 minutes max) — ou notification poussée via le flux **SSE** déjà présent dans CinéSlot — puis arrêt propre avec message utilisateur si le délai est dépassé ou si `status === 'FAILED'`.
+   - **Côté front** : interrogation bornée toutes les `2000 ms` avec un maximum de `60` tentatives (2 minutes max), ou notification poussée via le flux **SSE** déjà présent dans CinéSlot, puis arrêt propre avec message utilisateur si le délai est dépassé ou si `status === 'FAILED'`.
 3. **Télécharger (`GET /api/me/annual-summaries/{jobId}/file`)** :
    - Mêmes droits (`401`, `404` anti-IDOR) et mêmes en-têtes que le billet unitaire (`Content-Type: application/pdf`, `Content-Disposition: attachment; filename="summary-{jobId}.pdf"`, `Cache-Control: no-store`), ou `409 Conflict` si la tâche n'est pas encore `DONE`.
    - **Durée de vie / purge** : le fichier généré expire automatiquement (ex. TTL de `24 h` côté stockage + tâche de purge périodique) pour éviter de saturer le disque du serveur.

@@ -1,4 +1,4 @@
-# CinéSlot — Plateforme de Réservation Cinéma
+# CinéSlot - Plateforme de Réservation Cinéma
 
 Application full-stack de gestion de catalogue cinématographique et de réservation de séances en temps réel avec Server-Sent Events (SSE), test A/B statistique, génération de billets PDF et traçabilité OpenTelemetry.
 

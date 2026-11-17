@@ -2,6 +2,7 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:3001}"
+TENANT_HOST="${TENANT_HOST:-cine-bellecour.cineslot.localhost:3001}"
 JAEGER_URL="${JAEGER_URL:-http://127.0.0.1:16686}"
 
 ok=0
@@ -28,7 +29,7 @@ else
   ko "Point 1 : /otlp/v1/traces a repondu HTTP ${otlp_code} au lieu de 200"
 fi
 
-curl -s "${BASE_URL}/api/slots" > /dev/null
+curl -s -H "Host: ${TENANT_HOST}" "${BASE_URL}/api/slots" > /dev/null
 sleep 6
 api_services=$(curl -s "${JAEGER_URL}/api/v3/services")
 if echo "$api_services" | grep -q '"cineslot-api"'; then
@@ -39,7 +40,7 @@ fi
 
 trace_id=$(printf '%08x%08x%08x%08x' "$RANDOM$RANDOM" "$RANDOM$RANDOM" "$RANDOM$RANDOM" "$RANDOM$RANDOM")
 span_id=$(printf '%08x%08x' "$RANDOM$RANDOM" "$RANDOM$RANDOM")
-curl -s -H "traceparent: 00-${trace_id}-${span_id}-01" "${BASE_URL}/api/movies" > /dev/null
+curl -s -H "Host: ${TENANT_HOST}" -H "traceparent: 00-${trace_id}-${span_id}-01" "${BASE_URL}/api/movies" > /dev/null
 sleep 6
 propagated=$(curl -s "${JAEGER_URL}/api/traces/${trace_id}")
 if echo "$propagated" | grep -q "${trace_id}"; then

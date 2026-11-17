@@ -1,6 +1,6 @@
 # Qualite logicielle (SonarQube)
 
-## 1. Mesures initiales
+## 1. Mesures initiales (snapshot du 29/10/2026)
 
 | Projet | Lignes | Secu. | Fiab. | Maint. | Couverture | Dupl. | Porte |
 |---|---|---|---|---|---|---|---|

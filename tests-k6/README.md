@@ -1,4 +1,4 @@
-# Tests de charge k6 — CinéSlot
+# Tests de charge k6 - CinéSlot
 
 Ce dossier contient le scénario de montée en charge k6 (`load-test.js`) ciblant l'API Backend (`TARGET_URL`, par défaut `http://backend:3000`).
 

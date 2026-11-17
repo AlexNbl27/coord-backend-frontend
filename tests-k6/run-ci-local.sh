@@ -45,7 +45,9 @@ else
 fi
 
 echo -e "\nNettoyage des residus de tests k6 dans MongoDB..."
-docker exec ynov-mongodb mongosh cours_db --quiet --eval "db.movies.deleteMany({\$or: [{director: 'k6 Tester'}, {title: /^Film k6/}]})" || true
+if [ -n "${MONGO_ROOT_USERNAME:-}" ] && [ -n "${MONGO_ROOT_PASSWORD:-}" ]; then
+  docker compose exec -T mongodb mongosh cours_db -u "$MONGO_ROOT_USERNAME" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet --eval "db.movies.deleteMany({\$or: [{director: 'k6 Tester'}, {title: /^Film k6/}]})" || true
+fi
 
 echo -e "\nNettoyage de l'environnement..."
 docker compose down
