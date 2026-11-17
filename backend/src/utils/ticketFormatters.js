@@ -1,3 +1,5 @@
+import { parseSeatId, sortSeats } from './seatMap.js';
+
 export const PARIS_TIME_ZONE = 'Europe/Paris';
 
 const DAY_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
@@ -56,6 +58,20 @@ export function buildTicketReference(bookingId) {
   const clean = String(bookingId ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const suffix = clean.slice(0, 8) || 'TICKET';
   return `BK-${suffix}`;
+}
+
+export function formatSeatLabel(seats) {
+  const byRow = new Map();
+  for (const id of sortSeats(seats)) {
+    const { row, number } = parseSeatId(id);
+    if (!byRow.has(row)) byRow.set(row, []);
+    byRow.get(row).push(number);
+  }
+  return [...byRow].map(([row, numbers]) => (
+    numbers.length === 1
+      ? `Rangée ${row} · Fauteuil ${numbers[0]}`
+      : `Rangée ${row} · Fauteuils ${numbers.join(', ')}`
+  )).join(' / ');
 }
 
 export function generateSeatLabel(slotId, bookingId, quantity = 1) {

@@ -47,7 +47,7 @@
                 {{ slot.movieTitle }}
               </h1>
               <p class="text-sm text-cinema-textMuted mt-1">
-                {{ slot.hall }} · <span class="font-mono tabular-nums text-white">{{ formattedStartsAt }}</span>
+                <span v-if="cinema" class="text-accent-gold font-semibold">{{ cinema.name }}</span><span v-if="cinema"> · </span>{{ slot.hall }} · <span class="font-mono tabular-nums text-white">{{ formattedStartsAt }}</span>
               </p>
             </div>
 
@@ -61,6 +61,17 @@
               </span>
             </div>
           </div>
+        </div>
+
+        <div
+          v-if="cinemaDisabled && !existingBooking"
+          role="alert"
+          class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-5 py-4"
+        >
+          <p class="text-sm font-semibold text-amber-200">Réservations suspendues</p>
+          <p class="text-sm text-amber-100/90 mt-1">
+            {{ cinema?.name ?? 'Ce cinéma' }} n'accepte plus de réservations pour le moment : cette séance ne peut pas être réservée.
+          </p>
         </div>
 
         <div
@@ -94,7 +105,7 @@
           />
         </div>
 
-        <div v-else class="bg-cinema-card border border-cinema-border rounded-lg p-6 space-y-6">
+        <div v-else class="bg-cinema-card border border-cinema-border rounded-lg p-6 space-y-6" :class="{ 'opacity-60': cinemaDisabled }" :aria-disabled="cinemaDisabled ? 'true' : undefined">
           <div class="flex items-center justify-between border-b border-cinema-border pb-4">
             <div>
               <h2 class="font-display text-lg font-bold text-white">Choix des tarifs</h2>
@@ -127,7 +138,7 @@
                   <button
                     type="button"
                     @click="decrement(tariff.category)"
-                    :disabled="quantities[tariff.category] <= 0"
+                    :disabled="cinemaDisabled || quantities[tariff.category] <= 0"
                     :aria-label="`Retirer un billet ${tariff.label}`"
                     class="w-8 h-8 rounded bg-cinema-darker border border-cinema-border text-white font-bold text-sm hover:border-accent-gold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
@@ -142,7 +153,7 @@
                   <button
                     type="button"
                     @click="increment(tariff.category)"
-                    :disabled="totalQuantity >= maxSelectable"
+                    :disabled="cinemaDisabled || totalQuantity >= maxSelectable"
                     :aria-label="`Ajouter un billet ${tariff.label}`"
                     class="w-8 h-8 rounded bg-cinema-darker border border-cinema-border text-white font-bold text-sm hover:border-accent-gold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
@@ -151,6 +162,17 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <div class="border-t border-cinema-border pt-6">
+            <SeatPicker
+              ref="seatPickerRef"
+              v-model="selectedSeats"
+              :slot-id="slot.id"
+              :quantity="totalQuantity"
+              :version="slot.version"
+              :disabled="cinemaDisabled"
+            />
           </div>
 
           <div v-if="errorMessage" role="alert" class="p-3 rounded bg-red-950/60 border border-red-500/40 text-xs text-red-300">
@@ -171,10 +193,10 @@
             <button
               type="button"
               @click="submitBooking"
-              :disabled="submitting || cinemaDisabled || totalQuantity < 1 || remainingSeats < 1 || totalQuantity > remainingSeats"
+              :disabled="!canSubmit"
               class="w-full sm:w-auto text-center justify-center px-6 py-3 rounded-md bg-accent-gold hover:bg-accent-goldLight text-cinema-dark font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {{ submitting ? 'Confirmation en cours...' : 'Confirmer la réservation' }}
+              {{ submitLabel }}
             </button>
           </div>
         </div>
@@ -191,12 +213,15 @@ import { useSlots, type TicketLine } from '../composables/useSlots';
 import { useReservations } from '../composables/useReservations';
 import { useMoviesStore } from '../stores/movies';
 import TicketPdfButton from '../components/TicketPdfButton.vue';
+import SeatPicker from '../components/SeatPicker.vue';
+import { useCurrentCinema } from '../composables/useCurrentCinema';
 
 const route = useRoute();
 const router = useRouter();
 const moviesStore = useMoviesStore();
 const { slots, loading, cinemaDisabled, fetchSlots, connectSse, reserveSlot } = useSlots();
 const { bookings, saveBooking, markBookingCancelled, syncBookingsWithServer } = useReservations();
+const { cinema } = useCurrentCinema();
 
 const openReservationModal = inject<(bookingId: string, movieTitle: string, startsAt: string, hall: string) => void>('openReservationModal');
 
@@ -216,6 +241,8 @@ const quantities = reactive<Record<string, number>>({
 
 const submitting = ref(false);
 const errorMessage = ref('');
+const selectedSeats = ref<string[]>([]);
+const seatPickerRef = ref<InstanceType<typeof SeatPicker> | null>(null);
 
 const slotId = computed(() => String(route.params.id || ''));
 const slot = computed(() => slots.value.find((s) => s.id === slotId.value) ?? null);
@@ -235,6 +262,24 @@ const totalQuantity = computed(() =>
 const totalAmount = computed(() =>
   tariffs.reduce((sum, t) => sum + t.unitPrice * (quantities[t.category] || 0), 0)
 );
+
+const seatsComplete = computed(() => selectedSeats.value.length === totalQuantity.value);
+
+const canSubmit = computed(() =>
+  !submitting.value
+  && !cinemaDisabled.value
+  && totalQuantity.value >= 1
+  && remainingSeats.value >= 1
+  && totalQuantity.value <= remainingSeats.value
+  && seatsComplete.value
+);
+
+const submitLabel = computed(() => {
+  if (submitting.value) return 'Confirmation en cours...';
+  if (cinemaDisabled.value) return 'Réservations suspendues';
+  if (totalQuantity.value >= 1 && !seatsComplete.value) return 'Choisissez vos places';
+  return 'Confirmer la réservation';
+});
 
 const existingBooking = computed(() =>
   bookings.value.find(
@@ -270,7 +315,7 @@ const decrement = (category: string) => {
 };
 
 const submitBooking = async () => {
-  if (!slot.value || submitting.value || totalQuantity.value < 1) return;
+  if (!slot.value || !canSubmit.value) return;
   if (totalQuantity.value > remainingSeats.value) {
     errorMessage.value = `Il ne reste que ${remainingSeats.value} place(s) disponible(s).`;
     return;
@@ -289,7 +334,7 @@ const submitBooking = async () => {
     }));
 
   try {
-    const result = await reserveSlot(slot.value.id, '', selectedTickets);
+    const result = await reserveSlot(slot.value.id, '', selectedTickets, [...selectedSeats.value]);
     const movie = moviesStore.movies.find(
       (m) => m.title.toLowerCase() === slot.value!.movieTitle.toLowerCase()
     );
@@ -300,7 +345,7 @@ const submitBooking = async () => {
       movieTitle: slot.value.movieTitle,
       startsAt: slot.value.startsAt,
       hall: slot.value.hall,
-      seat: result.seat,
+      seat: result.seat ?? `Places ${selectedSeats.value.join(', ')}`,
       tickets: result.tickets ?? selectedTickets,
       totalQuantity: result.totalQuantity ?? totalQuantity.value,
       totalAmount: result.totalAmount ?? totalAmount.value,
@@ -318,6 +363,7 @@ const submitBooking = async () => {
   } catch (err: any) {
     errorMessage.value = err?.message || 'Impossible de finaliser la réservation.';
     await fetchSlots();
+    await seatPickerRef.value?.reload();
   } finally {
     submitting.value = false;
   }

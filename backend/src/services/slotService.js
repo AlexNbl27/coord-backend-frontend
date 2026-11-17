@@ -5,7 +5,8 @@ import { Movie } from '../models/Movie.js';
 import { getTenantModels } from '../tenancy/index.js';
 import { getCinemaStatus } from './cinemaStatusService.js';
 import { EXP, attribution } from './abService.js';
-import { generateSeatLabel } from '../utils/ticketFormatters.js';
+import { formatSeatLabel } from '../utils/ticketFormatters.js';
+import { buildSeatLayout, isValidSeatSelection, pickBestSeats } from '../utils/seatMap.js';
 import { sendProblem } from './sessionService.js';
 import { SSE_BROADCAST_TYPE, isValidSseBroadcast } from './sseMessages.js';
 import { emitReservationEvent } from '../events/reservationEvents.js';
@@ -296,6 +297,36 @@ function dispatchSmsConfirmation(bookingId, slotId) {
   });
 }
 
+async function claimSeats(SlotModel, slotId, seats, quantity, fields) {
+  const remaining = { $ifNull: ['$availableSeats', { $ifNull: ['$capacity', DEFAULT_CAPACITY] }] };
+  return SlotModel.findOneAndUpdate(
+    {
+      _id: String(slotId),
+      status: 'AVAILABLE',
+      takenSeats: { $nin: seats },
+      $expr: { $gte: [remaining, quantity] }
+    },
+    [
+      {
+        $set: {
+          capacity: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+          availableSeats: { $subtract: [remaining, quantity] },
+          takenSeats: { $concatArrays: [{ $ifNull: ['$takenSeats', []] }, { $literal: seats }] },
+          bookedBy: fields.ownerName,
+          bookingId: fields.bookingId,
+          bookedAt: fields.bookedAt,
+          experimentId: fields.experimentId,
+          subjectId: fields.subjectId,
+          version: { $add: ['$version', 1] },
+          claimCount: { $add: ['$claimCount', 1] },
+          status: { $cond: [{ $lte: [{ $subtract: [remaining, quantity] }, 0] }, 'BOOKED', 'AVAILABLE'] }
+        }
+      }
+    ],
+    { new: true }
+  );
+}
+
 export async function reserveSlot(slotId, customerId, visitorId, isMeasured, sessionUser = null, rawTickets = null, tenant = null, deps = {}) {
   return tracer.startActiveSpan('cineslot.reservation', async (span) => {
     span.setAttribute('cineslot.slot.id', String(slotId));
@@ -354,74 +385,68 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
 
       const bookingId = crypto.randomUUID();
       const bookedAt = new Date();
+      const requestedSeats = Array.isArray(deps.seats) ? deps.seats : null;
 
-      const winner = await SlotModel.findOneAndUpdate(
-        {
-          _id: String(slotId),
-          status: 'AVAILABLE',
-          $expr: {
-            $gte: [{ $ifNull: ['$availableSeats', { $ifNull: ['$capacity', DEFAULT_CAPACITY] }] }, totalQuantity]
-          }
-        },
-        [
-          {
-            $set: {
-              capacity: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
-              availableSeats: {
-                $subtract: [
-                  { $ifNull: ['$availableSeats', { $ifNull: ['$capacity', DEFAULT_CAPACITY] }] },
-                  totalQuantity
-                ]
-              },
-              bookedBy: ownerName,
-              bookingId,
-              bookedAt,
-              experimentId,
-              subjectId,
-              version: { $add: ['$version', 1] },
-              claimCount: { $add: ['$claimCount', 1] },
-              status: {
-                $cond: [
-                  {
-                    $lte: [
-                      {
-                        $subtract: [
-                          { $ifNull: ['$availableSeats', { $ifNull: ['$capacity', DEFAULT_CAPACITY] }] },
-                          totalQuantity
-                        ]
-                      },
-                      0
-                    ]
-                  },
-                  'BOOKED',
-                  'AVAILABLE'
-                ]
-              }
-            }
-          }
-        ],
-        { new: true }
-      );
-
-      if (!winner) {
-        const current = await SlotModel.findById(String(slotId)).lean();
-        if (!current) {
-          const error = new Error('Créneau inconnu');
-          error.status = 404;
-          throw error;
-        }
-        await logEvent('REJECTED_FULL', { movieId: current.movieId });
-        const remaining = current.availableSeats ?? (current.status === 'BOOKED' ? 0 : DEFAULT_CAPACITY);
+      const remainingOf = (slot) => slot.availableSeats ?? (slot.status === 'BOOKED' ? 0 : (slot.capacity ?? DEFAULT_CAPACITY));
+      const rejectFull = async (slot) => {
+        await logEvent('REJECTED_FULL', { movieId: slot.movieId });
+        const remaining = remainingOf(slot);
         const error = new Error(
-          remaining <= 0 || current.status === 'BOOKED'
+          remaining <= 0 || slot.status === 'BOOKED'
             ? 'Créneau déjà complet'
             : `Il ne reste que ${remaining} place(s) disponible(s) pour cette séance`
         );
         error.status = 409;
         throw error;
+      };
+      const loadSlot = async () => {
+        const slot = await SlotModel.findById(String(slotId)).lean();
+        if (!slot) {
+          const error = new Error('Créneau inconnu');
+          error.status = 404;
+          throw error;
+        }
+        return slot;
+      };
+
+      let winner = null;
+      let seats = null;
+      const attempts = requestedSeats ? 1 : 4;
+      for (let attempt = 0; attempt < attempts && !winner; attempt += 1) {
+        const current = await loadSlot();
+        if (current.status === 'BOOKED' || remainingOf(current) < totalQuantity) {
+          await rejectFull(current);
+        }
+        const capacity = current.capacity ?? DEFAULT_CAPACITY;
+        if (requestedSeats) {
+          if (!isValidSeatSelection(requestedSeats, capacity, totalQuantity)) {
+            const error = new Error('Sélection de places invalide pour cette salle.');
+            error.status = 400;
+            throw error;
+          }
+          seats = requestedSeats;
+        } else {
+          seats = pickBestSeats(buildSeatLayout(capacity), current.takenSeats, totalQuantity);
+          if (!seats) {
+            await rejectFull(current);
+          }
+        }
+
+        winner = await claimSeats(SlotModel, slotId, seats, totalQuantity, { ownerName, bookingId, bookedAt, experimentId, subjectId });
       }
 
-      const seat = generateSeatLabel(winner._id, bookingId, totalQuantity);
+      if (!winner) {
+        const current = await loadSlot();
+        if (current.status === 'BOOKED' || remainingOf(current) < totalQuantity) {
+          await rejectFull(current);
+        }
+        await logEvent('REJECTED_CONFLICT', { movieId: current.movieId });
+        const error = new Error('Une des places choisies vient d\'être réservée. Choisissez-en d\'autres.');
+        error.status = 409;
+        throw error;
+      }
+
+      const seat = formatSeatLabel(seats);
       const address = await resolveAddress(tenant?.slug);
       try {
         await BookingModel.create({
@@ -435,6 +460,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
           address,
           startsAt: winner.startsAt,
           seat,
+          seats,
           tickets: lines,
           totalQuantity,
           totalAmount,
@@ -443,7 +469,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
         });
       } catch (err) {
         if (err?.code !== 11000) throw err;
-        await releaseSeats(winner._id, totalQuantity, { Slot: SlotModel, Booking: BookingModel }, tenant?.slug);
+        await releaseSeats(winner._id, totalQuantity, { Slot: SlotModel, Booking: BookingModel }, tenant?.slug, seats);
         await logEvent('REJECTED_CONFLICT', { movieId: winner.movieId });
         const error = new Error('Vous avez déjà une réservation active pour cette séance');
         error.status = 409;
@@ -464,6 +490,7 @@ export async function reserveSlot(slotId, customerId, visitorId, isMeasured, ses
         movieId: winner.movieId ?? null,
         status: winner.status,
         seat,
+        seats,
         tickets: lines,
         totalQuantity,
         totalAmount,
@@ -504,7 +531,7 @@ export async function cancelSlot(slotId, sessionUser, tenant) {
   }
 
   const restoreQty = activeBooking.totalQuantity || 1;
-  const updated = await releaseSeats(safeSlotId, restoreQty, { Slot, Booking }, tenant?.slug);
+  const updated = await releaseSeats(safeSlotId, restoreQty, { Slot, Booking }, tenant?.slug, activeBooking.seats ?? []);
 
   await emitReservationEvent({
     action: 'CANCELLED',
@@ -519,7 +546,7 @@ export async function cancelSlot(slotId, sessionUser, tenant) {
   return toSlotView(updated);
 }
 
-async function releaseSeats(slotId, restoreQty, models, tenantSlug) {
+async function releaseSeats(slotId, restoreQty, models, tenantSlug, seats = []) {
   const safeSlotId = String(slotId);
   const remainingActive = await models.Booking.countDocuments({ slotId: safeSlotId, status: 'CONFIRMED' });
 
@@ -539,6 +566,7 @@ async function releaseSeats(slotId, restoreQty, models, tenantSlug) {
             }
           ]
         },
+        takenSeats: { $setDifference: [{ $ifNull: ['$takenSeats', []] }, { $literal: seats }] },
         version: { $add: ['$version', 1] }
       }
     }
@@ -615,6 +643,7 @@ export async function resetAllSlots(tenant) {
         status: 'AVAILABLE',
         capacity: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
         availableSeats: { $ifNull: ['$capacity', DEFAULT_CAPACITY] },
+        takenSeats: { $literal: [] },
         version: { $add: ['$version', 1] }
       }
     },
@@ -641,4 +670,20 @@ export async function resetAllSlots(tenant) {
   broadcastToTenant(tenant.slug, 'ready', { action: 'reload' });
 
   return { message: 'Tous les créneaux sont désormais disponibles.' };
+}
+
+export async function getSeatMap(slotId, tenant) {
+  const { Slot } = tenantModels(tenant);
+  const slot = await Slot.findById(String(slotId)).lean();
+  if (!slot) {
+    const error = new Error('Créneau inconnu');
+    error.status = 404;
+    throw error;
+  }
+  return {
+    slotId: slot._id,
+    version: slot.version,
+    layout: buildSeatLayout(slot.capacity ?? DEFAULT_CAPACITY),
+    taken: slot.takenSeats ?? []
+  };
 }

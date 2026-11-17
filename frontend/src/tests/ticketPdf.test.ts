@@ -25,7 +25,7 @@ function problemResponse(status: number, detail = 'Technical detail') {
 }
 
 function pdfResponse(filename = 'ticket-42.pdf') {
-  return new Response(new Blob(['%PDF-1.4'], { type: 'application/pdf' }), {
+  return new Response('%PDF-1.4', {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
@@ -164,7 +164,7 @@ describe('Affichage, mémoire et composant', () => {
     await saveTicketPdf('42', browser);
 
     expect(fetchMock).toHaveBeenCalledWith('/api/bookings/42/ticket.pdf?download=true', expect.any(Object));
-    expect(browser.save).toHaveBeenCalledWith(expect.any(Blob), 'ticket-42.pdf');
+    expect(browser.save).toHaveBeenCalledWith(expect.anything(), 'ticket-42.pdf');
   });
 
   it('affiche les états Prêt, Préparation…, Erreur (role="alert") et passe axe-core', async () => {

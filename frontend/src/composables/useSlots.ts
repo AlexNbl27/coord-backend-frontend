@@ -8,6 +8,7 @@ import { useConnection } from './useConnection';
 import { useAbTest } from './useAbTest';
 import { useReservations } from './useReservations';
 import { currentHostContext } from '../services/tenant';
+import { useCurrentCinema } from './useCurrentCinema';
 
 export interface Slot {
   id: string;
@@ -77,7 +78,7 @@ const API_SLOTS_URL = '/api/slots';
 const API_SSE_EVENTS_URL = '/api/slots/events';
 
 let sharedEventSource: EventSource | null = null;
-const cinemaDisabled = ref(false);
+const { cinemaDisabled, setCinemaStatus } = useCurrentCinema();
 const cinemaGroups = ref<CinemaSlotsGroup[]>([]);
 
 // Initialisation du cache persistant
@@ -251,7 +252,7 @@ export function useSlots() {
         try {
           const data = JSON.parse(event.data);
           if (typeof data?.status === 'string') {
-            cinemaDisabled.value = data.status !== 'ACTIVE';
+            setCinemaStatus(data.status);
           }
         } catch (e) {
           console.error('[SSE] Error parsing cinema-status event:', e);
@@ -291,14 +292,15 @@ export function useSlots() {
   const reserveSlot = async (
     slotId: string,
     customerId: string = '',
-    tickets?: TicketLine[]
+    tickets?: TicketLine[],
+    seats?: string[]
   ): Promise<BookingView> => {
     const { measured } = useAbTest();
 
     try {
       const response = await apiClient.post<BookingView>(
         `${API_SLOTS_URL}/${slotId}/reservations`,
-        { customerId, ...(tickets ? { tickets } : {}) },
+        { customerId, ...(tickets ? { tickets } : {}), ...(seats && seats.length > 0 ? { seats } : {}) },
         {
           headers: {
             'X-AB-Measure': String(measured.value),
@@ -317,6 +319,9 @@ export function useSlots() {
       });
       return response.data;
     } catch (err: any) {
+      if (err.response?.status === 423) {
+        setCinemaStatus('DISABLED');
+      }
       const isNetworkOrServer = !err.response || err.response.status >= 500;
 
       if (isNetworkOrServer && !cinemaDisabled.value) {
@@ -337,6 +342,7 @@ export function useSlots() {
           customerId,
           tempBookingId,
           tickets,
+          seats,
         });
 
         return {

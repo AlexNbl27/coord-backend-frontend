@@ -3,14 +3,16 @@
     <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" aria-label="Navigation principale">
       <div class="flex items-center justify-between h-16">
         <!-- Logo -->
-        <router-link to="/" class="flex items-center gap-3" aria-label="CinéSlot - Accueil">
+        <router-link to="/" class="flex items-center gap-3 min-w-0" :aria-label="cinema ? `CinéSlot ${cinema.name} - Accueil` : 'CinéSlot - Accueil'">
           <div class="w-9 h-9 bg-cinema-card border border-accent-gold/60 rounded flex items-center justify-center" aria-hidden="true">
             <span class="font-display text-base font-bold text-accent-gold tracking-tight">CS</span>
           </div>
-          <div class="hidden sm:flex flex-col">
+          <div class="hidden sm:flex flex-col min-w-0">
             <span class="font-display text-xl font-bold text-cinema-text tracking-tight">CinéSlot</span>
-            <span class="text-xs text-cinema-textMuted -mt-1">{{ isAdminPlane ? 'Portail admin' : 'Réservation en temps réel' }}</span>
+            <span v-if="cinema" class="text-xs text-accent-gold font-semibold -mt-0.5 truncate max-w-[14rem]" :title="cinemaLabel">{{ cinemaLabel }}</span>
+            <span v-else class="text-xs text-cinema-textMuted -mt-1">{{ isAdminPlane ? 'Portail admin' : 'Réservation en temps réel' }}</span>
           </div>
+          <span v-if="cinema" class="sm:hidden text-sm font-semibold text-accent-gold truncate max-w-[9rem]">{{ cinema.name }}</span>
         </router-link>
 
         <!-- Navigation Links -->
@@ -176,6 +178,7 @@ import { useAbTest } from '../composables/useAbTest';
 import { useRouter } from 'vue-router';
 import { useSession } from '../composables/useSession';
 import { apexUrl, currentHostContext } from '../services/tenant';
+import { useCurrentCinema } from '../composables/useCurrentCinema';
 
 const { activeBookingsCount } = useReservations();
 const { variant } = useAbTest();
@@ -184,6 +187,7 @@ const router = useRouter();
 const hostContext = currentHostContext();
 const chooseCinemaHref = apexUrl('/cinemas');
 const isAdminPlane = hostContext.plane === 'admin';
+const { cinema, cinemaLabel } = useCurrentCinema();
 
 type NavLink = { label: string; to?: string; href?: string };
 // The admin portal only serves admin pages (planeRedirect sends the public ones to /admin/cinemas).

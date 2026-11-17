@@ -161,8 +161,9 @@
                     v-for="slot in movieSlots"
                     :key="slot.id"
                     @click="handleReserveFromModal(slot.id)"
-                    :aria-label="`Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}`"
-                    class="group px-3 py-2 rounded-lg bg-cinema-darker hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
+                    :disabled="cinemaDisabled"
+                    :aria-label="cinemaDisabled ? `Séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}, réservations suspendues` : `Réserver la séance de ${formatSlotTime(slot.startsAt)} en salle ${slot.hall}`"
+                    class="disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none group px-3 py-2 rounded-lg bg-cinema-darker hover:bg-accent-gold text-cinema-text hover:text-cinema-dark border border-cinema-border hover:border-accent-gold transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer"
                   >
                     <span class="font-mono tabular-nums">
                       {{ formatSlotTime(slot.startsAt) }}
@@ -225,7 +226,7 @@ const router = useRouter();
 const moviesStore = useMoviesStore();
 const slotsStore = useSlotsStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse, sseConnected, loading: loadingSlots } = useSlots();
+const { fetchSlots, connectSse, sseConnected, loading: loadingSlots, cinemaDisabled } = useSlots();
 const { bookings } = useReservations();
 const { exposeIfAvailable } = useAbTest();
 

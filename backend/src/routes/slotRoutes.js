@@ -8,12 +8,14 @@ import {
   createDemoSlot,
   getSlotProof,
   resetAllSlots,
-  toSlotView
+  toSlotView,
+  getSeatMap
 } from '../services/slotService.js';
 import { getTenantModels, isValidSlug, useTenantDb } from '../tenancy/index.js';
 import { requireRole, requireSession } from '../services/sessionService.js';
 import { areDemoRoutesEnabled, isValidEntityId } from '../utils/securityMiddleware.js';
 import { auditRequest } from '../events/audit.js';
+import { normalizeSeatInput } from '../utils/seatMap.js';
 
 const COOKIE_NAME = 'ab_visitor';
 
@@ -33,6 +35,22 @@ export function createSlotRouter({ demoRoutes = areDemoRoutesEnabled() } = {}) {
     }
   });
 
+  slotRouter.get('/:id/seats', async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      if (!isValidEntityId(id)) {
+        return res.status(400).json({ message: 'Identifiant de créneau invalide' });
+      }
+      res.setHeader('Cache-Control', 'no-store');
+      return res.json(await getSeatMap(id, req.tenant));
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ message: err.message });
+      }
+      return next(err);
+    }
+  });
+
   slotRouter.post('/:id/reservations', requireSession, async (req, res, next) => {
     try {
       const { id } = req.params;
@@ -42,8 +60,14 @@ export function createSlotRouter({ demoRoutes = areDemoRoutesEnabled() } = {}) {
       const visitorId = req.cookies?.[COOKIE_NAME];
       const isMeasured = req.headers['x-ab-measure'] === 'true';
       const rawTickets = Array.isArray(req.body?.tickets) ? req.body.tickets : null;
+      const seats = normalizeSeatInput(req.body?.seats);
+      if (seats === false) {
+        return res.status(400).json({ message: 'Sélection de places invalide.' });
+      }
 
-      const booking = await reserveSlot(id, req.body?.customerId ?? null, visitorId, isMeasured, req.sessionUser, rawTickets, req.tenant);
+      const booking = await reserveSlot(id, req.body?.customerId ?? null, visitorId, isMeasured, req.sessionUser, rawTickets, req.tenant, {
+        ...(seats ? { seats } : {})
+      });
       return res.status(201).json(booking);
     } catch (err) {
       if (err.status) {

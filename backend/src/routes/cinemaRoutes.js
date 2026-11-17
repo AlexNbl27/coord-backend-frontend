@@ -3,6 +3,7 @@ import { Cinema } from '../models/Cinema.js';
 import { roundKm } from '../geo/distance.js';
 import { findInBox, findWithGeoNear } from '../geo/finders.js';
 import { sendProblem } from '../services/sessionService.js';
+import { isValidSlug } from '../tenancy/slug.js';
 
 function badRequest(message) {
   const err = new Error(message);
@@ -89,6 +90,31 @@ async function searchNearby(query, finder) {
 export function createCinemaRouter(deps = {}) {
   const router = Router();
   const finder = deps.finder || (process.env.GEO_FINDER === 'geonear' ? findWithGeoNear : findInBox);
+
+  const notFound = (res, detail) => sendProblem(res, 404, 'Not Found', detail);
+
+  const sendCinema = async (res, next, slug) => {
+    try {
+      const cinema = await Cinema.findOne({ slug, status: { $ne: 'DELETED' } }).lean();
+      if (!cinema) return notFound(res, 'Cinéma introuvable.');
+      return res.json(toItem(cinema, null));
+    } catch (err) {
+      return next(err);
+    }
+  };
+
+  router.get('/current', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const slug = req.tenant?.slug;
+    if (!slug) return notFound(res, 'Aucun cinéma associé à ce sous-domaine.');
+    return sendCinema(res, next, slug);
+  });
+
+  router.get('/:slug', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!isValidSlug(req.params.slug)) return notFound(res, 'Cinéma introuvable.');
+    return sendCinema(res, next, req.params.slug);
+  });
 
   router.get('/', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');

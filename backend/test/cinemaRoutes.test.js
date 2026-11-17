@@ -118,3 +118,26 @@ test('ne renvoie pas la position reçue', async () => {
   assert.ok(!res.text.includes('4.83172'));
   assert.equal(res.headers.get('cache-control'), 'no-store');
 });
+
+test('GET /current renvoie le nom et le statut du cinéma du sous-domaine', async (t) => {
+  const { Cinema } = await import('../src/models/Cinema.js');
+  t.mock.method(Cinema, 'findOne', (filter) => ({
+    lean: async () => (filter.slug === 'cine-bellecour'
+      ? { slug: 'cine-bellecour', name: 'Ciné Bellecour', address: 'Place Bellecour', city: 'Lyon', features: [], status: 'DISABLED' }
+      : null)
+  }));
+  const app = express();
+  app.use((req, _res, next) => { req.tenant = { slug: 'cine-bellecour' }; next(); });
+  app.use('/api/cinemas', createCinemaRouter({ finder: memoryFinder }));
+
+  const res = await get(app, '/api/cinemas/current');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.name, 'Ciné Bellecour');
+  assert.equal(res.body.status, 'DISABLED');
+
+  const noTenant = await get(createApp(), '/api/cinemas/current');
+  assert.equal(noTenant.status, 404);
+
+  const badSlug = await get(createApp(), '/api/cinemas/ADMIN');
+  assert.equal(badSlug.status, 404);
+});

@@ -13,6 +13,7 @@
     
     <!-- Main Content -->
     <main id="main-content" class="relative z-10 pt-16 min-h-[calc(100vh-4rem)]">
+      <CinemaStatusBanner />
       <router-view />
     </main>
     
@@ -67,14 +68,17 @@ import Navbar from './components/Navbar.vue';
 import Footer from './components/Footer.vue';
 import ReservationModal from './components/ReservationModal.vue';
 import AbMetricsModal from './components/AbMetricsModal.vue';
+import CinemaStatusBanner from './components/CinemaStatusBanner.vue';
 import { useAbTest } from './composables/useAbTest';
 import { useSlots } from './composables/useSlots';
 import { useConnection } from './composables/useConnection';
 import { currentHostContext } from './services/tenant';
+import { useCurrentCinema } from './composables/useCurrentCinema';
 
 const { initAssignment } = useAbTest();
 const { connectSse } = useSlots();
 const { initConnectionWatcher, activeToast, clearToast } = useConnection();
+const { loadCurrentCinema } = useCurrentCinema();
 
 const showReservationModal = ref(false);
 const currentBookingId = ref('');
@@ -116,6 +120,7 @@ onMounted(() => {
     initAssignment();
   }
   if (plane === 'tenant') {
+    void loadCurrentCinema();
     connectSse();
   }
 });

@@ -93,8 +93,15 @@
         Réservation en cours pour {{ slot.movieTitle }}...
       </span>
 
+      <p
+        v-if="suspended && slot.status === 'AVAILABLE' && !alreadyBooked"
+        class="w-full text-center text-xs font-semibold py-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-200"
+      >
+        Réservations suspendues
+      </p>
+
       <button
-        v-if="slot.status === 'AVAILABLE' && !alreadyBooked"
+        v-else-if="slot.status === 'AVAILABLE' && !alreadyBooked"
         @click.stop="handleReserve"
         class="w-full btn btn-primary text-xs py-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         :aria-label="`Réserver une place pour ${slot.movieTitle} à ${formattedStartsAt} en salle ${slot.hall}${showDeferred ? ' (réservation hors-ligne, synchronisation différée)' : ''}`"
@@ -149,8 +156,10 @@ import { ref, computed } from 'vue';
 import type { Slot } from '../composables/useSlots';
 import { useAbTest } from '../composables/useAbTest';
 import { offlineQueue } from '../services/offlineQueue';
+import { useCurrentCinema } from '../composables/useCurrentCinema';
 
 const { bookingButtonLabel } = useAbTest();
+const { cinemaDisabled } = useCurrentCinema();
 
 const props = defineProps<{
   slot: Slot;
@@ -167,6 +176,9 @@ const showDeferred = computed(() => !props.isPublicPlane && Boolean(props.isOffl
 const emit = defineEmits(["reserve", "click"]);
 
 const isReserving = ref(false);
+const suspended = computed(() =>
+  cinemaDisabled.value || (!!props.slot.cinemaStatus && props.slot.cinemaStatus !== 'ACTIVE'),
+);
 const isPendingSync = computed(() =>
   offlineQueue.isSlotPendingReservation(props.slot.id),
 );
@@ -184,7 +196,7 @@ const formattedStartsAt = computed(() => {
 });
 
 const handleReserve = () => {
-  if (isReserving.value || props.alreadyBooked) return;
+  if (isReserving.value || props.alreadyBooked || suspended.value) return;
   isReserving.value = true;
   emit('reserve', props.slot.id, '');
   isReserving.value = false;

@@ -48,9 +48,11 @@ function lastLog() {
 test('reserveSlot success logs BOOKED with traceId and publishes it', async () => {
   mock.method(Booking, 'findOne', () => lean(null));
   mock.method(Booking, 'create', async (doc) => doc);
-  mock.method(Slot, 'findOneAndUpdate', async () => ({
+  const winner = {
     _id: 'slot-1', movieId: 'movie-9', status: 'AVAILABLE', capacity: 40, availableSeats: 38, version: 1, startsAt: '2026-12-01T20:00:00Z'
-  }));
+  };
+  mock.method(Slot, 'findById', () => lean(winner));
+  mock.method(Slot, 'findOneAndUpdate', async () => winner);
 
   const booking = await reserveSlot('slot-1', null, null, false, USER, [{ category: 'ADULT', quantity: 2 }], TENANT, ACTIVE);
 

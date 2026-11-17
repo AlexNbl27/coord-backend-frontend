@@ -318,7 +318,7 @@ test('reserveSlot copie adresse et movieId', async () => {
     {
       getCinemaStatus: async (slug) => { statusCalls.push(slug); return 'ACTIVE'; },
       getCinemaAddress: async (slug) => (slug === 'cine-a' ? '1 place Test, Lyon' : ''),
-      Slot: { findOneAndUpdate: async () => winner },
+      Slot: { findOneAndUpdate: async () => winner, findById: () => ({ lean: async () => winner }) },
       Booking: {
         findOne: () => ({ lean: async () => null }),
         create: async (doc) => { created.push(doc); return doc; }

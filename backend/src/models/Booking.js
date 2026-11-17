@@ -18,6 +18,7 @@ export const bookingSchema = new mongoose.Schema({
   address: { type: String, default: '' },
   startsAt: { type: String, required: true },
   seat: { type: String, required: true },
+  seats: { type: [String], default: [] },
   tickets: { type: [ticketLineSchema], default: [] },
   totalQuantity: { type: Number, default: 1 },
   totalAmount: { type: Number, default: 11.5 },

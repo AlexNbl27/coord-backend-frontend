@@ -56,6 +56,7 @@ test('reserveSlot: a duplicate booking caught by the unique index gives seats ba
   t.mock.method(Booking, 'findOne', () => query(null));
   t.mock.method(Booking, 'countDocuments', async () => 1);
   t.mock.method(Booking, 'create', async () => { throw Object.assign(new Error('dup'), { code: 11000 }); });
+  t.mock.method(Slot, 'findById', () => query(slot));
   t.mock.method(Slot, 'findOneAndUpdate', async (filter, update) => {
     slotUpdates.push(update);
     return slot;

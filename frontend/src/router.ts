@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router';
 import { useSession } from './composables/useSession';
 import { currentHostContext, planeRedirect } from './services/tenant';
+import { useCurrentCinema } from './composables/useCurrentCinema';
 
 // Mirrors MFA_STEP_UP_TTL_MS in backend/src/services/sessionService.js
 const MFA_STEP_UP_MS = 5 * 60 * 1000;
@@ -199,7 +200,12 @@ router.beforeEach(async (to) => {
       }
     }
   }
-  const title = (to.meta.title as string) || 'CinéSlot - Réservation de films en temps réel';
+  const { cinema, loadCurrentCinema } = useCurrentCinema();
+  if (hostCtx.plane === 'tenant') {
+    await loadCurrentCinema();
+  }
+  const baseTitle = (to.meta.title as string) || 'CinéSlot - Réservation de films en temps réel';
+  const title = cinema.value ? `${baseTitle} · ${cinema.value.name}` : baseTitle;
   const description = (to.meta.description as string) || 'Découvrez et réservez vos films préférés en temps réel avec synchronisation SSE';
 
   document.title = title;

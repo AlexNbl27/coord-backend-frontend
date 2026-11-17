@@ -172,14 +172,6 @@
         {{ displayedSlots.length }} séance{{ displayedSlots.length > 1 ? 's' : '' }} trouvée{{ displayedSlots.length > 1 ? 's' : '' }}
       </div>
 
-      <div
-        v-if="cinemaDisabled"
-        role="alert"
-        class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
-      >
-        Ce cinéma est temporairement désactivé. Les réservations sont suspendues.
-      </div>
-
       <!-- Résultats : Grille des séances -->
       <div v-if="loading && displayedSlots.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div v-for="n in 6" :key="n" class="bg-gray-800 h-44 rounded-xl animate-pulse"></div>

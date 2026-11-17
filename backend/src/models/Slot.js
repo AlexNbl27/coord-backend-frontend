@@ -9,6 +9,7 @@ export const slotSchema = new mongoose.Schema({
   hall: { type: String, default: 'Salle 1 - IMAX Laser' },
   capacity: { type: Number, default: 40 },
   availableSeats: { type: Number, default: 40 },
+  takenSeats: { type: [String], default: [] },
   bookingId: { type: String, default: null },
   bookedBy: { type: String, default: null },
   bookedAt: { type: Date, default: null },
