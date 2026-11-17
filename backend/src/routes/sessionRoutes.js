@@ -130,9 +130,19 @@ export function createSessionRouter(deps = {}) {
    * POST /api/session/logout
    * Clears the spectator session cookie.
    */
-  router.post('/logout', (_req, res) => {
-    res.clearCookie(SESSION_COOKIE_NAME, { path: '/api' });
-    return res.status(204).end();
+  router.post('/logout', async (req, res, next) => {
+    try {
+      if (req.sessionUser?.id) {
+        await users.findOneAndUpdate(
+          { _id: req.sessionUser.id },
+          { $inc: { sessionVersion: 1 } }
+        );
+      }
+      res.clearCookie(SESSION_COOKIE_NAME, { path: '/api' });
+      return res.status(204).end();
+    } catch (err) {
+      return next(err);
+    }
   });
 
   /**
