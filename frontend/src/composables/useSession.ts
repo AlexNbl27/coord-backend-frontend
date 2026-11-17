@@ -5,6 +5,8 @@ export interface SpectatorUser {
   id: string;
   name: string;
   email: string;
+  role?: 'SUPER_ADMIN' | 'CINEMA_ADMIN' | 'SPECTATOR';
+  cinemaSlugs?: string[];
 }
 
 const currentUser = ref<SpectatorUser | null>(null);

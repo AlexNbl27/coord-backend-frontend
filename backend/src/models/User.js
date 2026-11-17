@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, default: undefined },
   role: { type: String, enum: ['SUPER_ADMIN', 'CINEMA_ADMIN', 'SPECTATOR'], default: 'SPECTATOR' },
   cinemaSlugs: { type: [String], default: [] },
+  totpSecretEncrypted: { type: String, default: undefined },
+  totpEnabled: { type: Boolean, default: false },
   // Absent until the first password reset ($inc then sets it to 1).
   sessionVersion: { type: Number, default: undefined },
   googleId: { type: String, default: undefined, unique: true, sparse: true },

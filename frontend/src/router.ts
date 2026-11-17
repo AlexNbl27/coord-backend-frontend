@@ -97,6 +97,17 @@ const routes = [
     },
   },
   {
+    path: '/admin/cinemas',
+    name: 'admin-cinemas',
+    component: () => import('./views/AdminCinemasView.vue'),
+    meta: {
+      title: 'CinéSlot - Administration des cinémas',
+      description: 'Gestion des cinémas',
+      requiresAuth: true,
+      requiresRole: ['SUPER_ADMIN'],
+    },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('./views/NotFoundView.vue'),
@@ -126,11 +137,17 @@ const router = createRouter({
 
 // Navigation guard pour mettre à jour le titre de la page
 router.beforeEach(async (to) => {
-  if (to.meta.requiresAuth) {
+  const requiredRoles = to.meta.requiresRole as string[] | undefined;
+  if (to.meta.requiresAuth || (requiredRoles && requiredRoles.length > 0)) {
     const { currentUser, initSession } = useSession();
     await initSession();
     if (!currentUser.value) {
       return { name: 'login', query: { redirect: to.fullPath } };
+    }
+    if (requiredRoles && requiredRoles.length > 0) {
+      if (!currentUser.value.role || !requiredRoles.includes(currentUser.value.role)) {
+        return { name: 'home' };
+      }
     }
   }
   const title = (to.meta.title as string) || 'CinéSlot - Réservation de films en temps réel';

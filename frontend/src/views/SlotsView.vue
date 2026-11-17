@@ -189,7 +189,19 @@
         </button>
       </div>
 
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div
+        v-if="cinemaDisabled"
+        role="alert"
+        class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+      >
+        Ce cinéma est temporairement désactivé. Les réservations sont suspendues.
+      </div>
+
+      <div
+        v-else
+        :class="['grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4', cinemaDisabled ? 'opacity-50 grayscale pointer-events-none select-none' : '']"
+        :aria-disabled="cinemaDisabled ? 'true' : undefined"
+      >
         <SlotCard
           v-for="slot in displayedSlots"
           :key="slot.id"
@@ -218,7 +230,7 @@ const router = useRouter();
 const slotsStore = useSlotsStore();
 const moviesStore = useMoviesStore();
 const { fetchMovies } = useMovies();
-const { fetchSlots, connectSse, resetSlots, sseConnected } = useSlots();
+const { fetchSlots, connectSse, resetSlots, sseConnected, cinemaDisabled } = useSlots();
 const { bookings } = useReservations();
 const { exposeIfAvailable } = useAbTest();
 
