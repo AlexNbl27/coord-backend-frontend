@@ -13,6 +13,7 @@ export interface ReservationLogEntry {
   movieId: string | null;
   bookingId: string | null;
   userId: string | null;
+  userEmail?: string | null;
   quantity: number;
   traceId: string | null;
 }
@@ -20,7 +21,7 @@ export interface ReservationLogEntry {
 export interface AuditEntry {
   seq: number;
   at: string;
-  actor: { id: string; role: string | null } | null;
+  actor: { id: string; role: string | null; email?: string | null } | null;
   action: string;
   target: { type?: string; id?: string; cinemaSlug?: string | null } | null;
   result: string;

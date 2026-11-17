@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ReservationLog, RESERVATION_ACTIONS } from '../models/ReservationLog.js';
 import { AuditLog } from '../models/AuditLog.js';
+import { User } from '../models/User.js';
 import { auditRequest } from '../events/audit.js';
 import { requireRole, sendProblem as problem } from '../services/sessionService.js';
 import { isValidSlug } from '../tenancy/index.js';
@@ -95,7 +96,21 @@ async function paginate(model, filter, sort, { page, limit }) {
   return { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)), items };
 }
 
-function toReservationLogView(log) {
+async function loadEmails(users, ids) {
+  const unique = [...new Set(ids.filter((id) => typeof id === 'string' && id))];
+  if (unique.length === 0) {
+    return new Map();
+  }
+  try {
+    const query = users.find({ _id: { $in: unique } }, { email: 1 });
+    const docs = typeof query?.lean === 'function' ? await query.lean() : await query;
+    return new Map(docs.map((u) => [String(u._id), u.email]));
+  } catch {
+    return new Map();
+  }
+}
+
+function toReservationLogView(log, emails) {
   return {
     id: String(log._id),
     at: log.at,
@@ -105,16 +120,18 @@ function toReservationLogView(log) {
     movieId: log.movieId ?? null,
     bookingId: log.bookingId ?? null,
     userId: log.userId ?? null,
+    userEmail: (log.userId && emails.get(log.userId)) ?? null,
     quantity: log.quantity ?? 0,
     traceId: log.traceId ?? null
   };
 }
 
-function toAuditView(entry) {
+function toAuditView(entry, emails) {
+  const actor = entry.actor ?? null;
   return {
     seq: entry.seq,
     at: entry.at,
-    actor: entry.actor ?? null,
+    actor: actor ? { ...actor, email: (actor.id && emails.get(actor.id)) ?? null } : null,
     action: entry.action,
     target: entry.target ?? null,
     before: entry.before ?? null,
@@ -139,7 +156,7 @@ function handle(fn) {
   };
 }
 
-export function createAdminLogRouter({ reservationLogs = ReservationLog, auditLogs = AuditLog } = {}) {
+export function createAdminLogRouter({ reservationLogs = ReservationLog, auditLogs = AuditLog, users = User } = {}) {
   const router = Router();
   const adminOnly = requireRole('SUPER_ADMIN', 'CINEMA_ADMIN');
 
@@ -163,7 +180,8 @@ export function createAdminLogRouter({ reservationLogs = ReservationLog, auditLo
     if (at) filter.at = at;
 
     const result = await paginate(reservationLogs, filter, { at: -1, _id: -1 }, paging);
-    return res.json({ ...result, items: result.items.map(toReservationLogView) });
+    const emails = await loadEmails(users, result.items.map((i) => i.userId));
+    return res.json({ ...result, items: result.items.map((i) => toReservationLogView(i, emails)) });
   }));
 
   router.get('/audit', adminOnly, handle(async (req, res) => {
@@ -182,7 +200,8 @@ export function createAdminLogRouter({ reservationLogs = ReservationLog, auditLo
     if (at) filter.at = at;
 
     const result = await paginate(auditLogs, filter, { seq: -1 }, paging);
-    return res.json({ ...result, items: result.items.map(toAuditView) });
+    const emails = await loadEmails(users, result.items.map((i) => i.actor?.id));
+    return res.json({ ...result, items: result.items.map((i) => toAuditView(i, emails)) });
   }));
 
   return router;

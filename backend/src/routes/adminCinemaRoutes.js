@@ -13,6 +13,27 @@ function getTraceId() {
   return ctx && isSpanContextValid(ctx) ? ctx.traceId : null;
 }
 
+const EDITABLE_FIELDS = ['name', 'address', 'city', 'latitude', 'longitude', 'features'];
+
+function parseCinemaFields(body) {
+  const name = isPlainString(body?.name, 120) ? body.name.trim() : '';
+  const address = isPlainString(body?.address, 200) ? body.address.trim() : '';
+  const city = isPlainString(body?.city, 100) ? body.city.trim() : '';
+  const latitude = Number(body?.latitude);
+  const longitude = Number(body?.longitude);
+  const features = Array.isArray(body?.features)
+    ? body.features.filter((f) => typeof f === 'string').map((f) => f.trim().slice(0, 50)).filter(Boolean)
+    : [];
+
+  if (!name || !address || !city || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return { error: 'Champs obligatoires manquants ou invalides.' };
+  }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return { error: 'Coordonnées géographiques invalides.' };
+  }
+  return { name, address, city, latitude, longitude, features };
+}
+
 export function createAdminCinemaRouter(deps = {}) {
   const cinemas = deps.cinemas || Cinema;
   const getDb = deps.useTenantDb || useTenantDb;
@@ -53,21 +74,11 @@ export function createAdminCinemaRouter(deps = {}) {
         return problem(res, 400, 'Bad Request', 'Slug de cinéma invalide ou réservé.');
       }
 
-      const name = isPlainString(req.body?.name, 120) ? req.body.name.trim() : '';
-      const address = isPlainString(req.body?.address, 200) ? req.body.address.trim() : '';
-      const city = isPlainString(req.body?.city, 100) ? req.body.city.trim() : '';
-      const latitude = Number(req.body?.latitude);
-      const longitude = Number(req.body?.longitude);
-      const features = Array.isArray(req.body?.features)
-        ? req.body.features.filter((f) => typeof f === 'string').map((f) => f.trim().slice(0, 50))
-        : [];
-
-      if (!name || !address || !city || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-        return problem(res, 400, 'Bad Request', 'Champs obligatoires manquants ou invalides.');
+      const parsed = parseCinemaFields(req.body);
+      if (parsed.error) {
+        return problem(res, 400, 'Bad Request', parsed.error);
       }
-      if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-        return problem(res, 400, 'Bad Request', 'Coordonnées géographiques invalides.');
-      }
+      const { name, address, city, latitude, longitude, features } = parsed;
 
       const created = await cinemas.create({
         slug,
@@ -105,6 +116,57 @@ export function createAdminCinemaRouter(deps = {}) {
       if (err?.code === 11000) {
         return problem(res, 409, 'Conflict', 'Un cinéma existe déjà avec ce slug.');
       }
+      return next(err);
+    }
+  });
+
+  router.patch('/:slug', async (req, res, next) => {
+    try {
+      const { slug } = req.params;
+      if (!isValidSlug(slug)) {
+        return problem(res, 400, 'Bad Request', 'Slug de cinéma invalide.');
+      }
+      if (req.body?.slug !== undefined && req.body.slug !== slug) {
+        return problem(res, 400, 'Bad Request', 'Le slug d\'un cinéma ne peut pas être modifié.');
+      }
+      const parsed = parseCinemaFields(req.body);
+      if (parsed.error) {
+        return problem(res, 400, 'Bad Request', parsed.error);
+      }
+      const { name, address, city, latitude, longitude, features } = parsed;
+
+      const before = await cinemas.findOneAndUpdate(
+        { slug, status: { $ne: 'DELETED' } },
+        {
+          $set: {
+            name,
+            address,
+            city,
+            latitude,
+            longitude,
+            location: { type: 'Point', coordinates: [longitude, latitude] },
+            features
+          }
+        },
+        { new: false }
+      );
+      if (!before) {
+        return problem(res, 404, 'Not Found', 'Cinéma introuvable ou supprimé.');
+      }
+
+      const pick = (doc) => Object.fromEntries(EDITABLE_FIELDS.map((k) => [k, doc[k] ?? null]));
+      const after = { name, address, city, latitude, longitude, features };
+      await audit({
+        actor: req.sessionUser.id,
+        action: 'CINEMA_UPDATE',
+        target: slug,
+        before: pick(before),
+        after,
+        result: 'SUCCESS'
+      });
+
+      return res.json({ slug, status: before.status, ...after });
+    } catch (err) {
       return next(err);
     }
   });

@@ -9,12 +9,16 @@ import { auditForbiddenResponses } from '../src/events/audit.js';
 
 let reservationLogs;
 let auditLogs;
+let users;
 
 const day = (d) => new Date(`2026-11-${String(d).padStart(2, '0')}T10:00:00.000Z`);
 
 beforeEach(async () => {
   reservationLogs = createMemoryModel();
   auditLogs = createMemoryModel({ unique: ['seq', 'prevHash'] });
+  users = createMemoryModel();
+  await users.create({ _id: 'u-1', email: 'ada@cineslot.test' });
+  await users.create({ _id: 'root', email: 'root@cineslot.test' });
   mock.method(AuditLog, 'findOne', (...args) => auditLogs.findOne(...args));
   mock.method(AuditLog, 'create', (doc) => auditLogs.create(doc));
   const seed = [
@@ -46,7 +50,7 @@ async function withApp(fn) {
     next();
   });
   app.use(auditForbiddenResponses);
-  app.use('/api/admin', createAdminLogRouter({ reservationLogs, auditLogs }));
+  app.use('/api/admin', createAdminLogRouter({ reservationLogs, auditLogs, users }));
   const server = http.createServer(app);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api/admin`;
@@ -155,5 +159,17 @@ test('pagination is bounded and query parameters are validated', async () => {
       assert.match(res.headers.get('content-type'), /application\/problem\+json/);
     }
     assert.equal((await get('/audit?action=drop table', 'root')).status, 400);
+  });
+});
+
+test('logs expose the email of the user / actor instead of only the id', async () => {
+  await withApp(async (get) => {
+    const resa = await get('/logs/reservations', 'root');
+    assert.equal(resa.body.items[0].userEmail, 'ada@cineslot.test');
+
+    const audit = await get('/audit', 'root');
+    const byActor = Object.fromEntries(audit.body.items.map((i) => [i.actor.id, i.actor.email]));
+    assert.equal(byActor.root, 'root@cineslot.test');
+    assert.equal(byActor.adm, null);
   });
 });
