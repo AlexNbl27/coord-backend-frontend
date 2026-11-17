@@ -1,7 +1,6 @@
 <template>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto">
-      <!-- En-tête -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <div class="flex items-center gap-3">
@@ -12,7 +11,6 @@
           </p>
         </div>
 
-        <!-- Actions et Pastille de statut SSE -->
         <div class="flex items-center gap-3 self-start sm:self-auto">
           <button
             v-if="isSuperAdmin"
@@ -24,7 +22,6 @@
             <span>Réinitialiser les séances</span>
           </button>
 
-          <!-- Pastille de statut SSE -->
           <div
             v-if="!isPublicPlane"
             role="status"
@@ -45,11 +42,8 @@
         </div>
       </div>
 
-      <!-- Barre de Filtres Avancés -->
       <div class="bg-cinema-card/70 p-5 rounded-2xl border border-cinema-border/50 shadow-cinema mb-8 space-y-4">
-        <!-- Ligne 1: Recherche & Sélecteur de Film -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Recherche textuelle -->
           <div class="relative">
             <label for="slots-search-input" class="sr-only">Rechercher par film ou par salle</label>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-cinema-textMuted pointer-events-none" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -74,7 +68,6 @@
             </button>
           </div>
 
-          <!-- Sélecteur de film -->
           <div>
             <label for="slots-movie-select" class="sr-only">Filtrer par film</label>
             <select
@@ -91,9 +84,7 @@
           </div>
         </div>
 
-        <!-- Ligne 2: Formats Technologiques & Statut -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-cinema-border/30">
-          <!-- Formats techniques -->
           <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer les séances par format technologique">
             <span class="text-xs text-cinema-textMuted mr-1 font-medium" aria-hidden="true">Format :</span>
             <button
@@ -134,7 +125,6 @@
             </button>
           </div>
 
-          <!-- Filtre Statut Disponibilité -->
           <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto" role="group" aria-label="Filtrer les séances par disponibilité">
             <button
               @click="selectedFilter = 'ALL'"
@@ -167,17 +157,14 @@
         </div>
       </div>
 
-      <!-- Annonce vocale dynamique pour VoiceOver des résultats de filtrage -->
       <div class="sr-only" aria-live="polite" role="status">
         {{ displayedSlots.length }} séance{{ displayedSlots.length > 1 ? 's' : '' }} trouvée{{ displayedSlots.length > 1 ? 's' : '' }}
       </div>
 
-      <!-- Résultats : Grille des séances -->
       <div v-if="loading && displayedSlots.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div v-for="n in 6" :key="n" class="bg-gray-800 h-44 rounded-xl animate-pulse"></div>
       </div>
 
-      <!-- Empty State -->
       <div v-else-if="displayedSlots.length === 0" class="text-center py-16 bg-cinema-card/30 rounded-2xl border border-cinema-border/40 p-8">
         <h2 class="text-lg font-bold text-white mb-1">Aucune séance ne correspond à ces critères</h2>
         <p class="text-xs text-cinema-textMuted max-w-sm mx-auto mb-4">
@@ -262,7 +249,6 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSlotsStore } from '../stores/slots';
-import { useMoviesStore } from '../stores/movies';
 import { useSlots } from '../composables/useSlots';
 import { useMovies } from '../composables/useMovies';
 import { useReservations } from '../composables/useReservations';

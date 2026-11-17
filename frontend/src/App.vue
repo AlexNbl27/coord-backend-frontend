@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen bg-cinema-dark">
-    <!-- Skip to main content link pour VoiceOver et clavier -->
     <a
       href="#main-content"
       class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2.5 focus:bg-accent-gold focus:text-cinema-dark focus:font-bold focus:rounded-xl focus:shadow-2xl focus:outline-none focus:ring-2 focus:ring-white"
@@ -8,19 +7,15 @@
       Aller au contenu principal
     </a>
 
-    <!-- NavBar -->
     <Navbar />
     
-    <!-- Main Content -->
     <main id="main-content" class="relative z-10 pt-16 min-h-[calc(100vh-4rem)]">
       <CinemaStatusBanner />
       <router-view />
     </main>
     
-    <!-- Footer -->
     <Footer />
     
-    <!-- Reservation Modal (global) -->
     <ReservationModal
       v-if="showReservationModal"
       :show="showReservationModal"
@@ -31,7 +26,6 @@
       @close="closeReservationModal"
     />
 
-    <!-- A/B Testing Metrics Modal (global) -->
     <AbMetricsModal
       v-if="showAbMetricsModal"
       :show="showAbMetricsModal"

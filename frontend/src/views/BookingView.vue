@@ -179,10 +179,6 @@
             {{ errorMessage }}
           </div>
 
-          <div v-if="cinemaDisabled" role="alert" class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-            Ce cinéma est temporairement désactivé. Les réservations sont suspendues.
-          </div>
-
           <div class="pt-4 border-t border-cinema-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span class="text-xs text-cinema-textMuted block">Total à régler</span>

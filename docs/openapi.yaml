@@ -1,22 +1,23 @@
 openapi: 3.1.0
 info:
-  title: CinéSlot API — Billetterie PDF & Session
+  title: CinéSlot API - Billetterie PDF & Session
   version: 1.0.0
   description: >
     Contrat d'interface pour la génération et le téléchargement sécurisé des billets PDF
-    sur CinéSlot (données de démonstration uniquement).
+    sur CinéSlot.
 servers:
-  - url: http://localhost:3001/api
-    description: Reverse proxy Nginx (même origine)
-  - url: http://localhost:3000/api
-    description: Backend Express direct
+  - url: http://{cinema}.cineslot.localhost:3001/api
+    description: Reverse proxy Nginx par cinéma
+    variables:
+      cinema:
+        default: bellecour
 paths:
   /session:
     get:
       summary: Lire la session spectateur courante
       responses:
         "200":
-          description: État de session et comptes de démonstration
+          description: État de session
           headers:
             Cache-Control:
               schema:
@@ -26,36 +27,34 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [authenticated, user, demoUsers]
+                required: [authenticated, user]
                 properties:
                   authenticated:
                     type: boolean
                   user:
                     nullable: true
                     $ref: "#/components/schemas/SpectatorUser"
-                  demoUsers:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/SpectatorUser"
   /session/login:
     post:
-      summary: Ouvrir une session spectateur de démonstration
+      summary: Ouvrir une session spectateur par email et mot de passe
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [userId]
+              required: [email, password]
               properties:
-                userId:
+                email:
                   type: string
-                  enum: [spectator-1, spectator-2]
+                  format: email
+                password:
+                  type: string
       responses:
         "200":
           description: Session ouverte (cookie HttpOnly SameSite=Lax déposé)
-        "400":
-          description: Compte spectateur inconnu
+        "401":
+          description: Identifiants invalides
           content:
             application/problem+json:
               schema:

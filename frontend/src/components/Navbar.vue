@@ -2,7 +2,6 @@
   <header class="navbar">
     <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" aria-label="Navigation principale">
       <div class="flex items-center justify-between h-16">
-        <!-- Logo -->
         <router-link to="/" class="flex items-center gap-3 min-w-0" :aria-label="cinema ? `CinéSlot ${cinema.name} - Accueil` : 'CinéSlot - Accueil'">
           <div class="w-9 h-9 bg-cinema-card border border-accent-gold/60 rounded flex items-center justify-center" aria-hidden="true">
             <span class="font-display text-base font-bold text-accent-gold tracking-tight">CS</span>
@@ -15,7 +14,6 @@
           <span v-if="cinema" class="sm:hidden text-sm font-semibold text-accent-gold truncate max-w-[9rem]">{{ cinema.name }}</span>
         </router-link>
 
-        <!-- Navigation Links -->
         <div class="hidden md:flex items-center gap-4 lg:gap-6 text-sm">
           <template v-for="link in navLinks" :key="link.label">
             <a v-if="link.href" :href="link.href" class="text-cinema-textMuted hover:text-cinema-text transition-colors duration-200 font-medium whitespace-nowrap">{{ link.label }}</a>
@@ -25,12 +23,9 @@
           </template>
         </div>
 
-        <!-- Right side: Status + User Tickets -->
         <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-          <!-- Indicateur de Connexion & Résilience -->
           <ConnectionBadge class="hidden sm:inline-flex" />
 
-          <!-- User / Mes Billets Quick Action Button -->
           <router-link
             v-if="!isAdminPlane"
             to="/reservations"
@@ -50,7 +45,6 @@
             </span>
           </router-link>
 
-          <!-- Bouton Test A/B -->
           <button
             v-if="isSuperAdmin && !isAdminPlane"
             @click="handleOpenAbModal"
@@ -62,7 +56,6 @@
             <span>Test A/B : {{ variant }}</span>
           </button>
 
-          <!-- Session spectateur / admin -->
           <div v-if="currentUser" class="hidden md:flex items-center gap-2.5 pl-2 border-l border-cinema-border/40">
             <span class="text-cinema-text text-xs font-medium truncate max-w-[9rem]" :title="currentUser.name">{{ currentUser.name }}</span>
             <button
@@ -81,7 +74,6 @@
             Se connecter
           </router-link>
 
-          <!-- Mobile menu button -->
           <button
             @click="toggleMobileMenu"
             :aria-expanded="mobileMenuOpen ? 'true' : 'false'"
@@ -96,7 +88,6 @@
         </div>
       </div>
 
-      <!-- Mobile Menu -->
       <transition
         enter-active-class="transition-all duration-300 ease-out"
         leave-active-class="transition-all duration-200 ease-in"

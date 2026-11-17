@@ -1,7 +1,6 @@
 <template>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto">
-      <!-- En-tête standardisé -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <div class="flex items-center gap-3">
@@ -18,7 +17,6 @@
         </div>
       </div>
 
-      <!-- Barre de recherche -->
       <div class="mb-6">
         <SearchBar
           v-model:search="searchQuery"
@@ -32,9 +30,7 @@
         />
       </div>
 
-      <!-- Filtres actifs & Barre de tri (alignement vertical harmonisé) -->
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-cinema-border/40">
-        <!-- Chips filtres actifs -->
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs text-cinema-textMuted font-medium">Filtres :</span>
           <span v-if="!hasActiveFilters" class="text-xs text-cinema-textMuted/70 italic">Aucun filtre actif</span>
@@ -79,7 +75,6 @@
           </button>
         </div>
 
-        <!-- Sélecteur de tri -->
         <div class="flex items-center gap-2.5 self-start sm:self-auto">
           <label for="movies-sort-select" class="text-xs text-cinema-textMuted font-medium whitespace-nowrap">Trier par :</label>
           <select
@@ -96,7 +91,6 @@
         </div>
       </div>
 
-      <!-- Résultats : Grille de films -->
       <div v-if="loading && sortedMovies.length === 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <div v-for="n in 8" :key="n" class="bg-gray-800 h-96 rounded-xl animate-pulse"></div>
       </div>
@@ -145,7 +139,6 @@
           </button>
           
           <div class="flex flex-col md:flex-row gap-6">
-            <!-- Affiche -->
             <div class="w-full md:w-56 shrink-0">
               <div class="aspect-[2/3] bg-cinema-darker rounded-xl overflow-hidden border border-cinema-border/50">
                 <img
@@ -160,7 +153,6 @@
               </div>
             </div>
             
-            <!-- Détails -->
             <div class="flex-1 min-w-0">
               <div class="flex items-start justify-between gap-3 pr-8">
                 <div class="min-w-0">
@@ -173,7 +165,6 @@
                 </div>
               </div>
 
-              <!-- Genres -->
               <div class="flex flex-wrap gap-1.5 mt-3">
                 <span
                   v-for="(genre, index) in selectedMovie.genres"
@@ -188,7 +179,6 @@
                 {{ selectedMovie.synopsis || 'Aucun synopsis disponible.' }}
               </p>
               
-              <!-- Séances disponibles pour ce film -->
               <div class="mb-5 p-3.5 bg-cinema-darker/70 rounded-xl border border-cinema-border/50">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-xs font-bold uppercase tracking-wider text-accent-gold">
@@ -226,7 +216,6 @@
                 </div>
               </div>
 
-              <!-- Actions -->
               <div class="flex flex-col sm:flex-row gap-2.5">
                 <button
                   @click="goToMovieDetails(selectedMovie)"

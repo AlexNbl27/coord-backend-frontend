@@ -32,7 +32,6 @@
       </div>
     </section>
 
-    <!-- Section Films populaires -->
     <section class="py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between mb-8">
@@ -63,7 +62,6 @@
       </div>
     </section>
 
-    <!-- Section Séances disponibles -->
     <section class="py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-7xl mx-auto">
         <div class="flex items-center justify-between mb-8">
@@ -147,7 +145,6 @@
 
               <p class="text-gray-300 text-sm mt-3 mb-4 line-clamp-3 leading-relaxed">{{ selectedMovie.synopsis || 'Aucun synopsis disponible.' }}</p>
 
-              <!-- Séances disponibles pour ce film -->
               <div class="mb-5 p-3.5 bg-cinema-card/70 rounded-xl border border-cinema-border/50">
                 <div class="flex items-center justify-between mb-2.5">
                   <span class="text-xs font-bold uppercase tracking-wider text-accent-gold">
@@ -181,7 +178,6 @@
                 </div>
               </div>
 
-              <!-- Actions -->
               <div class="flex flex-col sm:flex-row gap-2.5">
                 <button
                   @click="goToMovieDetail(selectedMovie._id)"

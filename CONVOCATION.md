@@ -17,23 +17,17 @@
   - `409 Conflict` : « Cette réservation est annulée : son billet n'est plus disponible. »
   - `500 Internal Server Error` : « La génération du billet a échoué. Réessayez dans un instant. » (ou le `detail` du `ProblemDetail`).
 
----
-
-## 2 · Où le PDF est fabriqué, et pourquoi
+## 2. Où le PDF est fabriqué, et pourquoi
 
 Le billet PDF est fabriqué **côté serveur** (Express + `pdfkit` + polices embarquées `DejaVu Sans`) parce que c'est un **document officiel qui fait foi** au contrôle d'accès en salle : son rendu, son horaire et sa référence doivent être garantis identiques quel que soit le navigateur ou le poste du spectateur, sans exposer de logique métier ni de données d'autres utilisateurs côté client. Le `@media print` côté navigateur reste réservé à l'impression locale de confort.
 
----
+## 3. Le bug du fuseau horaire (`Europe/Paris`)
 
-## 3 · Le bug du fuseau horaire (`Europe/Paris`)
+Les créneaux `startsAt` sont stockés en base MongoDB au format ISO 8601 UTC (`...Z`), et le conteneur Node.js tourne en UTC : sans conversion explicite, une séance réservée pour `9 h 30` en France était imprimée `8 h 30` en hiver (UTC+1) ou `7 h 30` en été (UTC+2). Le formateur serveur (`backend/src/utils/ticketFormatters.js`) et les vues front (`ReservationsView.vue`, `ReservationModal.vue`, `SlotCard.vue`, `MovieDetailView.vue`, `BookingView.vue`) imposent désormais explicitement `timeZone: 'Europe/Paris'`, garantissant `9 h 30` été comme hiver.
 
-Les créneaux `startsAt` sont stockés en base MongoDB au format ISO 8601 UTC (`...Z`), et le conteneur Node.js tourne en UTC : sans conversion explicite, une séance réservée pour `9 h 30` en France était imprimée `8 h 30` en hiver (UTC+1) ou `7 h 30` en été (UTC+2). Le formateur serveur (`backend/src/utils/ticketFormatters.js`) et les vues front (`ReservationsView.vue`, `ReservationModal.vue`, `SlotCard.vue`) imposent désormais explicitement `timeZone: 'Europe/Paris'`, garantissant `9 h 30` été comme hiver.
+## 4. Intégration et preuves (`curl -D -`)
 
----
-
-## 4 · Intégration et preuves (`curl -D -`)
-
-Preuves relevées sur la pile Docker Compose complète (`http://localhost:3001/api`, derrière Nginx) pour la réservation `ce139aff-9a37-450e-97ab-fa6588ee271e` :
+Preuves relevées sur la pile Docker Compose (`http://<slug>.cineslot.localhost:3001/api`, derrière Nginx) pour la réservation `ce139aff-9a37-450e-97ab-fa6588ee271e` :
 
 ### 1. Succès (`200 OK` inline & attachment)
 

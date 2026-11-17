@@ -14,7 +14,6 @@
         class="modal-content relative max-w-lg w-full max-h-[90vh] overflow-y-auto !p-6 sm:!p-8 shadow-2xl focus:outline-none"
         tabindex="-1"
       >
-        <!-- Annonce vocale dynamique pour VoiceOver lors de l'ouverture -->
         <div class="sr-only" aria-live="polite">
           {{ isOfflineBooking
             ? `Réservation hors-ligne enregistrée pour le film ${movieTitle}. Fauteuil ${assignedSeat} en salle ${hall}.`
@@ -22,12 +21,10 @@
           }}
         </div>
 
-        <!-- Description complète contextualisée pour les lecteurs d'écran -->
         <p id="reservation-modal-summary" class="sr-only">
           Billet pour le film {{ movieTitle }}, séance du {{ formattedStartsAt }} en {{ hall }}. Fauteuil attribué : {{ assignedSeat }}. Référence du billet : {{ shortBookingRef }}. {{ isOfflineBooking ? 'Réservation enregistrée localement en attente de synchronisation sur le serveur.' : 'Réservation confirmée et validée en direct sur le serveur.' }}
         </p>
 
-        <!-- Close button -->
         <button
           ref="closeButtonRef"
           @click="close"
@@ -37,7 +34,6 @@
           <span aria-hidden="true">✕</span>
         </button>
 
-        <!-- Status Header icon -->
         <div class="text-center mb-6">
           <div
             class="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center shadow-lg border-2"
@@ -46,11 +42,9 @@
               : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10'"
             aria-hidden="true"
           >
-            <!-- Icône Horloge/Sablier si hors-ligne -->
             <svg v-if="isOfflineBooking" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <!-- Icône Check vert si en ligne -->
             <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
@@ -67,7 +61,6 @@
           </p>
         </div>
 
-        <!-- Reservation details card with uniform divide-y -->
         <div class="mb-6">
           <div class="bg-cinema-darker/80 p-4 rounded-xl border border-cinema-border/60 shadow-inner">
             <div class="divide-y divide-cinema-border/30 text-xs">
@@ -119,7 +112,6 @@
           </div>
         </div>
 
-        <!-- Actions -->
         <div class="flex flex-col gap-2.5">
           <div v-if="!isOfflineBooking && bookingId" class="flex justify-center">
             <TicketPdfButton :booking-id="bookingId" :movie-title="movieTitle" />

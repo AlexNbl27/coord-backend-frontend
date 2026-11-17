@@ -7,9 +7,7 @@
     }"
     @click="handleSlotClick"
   >
-    <!-- Contenu haut -->
     <div>
-      <!-- En-tête avec titre du film et statut -->
       <div class="flex justify-between items-start gap-2 mb-3">
         <div class="flex-1">
           <h4 class="font-display text-white font-bold text-base sm:text-lg line-clamp-2 leading-snug">
@@ -20,7 +18,6 @@
           </p>
         </div>
 
-        <!-- Badge de statut (double encodage icône + texte pour daltonisme) -->
         <span
           class="badge whitespace-nowrap shrink-0 inline-flex items-center gap-1.5"
           :class="{
@@ -33,7 +30,6 @@
         </span>
       </div>
 
-      <!-- Horaires -->
       <div class="flex items-center gap-2 mb-3">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -55,7 +51,6 @@
         </span>
       </div>
 
-      <!-- Hall / Technology Tags -->
       <div
         class="flex items-center gap-1.5 flex-wrap mb-4"
         aria-label="Caractéristiques de la séance"
@@ -86,9 +81,7 @@
       </div>
     </div>
 
-    <!-- Contenu bas (ancré) -->
     <div class="mt-auto pt-2 border-t border-cinema-border/30">
-      <!-- Annonce vocale dynamique pour VoiceOver lors de la réservation -->
       <span v-if="isReserving" class="sr-only" aria-live="polite">
         Réservation en cours pour {{ slot.movieTitle }}...
       </span>
@@ -128,7 +121,6 @@
         </span>
       </button>
 
-      <!-- Message si déjà réservé, séance complète ou en attente de synchro -->
       <div v-else class="text-center py-2">
         <div v-if="alreadyBooked" class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
           <span class="text-xs font-semibold text-emerald-400">Déjà réservé</span>

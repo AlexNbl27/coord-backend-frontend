@@ -1,7 +1,6 @@
 <template>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto">
-      <!-- En-tête avec bouton retour -->
       <div class="mb-8 flex items-center justify-between">
         <button
           @click="goBack"
@@ -19,7 +18,6 @@
         </router-link>
       </div>
 
-      <!-- Loading State -->
       <div v-if="loading" class="animate-pulse space-y-8">
         <div class="h-10 bg-gray-800 rounded-xl w-1/3"></div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -31,7 +29,6 @@
         </div>
       </div>
 
-      <!-- Error State -->
       <div v-else-if="error || !movie" class="text-center py-16 bg-cinema-card/30 rounded-2xl border border-cinema-border/40">
         <h2 class="text-xl font-bold text-white mb-2">Film introuvable</h2>
         <p class="text-sm text-cinema-textMuted mb-6">{{ error || "Ce film n'existe pas ou a été retiré." }}</p>
@@ -43,11 +40,8 @@
         </router-link>
       </div>
 
-      <!-- Main Content -->
       <div v-else class="space-y-12">
-        <!-- Film Hero Card -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 bg-cinema-card/60 p-6 sm:p-8 rounded-2xl border border-cinema-border/50 shadow-cinema backdrop-blur-sm">
-          <!-- Affiche -->
           <div class="lg:col-span-1">
             <div class="aspect-poster bg-cinema-darker rounded-xl overflow-hidden border border-cinema-border/60 shadow-lg relative group">
               <img
@@ -60,7 +54,6 @@
                 <span class="text-xs text-cinema-textMuted">Affiche indisponible</span>
               </div>
 
-              <!-- Note IMDB Badge -->
               <div class="absolute top-3 right-3 bg-cinema-dark/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-accent-gold/40 shadow-md flex items-center gap-1.5" :aria-label="`Note IMDB : ${movie.ratings?.imdb?.toFixed(1) || 'N/A'} sur 10`">
                 <span class="text-accent-gold text-base" aria-hidden="true">★</span>
                 <span class="text-white font-bold text-sm">{{ movie.ratings?.imdb?.toFixed(1) || 'N/A' }}</span>
@@ -69,7 +62,6 @@
             </div>
           </div>
           
-          <!-- Détails film -->
           <div class="lg:col-span-2 flex flex-col justify-between">
             <div>
               <h1 class="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight mb-2">
@@ -79,7 +71,6 @@
                 {{ movie.year }} • {{ movie.duration }} minutes • Réalisé par <strong class="text-white">{{ movie.director }}</strong>
               </p>
 
-              <!-- Genres -->
               <div class="flex flex-wrap gap-2 mb-6">
                 <span
                   v-for="(genre, index) in movie.genres"
@@ -96,7 +87,6 @@
                 </span>
               </div>
 
-              <!-- Synopsis -->
               <div class="mb-6">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-cinema-textMuted mb-2">Synopsis</h3>
                 <p class="text-gray-200 text-sm sm:text-base leading-relaxed">
@@ -104,7 +94,6 @@
                 </p>
               </div>
 
-              <!-- Casting -->
               <div v-if="movie.cast && movie.cast.length > 0" class="mb-6">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-cinema-textMuted mb-2">Casting principal</h3>
                 <div class="flex flex-wrap gap-2">
@@ -119,7 +108,6 @@
               </div>
             </div>
 
-            <!-- Meta Data Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-cinema-border/40 text-xs">
               <div class="p-3 rounded-xl bg-cinema-darker/60 border border-cinema-border/30">
                 <span class="text-cinema-textMuted block">Année</span>
@@ -137,7 +125,6 @@
           </div>
         </div>
 
-        <!-- Billets déjà réservés pour ce film -->
         <section
           v-if="activeMovieBookings.length > 0"
           class="mb-10 p-6 rounded-2xl bg-cinema-card/80 border border-emerald-500/30 space-y-4"
@@ -201,7 +188,6 @@
           </div>
         </section>
 
-        <!-- Séances disponibles pour ce film -->
         <div class="space-y-6">
           <div class="flex items-center justify-between">
             <div>
@@ -244,7 +230,6 @@
             </div>
           </div>
 
-          <!-- Empty State Séances -->
           <div v-else class="text-center py-12 bg-cinema-card/30 rounded-2xl border border-cinema-border/40 p-6">
             <h3 class="text-lg font-bold text-white mb-1">Aucune séance aujourd'hui</h3>
             <p class="text-xs text-cinema-textMuted max-w-md mx-auto mb-4">
