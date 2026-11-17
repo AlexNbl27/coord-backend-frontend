@@ -16,6 +16,9 @@ import { cinemaRouter } from './routes/cinemaRoutes.js';
 import { adminSessionRouter } from './routes/adminSessionRoutes.js';
 import { adminCinemaRouter } from './routes/adminCinemaRoutes.js';
 import { adminLogRouter } from './routes/adminLogRoutes.js';
+import { adminStatsRouter } from './routes/adminStatsRoutes.js';
+import { onReservationEvent } from './events/index.js';
+import { applyReservationEvent } from './stats/bookingStats.js';
 import { seedCinemas } from './geo/cinemas.js';
 import { attachSession, rejectDuplicateSessionCookies } from './services/sessionService.js';
 import { securityHeaders, createRateLimiter } from './utils/securityMiddleware.js';
@@ -108,6 +111,7 @@ function createServer() {
   app.use('/api/admin/session', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminSessionRouter);
   app.use('/api/admin/cinemas', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminCinemaRouter);
   app.use('/api/admin', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminLogRouter);
+  app.use('/api/admin/stats', (req, res, next) => (req.plane === 'admin' ? next() : res.status(404).end()), adminStatsRouter);
 
   app.use(errorHandler);
 
@@ -123,6 +127,8 @@ async function startWorker() {
     });
     console.log(`[MongoDB] Connected (worker ${process.pid})`);
     await seedCinemas().catch((err) => console.error('[Cinemas] Seed failed:', err.message));
+    onReservationEvent((entry) => applyReservationEvent(entry)
+      .catch((err) => console.error('[Stats] booking_stats update failed:', err.message)));
 
     const app = createServer();
     app.listen(PORT, '0.0.0.0', () => {

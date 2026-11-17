@@ -115,6 +115,10 @@ services:
       - TARGET_URL=http://backend:3000
       - MAX_VUS=${MAX_VUS:-500}
       - MAX_PING_MS=${MAX_PING_MS:-500}
+      - K6_ROOT_DOMAIN=${K6_ROOT_DOMAIN:-cineslot.localhost:3001}
+      - K6_TENANTS=${K6_TENANTS:-lumiere,rex}
+      - K6_ADMIN_EMAIL=${K6_ADMIN_EMAIL:-}
+      - K6_ADMIN_PASSWORD=${K6_ADMIN_PASSWORD:-}
     entrypoint: ["k6", "run", "--linger", "/scripts/load-test.js"]
     networks:
       - ynov-network
@@ -130,6 +134,10 @@ services:
       - TARGET_URL=http://backend:3000
       - MAX_VUS=${MAX_VUS:-500}
       - MAX_PING_MS=${MAX_PING_MS:-500}
+      - K6_ROOT_DOMAIN=${K6_ROOT_DOMAIN:-cineslot.localhost:3001}
+      - K6_TENANTS=${K6_TENANTS:-lumiere,rex}
+      - K6_ADMIN_EMAIL=${K6_ADMIN_EMAIL:-}
+      - K6_ADMIN_PASSWORD=${K6_ADMIN_PASSWORD:-}
     entrypoint: ["k6", "run", "/scripts/load-test.js"]
     networks:
       - ynov-network

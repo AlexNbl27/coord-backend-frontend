@@ -35,3 +35,13 @@ docker compose exec mongodb mongosh -u "$MONGO_ROOT_USERNAME" -p "$MONGO_ROOT_PA
 ```
 
 Un volume créé avant l'activation de l'authentification n'exécute pas les scripts d'init : `docker compose down -v` puis `docker compose up -d`.
+
+## Statistiques de réservation (`booking_stats`)
+
+`booking_stats` contient des compteurs `booked`, `cancelled` et `seats` par `{ cinemaSlug, movieId, day }`, où `day` est le jour calendaire à Paris. Ils sont incrémentés à chaque événement `BOOKED` ou `CANCELLED`, et un même événement n'est jamais compté deux fois. `reservation_logs` fait foi : en cas d'écart, le recalcul complet reconstruit la collection à partir des logs.
+
+```bash
+docker compose exec -T backend node scripts/recompute-booking-stats.js
+```
+
+Lancez-le hors pic de trafic : un compteur créé pendant le recalcul pour une clé absente des logs déjà lus est supprimé, et un nouveau recalcul le rétablit.
