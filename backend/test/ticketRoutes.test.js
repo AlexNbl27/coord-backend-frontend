@@ -14,7 +14,9 @@ import { CANCELLED_MESSAGE, NOT_FOUND_MESSAGE } from '../src/services/ticketServ
 function createTestApp(buildTicketStub) {
   const app = express();
   app.use(cookieParser());
-  app.use(createAttachSession({ exists: async () => ({}) }));
+  app.use(createAttachSession({
+    findOne: () => ({ lean: async () => ({ role: 'SPECTATOR', cinemaSlugs: [] }) })
+  }));
   app.use('/api/bookings', createTicketRouter({ buildTicket: buildTicketStub }));
   return app;
 }
