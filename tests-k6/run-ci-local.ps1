@@ -22,7 +22,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 2. Attente de la disponibilité de l'API
-Write-Host "`n[2/4] Attente de la disponibilité de l'API sur http://localhost:3000/health..." -ForegroundColor Yellow
+Write-Host "`n[2/4] Attente de la disponibilité de l'API (backend:3000/health depuis le conteneur)..." -ForegroundColor Yellow
 $maxAttempts = 30
 $attempt = 0
 $healthy = $false
@@ -31,7 +31,8 @@ while ($attempt -lt $maxAttempts) {
     Start-Sleep -Seconds 2
     $attempt++
     try {
-        $response = Invoke-RestMethod -Uri "http://localhost:3000/health" -Method Get -TimeoutSec 3 -ErrorAction SilentlyContinue
+        $raw = docker compose exec -T backend node -e "fetch('http://127.0.0.1:3000/health').then(r=>r.text()).then(t=>process.stdout.write(t))" 2>$null
+        $response = $raw | ConvertFrom-Json
         if ($response.status -eq "OK" -and $response.database -eq "connected") {
             $healthy = $true
             break
