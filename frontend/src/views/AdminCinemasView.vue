@@ -5,7 +5,7 @@
         <div>
           <h1 class="font-display text-3xl font-bold text-white tracking-tight">Administration des cinémas</h1>
           <p class="text-cinema-textMuted text-sm mt-1">
-            Création, activation/désactivation et suppression des cinémas du réseau
+            Création, modification, activation/désactivation et suppression des cinémas du réseau
           </p>
         </div>
         <button
@@ -137,6 +137,16 @@
               <button
                 v-if="cinema.status !== 'DELETED'"
                 type="button"
+                :aria-label="`Modifier ${cinema.slug}`"
+                :disabled="loading || submitting"
+                @click="openEditModal(cinema)"
+                class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-cinema-border text-cinema-text hover:text-white hover:bg-white/5 disabled:opacity-50"
+              >
+                Modifier
+              </button>
+              <button
+                v-if="cinema.status !== 'DELETED'"
+                type="button"
                 role="switch"
                 :aria-checked="cinema.status === 'ACTIVE' ? 'true' : 'false'"
                 :aria-label="`Basculer l'état de ${cinema.slug}`"
@@ -161,6 +171,121 @@
           </div>
         </div>
       </section>
+
+      <Teleport to="body">
+        <div
+          v-if="editTarget"
+          ref="editDialogRef"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-dialog-title"
+          tabindex="-1"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          @click.self="closeEditModal"
+        >
+          <form
+            @submit.prevent="confirmEdit"
+            class="w-full max-w-lg rounded-2xl bg-cinema-card border border-cinema-border p-6 space-y-4"
+          >
+            <h3 id="edit-dialog-title" class="text-lg font-semibold text-white">
+              Modifier {{ editTarget }}
+            </h3>
+            <div v-if="editError" role="alert" class="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              {{ editError }}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label for="edit-cinema-name" class="block text-xs font-medium text-cinema-textMuted mb-1">Nom</label>
+                <input
+                  id="edit-cinema-name"
+                  ref="editNameInputRef"
+                  v-model="editForm.name"
+                  type="text"
+                  required
+                  maxlength="120"
+                  class="w-full px-3 py-2 rounded-xl bg-cinema-darker border border-cinema-border text-sm text-white"
+                />
+              </div>
+              <div>
+                <label for="edit-cinema-city" class="block text-xs font-medium text-cinema-textMuted mb-1">Ville</label>
+                <input
+                  id="edit-cinema-city"
+                  v-model="editForm.city"
+                  type="text"
+                  required
+                  maxlength="100"
+                  class="w-full px-3 py-2 rounded-xl bg-cinema-darker border border-cinema-border text-sm text-white"
+                />
+              </div>
+              <div>
+                <label for="edit-cinema-address" class="block text-xs font-medium text-cinema-textMuted mb-1">Adresse</label>
+                <input
+                  id="edit-cinema-address"
+                  v-model="editForm.address"
+                  type="text"
+                  required
+                  maxlength="200"
+                  class="w-full px-3 py-2 rounded-xl bg-cinema-darker border border-cinema-border text-sm text-white"
+                />
+              </div>
+              <div>
+                <label for="edit-cinema-lat" class="block text-xs font-medium text-cinema-textMuted mb-1">Latitude</label>
+                <input
+                  id="edit-cinema-lat"
+                  v-model.number="editForm.latitude"
+                  type="number"
+                  step="any"
+                  min="-90"
+                  max="90"
+                  required
+                  class="w-full px-3 py-2 rounded-xl bg-cinema-darker border border-cinema-border text-sm text-white"
+                />
+              </div>
+              <div>
+                <label for="edit-cinema-lon" class="block text-xs font-medium text-cinema-textMuted mb-1">Longitude</label>
+                <input
+                  id="edit-cinema-lon"
+                  v-model.number="editForm.longitude"
+                  type="number"
+                  step="any"
+                  min="-180"
+                  max="180"
+                  required
+                  class="w-full px-3 py-2 rounded-xl bg-cinema-darker border border-cinema-border text-sm text-white"
+                />
+              </div>
+              <div class="sm:col-span-2">
+                <label for="edit-cinema-features" class="block text-xs font-medium text-cinema-textMuted mb-1">
+                  Équipements (séparés par des virgules)
+                </label>
+                <input
+                  id="edit-cinema-features"
+                  v-model="editForm.features"
+                  type="text"
+                  placeholder="IMAX, Dolby Atmos"
+                  class="w-full px-3 py-2 rounded-xl bg-cinema-darker border border-cinema-border text-sm text-white"
+                />
+              </div>
+            </div>
+            <div class="flex justify-end gap-3">
+              <button
+                type="button"
+                @click="closeEditModal"
+                class="px-4 py-2 rounded-xl border border-cinema-border text-sm text-cinema-text"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                :disabled="submitting"
+                class="px-4 py-2 rounded-xl bg-accent-gold text-cinema-dark text-sm font-semibold disabled:opacity-40"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </Teleport>
 
       <Teleport to="body">
         <div
@@ -235,6 +360,9 @@ interface AdminCinema {
   name: string;
   address: string;
   city: string;
+  latitude?: number;
+  longitude?: number;
+  features?: string[];
   status: 'ACTIVE' | 'DISABLED' | 'DELETED';
 }
 
@@ -253,6 +381,27 @@ useAccessibleDialog({
   dialogRef: deleteDialogRef,
   initialFocusRef: deleteConfirmInputRef,
   onClose: closeDeleteModal
+});
+
+const editTarget = ref<string | null>(null);
+const editError = ref<string | null>(null);
+const editDialogRef = ref<HTMLElement | null>(null);
+const editNameInputRef = ref<HTMLInputElement | null>(null);
+const isEditOpen = computed(() => Boolean(editTarget.value));
+const editForm = reactive({
+  name: '',
+  address: '',
+  city: '',
+  latitude: 0,
+  longitude: 0,
+  features: ''
+});
+
+useAccessibleDialog({
+  isOpen: isEditOpen,
+  dialogRef: editDialogRef,
+  initialFocusRef: editNameInputRef,
+  onClose: closeEditModal
 });
 
 const form = reactive({
@@ -307,6 +456,51 @@ async function toggleStatus(cinema: AdminCinema) {
     cinema.status = nextStatus;
   } catch (err) {
     errorMessage.value = extractError(err);
+  } finally {
+    submitting.value = false;
+  }
+}
+
+function openEditModal(cinema: AdminCinema) {
+  editTarget.value = cinema.slug;
+  editError.value = null;
+  editForm.name = cinema.name;
+  editForm.address = cinema.address;
+  editForm.city = cinema.city;
+  editForm.latitude = cinema.latitude ?? 0;
+  editForm.longitude = cinema.longitude ?? 0;
+  editForm.features = (cinema.features ?? []).join(', ');
+}
+
+function closeEditModal() {
+  editTarget.value = null;
+  editError.value = null;
+}
+
+async function confirmEdit() {
+  const slug = editTarget.value;
+  if (!slug) {
+    return;
+  }
+  submitting.value = true;
+  editError.value = null;
+  const payload = {
+    name: editForm.name,
+    address: editForm.address,
+    city: editForm.city,
+    latitude: editForm.latitude,
+    longitude: editForm.longitude,
+    features: editForm.features.split(',').map((f) => f.trim()).filter(Boolean)
+  };
+  try {
+    const res = await apiClient.patch<AdminCinema>(`/api/admin/cinemas/${slug}`, payload, { withCredentials: true });
+    const target = cinemas.value.find((c) => c.slug === slug);
+    if (target) {
+      Object.assign(target, payload, res.data ?? {});
+    }
+    closeEditModal();
+  } catch (err) {
+    editError.value = extractError(err);
   } finally {
     submitting.value = false;
   }

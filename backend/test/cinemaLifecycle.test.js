@@ -545,3 +545,48 @@ test('google oauth stores HMAC-signed slug state and only redirects to ACTIVE ci
     assert.equal(cbClosed.headers.get('location'), 'http://cineslot.localhost:3001/login?error=cinema_unavailable');
   });
 });
+
+test('SUPER_ADMIN can edit cinema details but not its slug, nor a deleted cinema', async () => {
+  const cinemas = createInMemoryCinemas([
+    { slug: 'lyon', name: 'Lyon', address: '1 rue A', city: 'Lyon', latitude: 45, longitude: 4, features: [], status: 'ACTIVE' },
+    { slug: 'gone', name: 'Gone', address: '2 rue B', city: 'Paris', latitude: 48, longitude: 2, features: [], status: 'DELETED' }
+  ]);
+  const adminUser = { _id: 'sa-1', name: 'SA', email: 'sa@cineslot.test', role: 'SUPER_ADMIN', cinemaSlugs: [] };
+  const users = createInMemoryUsers([adminUser]);
+  const audits = [];
+
+  const app = express();
+  app.use(express.json());
+  app.use(cookieParser());
+  app.use((req, _res, next) => { req.plane = 'admin'; next(); });
+  app.use(createAttachSession(users));
+  app.use('/api/admin/cinemas', createAdminCinemaRouter({ cinemas, appendAudit: async (e) => audits.push(e) }));
+
+  const cookie = `${ADMIN_COOKIE_NAME}=${signAdminSessionToken(adminUser, { mfaVerifiedAt: Date.now() })}`;
+  const patch = (base, slug, body) => fetch(`${base}/api/admin/cinemas/${slug}`, {
+    method: 'PATCH',
+    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const valid = { name: 'Lyon Bellecour', address: '14 place Bellecour', city: 'Lyon', latitude: 45.7578, longitude: 4.832, features: ['IMAX', ' '] };
+
+  await withServer(app, async (base) => {
+    const ok = await patch(base, 'lyon', valid);
+    assert.equal(ok.status, 200);
+    const body = await ok.json();
+    assert.equal(body.name, 'Lyon Bellecour');
+    assert.deepEqual(body.features, ['IMAX']);
+    const doc = cinemas.docs.find((d) => d.slug === 'lyon');
+    assert.equal(doc.address, '14 place Bellecour');
+    assert.deepEqual(doc.location, { type: 'Point', coordinates: [4.832, 45.7578] });
+    assert.equal(doc.status, 'ACTIVE');
+    assert.equal(audits.at(-1).action, 'CINEMA_UPDATE');
+    assert.equal(audits.at(-1).before.name, 'Lyon');
+
+    assert.equal((await patch(base, 'lyon', { ...valid, slug: 'paris' })).status, 400);
+    assert.equal((await patch(base, 'lyon', { ...valid, latitude: 120 })).status, 400);
+    assert.equal((await patch(base, 'lyon', { ...valid, name: '' })).status, 400);
+    assert.equal((await patch(base, 'gone', valid)).status, 404);
+    assert.equal((await patch(base, 'nope', valid)).status, 404);
+  });
+});

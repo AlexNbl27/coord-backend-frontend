@@ -95,7 +95,7 @@
                 <td class="px-3 py-2 font-mono text-xs">{{ log.movieId ?? '—' }}</td>
                 <td class="px-3 py-2 font-mono text-xs">{{ log.slotId ?? '—' }}</td>
                 <td class="px-3 py-2 font-mono text-xs">{{ log.bookingId ? shortId(log.bookingId) : '—' }}</td>
-                <td class="px-3 py-2 font-mono text-xs">{{ log.userId ? shortId(log.userId) : '—' }}</td>
+                <td class="px-3 py-2 text-xs" :title="log.userId ?? undefined">{{ log.userEmail || (log.userId ? shortId(log.userId) : '—') }}</td>
                 <td class="px-3 py-2">{{ log.quantity }}</td>
                 <td class="px-3 py-2">
                   <a
@@ -177,7 +177,7 @@
               <tr v-for="entry in audit.items.value" :key="entry.seq" class="border-t border-cinema-border/40 text-cinema-text">
                 <td class="px-3 py-2 font-mono text-xs">{{ entry.seq }}</td>
                 <td class="px-3 py-2 whitespace-nowrap"><time :datetime="entry.at">{{ formatDate(entry.at) }}</time></td>
-                <td class="px-3 py-2 text-xs">{{ entry.actor ? `${shortId(entry.actor.id)} (${entry.actor.role ?? '?'})` : '—' }}</td>
+                <td class="px-3 py-2 text-xs" :title="entry.actor?.id">{{ entry.actor ? `${entry.actor.email || shortId(entry.actor.id)} (${entry.actor.role ?? '?'})` : '—' }}</td>
                 <td class="px-3 py-2 font-mono text-xs">{{ entry.action }}</td>
                 <td class="px-3 py-2 text-xs">{{ formatTarget(entry.target) }}</td>
                 <td class="px-3 py-2 text-xs font-semibold">{{ entry.result }}</td>

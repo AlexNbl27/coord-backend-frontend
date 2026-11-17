@@ -68,6 +68,46 @@ describe('AdminCinemasView & role guard', () => {
     wrapper.unmount();
   });
 
+  it('edits a cinema through the edit dialog', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: [
+        { slug: 'lyon', name: 'Lyon', address: '1 rue A', city: 'Lyon', latitude: 45, longitude: 4, features: ['IMAX'], status: 'ACTIVE' }
+      ]
+    } as any);
+    const patchSpy = vi.spyOn(apiClient, 'patch').mockResolvedValue({ data: {} } as any);
+
+    const wrapper = mount(AdminCinemasView, { attachTo: document.body });
+    await flushPromises();
+
+    const editBtn = wrapper.findAll('button').find((b) => b.text() === 'Modifier');
+    await editBtn!.trigger('click');
+    await flushPromises();
+
+    const nameInput = document.body.querySelector('#edit-cinema-name') as HTMLInputElement;
+    expect(nameInput.value).toBe('Lyon');
+    expect((document.body.querySelector('#edit-cinema-features') as HTMLInputElement).value).toBe('IMAX');
+
+    nameInput.value = 'Lyon Bellecour';
+    nameInput.dispatchEvent(new Event('input'));
+    const featuresInput = document.body.querySelector('#edit-cinema-features') as HTMLInputElement;
+    featuresInput.value = 'IMAX, Dolby Atmos';
+    featuresInput.dispatchEvent(new Event('input'));
+    await flushPromises();
+
+    const form = document.body.querySelector('[aria-labelledby="edit-dialog-title"] form') as HTMLFormElement;
+    form.dispatchEvent(new Event('submit'));
+    await flushPromises();
+
+    expect(patchSpy).toHaveBeenCalledWith(
+      '/api/admin/cinemas/lyon',
+      { name: 'Lyon Bellecour', address: '1 rue A', city: 'Lyon', latitude: 45, longitude: 4, features: ['IMAX', 'Dolby Atmos'] },
+      { withCredentials: true }
+    );
+    expect(document.body.querySelector('#edit-dialog-title')).toBeNull();
+    expect(wrapper.text()).toContain('Lyon Bellecour');
+    wrapper.unmount();
+  });
+
   it('blocks non-SUPER_ADMIN users from /admin/cinemas via router guard', async () => {
     const { currentUser } = useSession();
     const spectator = { id: 'u1', name: 'Ada', email: 'ada@cineslot.test', role: 'SPECTATOR' as const };
